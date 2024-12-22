@@ -1,0 +1,29 @@
+services:
+  server:
+    image: codeberg.org/forgejo/forgejo:9
+    container_name: forgejo
+    environment:
+      - USER_UID=1000
+      - USER_GID=1000
+    restart: unless-stopped
+    networks:
+      - traefik
+    volumes:
+      - ./forgejo:/data
+      - /etc/timezone:/etc/timezone:ro
+      - /etc/localtime:/etc/localtime:ro
+    # ports:
+    #   - '3000:3000'
+    #   - '222:22'
+    labels:
+      - traefik.enable=true
+      - traefik.docker.network=traefik
+      - traefik.http.routers.git.rule=Host(`git.internal.earles.io`)
+      - traefik.http.routers.git.entrypoints=websecure
+      - traefik.http.routers.git.tls.certresolver=production
+      - traefik.http.routers.git.service=git
+      - traefik.http.services.git.loadbalancer.server.port=3000
+
+networks:
+  traefik:
+    external: true

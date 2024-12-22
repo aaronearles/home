@@ -1,0 +1,17 @@
+http:
+  routers:
+    router-auth:
+      rule: "Host(`auth.earles.io`) && PathPrefix(`/`)"
+      service: auth
+      # priority: 1000
+      entryPoints:
+        - websecure
+      tls:
+        certresolver: production
+
+  services:
+    auth:
+      loadBalancer:
+        passHostHeader: false
+        servers:
+          - url: "https://authentik.internal.earles.io:443"

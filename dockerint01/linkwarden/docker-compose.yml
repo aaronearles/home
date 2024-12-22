@@ -1,0 +1,41 @@
+services:
+  postgres:
+    image: postgres:16-alpine
+    container_name: linkwarden-postgres
+    env_file: .env
+    environment:
+      - POSTGRES_PASSWORD=${POSTGRES_PASSWORD}
+    restart: always
+    volumes:
+      - ./pgdata:/var/lib/postgresql/data
+    networks:
+      - backend
+
+  linkwarden:
+    env_file: .env
+    environment:
+      - DATABASE_URL=postgresql://postgres:${POSTGRES_PASSWORD}@postgres:5432/postgres
+    restart: always
+    # build: . # uncomment this line to build from source
+    image: ghcr.io/linkwarden/linkwarden:latest # comment this line to build from source
+    container_name: linkwarden-server
+    volumes:
+      - ./data:/data/data
+    networks:
+      - traefik
+      - backend
+    depends_on:
+      - postgres
+    # ports:
+    #   - 3000:3000
+    labels:
+      - traefik.enable=true
+      - traefik.docker.network=traefik
+      - traefik.http.routers.linkwarden.rule=Host(`lw.internal.earles.io`)
+      - traefik.http.routers.linkwarden.entrypoints=websecure
+      - traefik.http.routers.linkwarden.tls.certresolver=production
+
+networks:
+  traefik:
+    external: true
+  backend:

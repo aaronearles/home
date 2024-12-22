@@ -1,0 +1,49 @@
+services:
+  minecraft:
+    image: itzg/minecraft-bedrock-server
+    container_name: minecraft
+    restart: unless-stopped
+    ports:
+      - 19132:19132/udp
+    environment:
+      # - UID=1000
+      # - GID=1000
+      - TZ=US/Denver
+      - EULA=true
+      - SERVER_NAME=EARLES
+      - GAMEMODE=survival
+      - FORCE_GAMEMODE=false
+      - DIFFICULTY=easy
+      - ALLOW_CHEATS=true
+      - MAX_PLAYERS=5
+      - ONLINE_MODE=true
+      # - WHITE_LIST
+      # - ALLOW_LIST
+      # - SERVER_PORT
+      # - SERVER_PORT_V6
+      - ENABLE_LAN_VISIBILITY=true
+      - VIEW_DISTANCE=64
+      # - TICK_DISTANCE
+      - PLAYER_IDLE_TIMEOUT=0
+      - MAX_THREADS=4
+      - LEVEL_NAME=WORLD
+      # - LEVEL_SEED
+      # - LEVEL_TYPE
+      - DEFAULT_PLAYER_PERMISSION_LEVEL=member
+      - OPS="2533275026015377"
+    volumes:
+      - ./data:/data
+    networks:
+      - backend
+
+  mcxboxbroadcast:
+    image: ghcr.io/rtm516/mcxboxbroadcast:latest
+    container_name: mcxboxbroadcast
+    restart: unless-stopped
+    volumes:
+      - ./mcxboxbroadcast_config:/opt/app/config
+    networks:
+      - backend
+
+networks:
+  backend:

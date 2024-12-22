@@ -1,0 +1,24 @@
+    # LAB
+    labels:
+      - traefik.enable=true
+      - traefik.docker.network=traefik
+      - traefik.http.routers.whoami.rule=Host(`whoami.lab.earles.io`)
+      - traefik.http.routers.whoami.entrypoints=websecure
+      - traefik.http.routers.whoami.tls.certresolver=production
+      # - traefik.http.routers.whoami.tls.certresolver=staging
+      # - traefik.http.routers.whoami.tls
+      # - traefik.http.routers.whoami.middlewares=waf@file,auth
+      # - traefik.http.routers.whoami.middlewares=auth
+      # - traefik.http.routers.whoami.middlewares=waf@file
+      # - traefik.http.middlewares.auth.basicauth.usersfile=/etc/traefik/conf/authorizedusers # Use htpasswd to generate user:hash
+
+
+      - traefik.http.services.vault.loadbalancer.server.port=8200
+      - traefik.http.services.vault.loadbalancer.server.scheme=https
+
+
+networks:
+  traefik:
+    external: true
+  backend:
+    # external: false #Not needed or used, just for reference

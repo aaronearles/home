@@ -1,0 +1,16 @@
+http:
+  routers:
+    router-pve:
+      rule: "Host(`pve.internal.earles.io`) && PathPrefix(`/`)"
+      service: pve
+      # priority: 1000
+      entryPoints:
+        - websecure
+      tls:
+        certresolver: production
+
+  services:
+    pve:
+      loadBalancer:
+        servers:
+          - url: "http://pve.earles.internal:8006"

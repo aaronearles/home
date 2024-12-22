@@ -1,0 +1,52 @@
+    # INTERNAL
+    labels:
+      - traefik.enable=true
+      - traefik.docker.network=traefik
+      - traefik.http.routers.whoami.rule=Host(`whoami.internal.earles.io`)
+      - traefik.http.routers.whoami.entrypoints=websecure
+      - traefik.http.routers.whoami.tls.certresolver=production
+      # - traefik.http.routers.whoami.tls.certresolver=staging
+      # - traefik.http.routers.whoami.tls
+      # - traefik.http.routers.whoami.middlewares=waf@file,auth
+      # - traefik.http.routers.whoami.middlewares=auth
+      # - traefik.http.routers.whoami.middlewares=waf@file
+      # - traefik.http.middlewares.auth.basicauth.usersfile=/etc/traefik/conf/authorizedusers # Use htpasswd to generate user:hash
+
+
+      - traefik.http.services.vault.loadbalancer.server.port=8200
+      - traefik.http.services.vault.loadbalancer.server.scheme=https
+
+
+networks:
+  traefik:
+    external: true
+
+
+A rule (or multiple rules) matching multiple hostnames may be necessary when proxying multiple times and maintaining external host header even when DNS does not resolve internally.
+For example, auth.earles.io resolves to DMZ, DMZ forwards to INT (authentik.internal.earles.io) but passes original host header (auth.earles.io).
+Although authentik.internal.earles.io resolves to INT and may be used internally, the INT proxy still must match requests based on host header auth.earles.io.
+
+https://doc.traefik.io/traefik/routing/routers/#host-and-hostregexp and
+https://doc.traefik.io/traefik/routing/routers/#certresolver suggest that SAN and Wildcard are supported using HostRegexp
+NOTE To match domains case-insensitively, use the (?i) option:
+
+Multi-host examples:
+
+
+    labels:
+      - traefik.enable=true
+      - traefik.docker.network=traefik
+      # - traefik.http.routers.authentik.rule=HostRegexp(`^auth\.earles\.io$|^authentik\.internal\.earles\.io$`) # WORKING REGEXP
+      - traefik.http.routers.authentik.rule=Host(`authentik.internal.earles.io`) || Host(`auth.earles.io`)       # WORKING || "OR" OPERATOR
+      # - traefik.http.routers.authentik.rule=Host(`authentik.internal.earles.io`)                               # WORKING DUPLICATE ROUTERS REFERENCE SHARED/SINGLE SERVICE
+      - traefik.http.routers.authentik.entrypoints=websecure                                                        # SHARED
+      - traefik.http.routers.authentik.tls.certresolver=production                                                  # SHARED
+      - traefik.http.routers.authentik.service=authentik                                                            # SHARED
+      # - traefik.http.routers.auth.rule=Host(`auth.earles.io`)                                                  # WORKING DUPLICATE ROUTERS REFERENCE SHARED/SINGLE SERVICE
+      # - traefik.http.routers.auth.entrypoints=websecure                                                           # NOT NEEDED W/ MULTIPLE MATCH RULES
+      # - traefik.http.routers.auth.tls.certresolver=production                                                     # NOT NEEDED W/ MULTIPLE MATCH RULES
+      # - traefik.http.routers.auth.service=authentik                                                               # NOT NEEDED W/ MULTIPLE MATCH RULES
+      - traefik.http.services.authentik.loadbalancer.server.port=9443                                               # SHARED
+      - traefik.http.services.authentik.loadbalancer.server.scheme=https                                            # SHARED
+      # - traefik.http.services.auth.loadbalancer.server.port=9443                                                  # NOT NEEDED W/ MULTIPLE MATCH RULES
+      # - traefik.http.services.auth.loadbalancer.server.scheme=https                                               # NOT NEEDED W/ MULTIPLE MATCH RULES

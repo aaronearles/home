@@ -1,0 +1,20 @@
+    # DMZ
+    labels:
+      - traefik.enable=true
+      - traefik.docker.network=traefik
+      - traefik.http.routers.whoami.rule=Host(`whoami.earles.internal`)
+      - traefik.http.routers.whoami.entrypoints=websecure
+      # - traefik.http.routers.whoami.tls
+      # - traefik.http.routers.whoami.tls.certresolver=staging
+      - traefik.http.routers.whoami.tls.certresolver=production
+      # - traefik.http.routers.whoami.middlewares=waf@file,auth
+      # - traefik.http.routers.whoami.middlewares=auth
+      # - traefik.http.routers.whoami.middlewares=waf@file
+      # - traefik.http.middlewares.auth.basicauth.usersfile=/etc/traefik/conf/authorizedusers # Use htpasswd to generate user:hash
+
+
+
+
+networks:
+  traefik:
+    external: true

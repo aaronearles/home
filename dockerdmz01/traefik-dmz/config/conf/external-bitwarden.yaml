@@ -1,0 +1,18 @@
+http:
+  routers:
+    router-bw:
+      rule: "Host(`bw.earles.io`) && PathPrefix(`/`)"
+      middlewares: authentik@docker
+      service: bitwarden
+      # priority: 1000
+      entryPoints:
+        - websecure
+      tls:
+        certresolver: production
+
+  services:
+    bitwarden:
+      loadBalancer:
+        passHostHeader: false
+        servers:
+          - url: "https://vaultwarden.internal.earles.io"

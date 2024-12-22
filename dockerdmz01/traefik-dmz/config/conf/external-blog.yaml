@@ -1,0 +1,16 @@
+http:
+  routers:
+    router-blog:
+      rule: "Host(`earlesgonewild.blog`) && PathPrefix(`/`)"
+      service: blog
+      entryPoints:
+        - websecure
+      tls: {}
+        # certresolver: production # Need to setup Cloudflare API Credentials for DNS Zone earlesgonewild.blog first! Cloudflare is set to ignore TLS errors in the meantime
+
+  services:
+    blog:
+      loadBalancer:
+        passHostHeader: false # Internal DNS is blog.internal.earles.io, external is earlesgonewild.blog
+        servers:
+          - url: "http://earlesgonewild.earles.internal"

@@ -1,0 +1,17 @@
+services:
+  draw:
+    image: excalidraw/excalidraw:latest
+    container_name: draw
+    restart: unless-stopped
+    networks:
+      - traefik
+    labels:
+      - traefik.enable=true
+      - traefik.docker.network=traefik
+      - traefik.http.routers.draw.rule=Host(`draw.internal.earles.io`)
+      - traefik.http.routers.draw.entrypoints=websecure
+      - traefik.http.routers.draw.tls.certresolver=production
+
+networks:
+  traefik:
+    external: true

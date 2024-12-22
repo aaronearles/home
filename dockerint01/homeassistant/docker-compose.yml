@@ -1,0 +1,28 @@
+services:
+  homeassistant:
+    image: lscr.io/linuxserver/homeassistant:latest
+    container_name: homeassistant
+    restart: unless-stopped
+    environment:
+      - PUID=1000
+      - PGID=1000
+      - TZ=US/Denver
+    volumes:
+      - ./config:/config
+    # devices:
+    #   - /path/to/device:/path/to/device #optional
+    networks:
+      - traefik
+    # ports:
+    #   - 8123:8123 #optional
+    labels:
+      - traefik.enable=true
+      - traefik.docker.network=traefik
+      - traefik.http.routers.homeassistant.rule=Host(`ha.internal.earles.io`)
+      - traefik.http.routers.homeassistant.entrypoints=websecure
+      - traefik.http.routers.homeassistant.tls.certresolver=production
+      - traefik.services.homeassistant.loadBalancer.passHostHeader=false
+
+networks:
+  traefik:
+    external: true

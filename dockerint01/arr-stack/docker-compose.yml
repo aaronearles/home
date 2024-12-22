@@ -1,0 +1,174 @@
+services:
+  gluetun: # See https://github.com/qdm12/gluetun-wiki/blob/main/setup/connect-a-container-to-gluetun.md#external-container-to-gluetun
+    image: qmcgaw/gluetun:latest
+    container_name: arr-gluetun
+    restart: unless-stopped
+    cap_add:
+      - NET_ADMIN
+    devices:
+      - /dev/net/tun:/dev/net/tun
+    # ports:
+    #   - 8085:8085       # qbittorrent - BT Client
+    #   - 8989:8989       # Sonarr - TV
+    #   - 7878:7878       # Radarr - Movies
+    #   - 9696:9696       # Prowlarr - Indexer
+    #   - 8191:8191       # Flaresolverr - Cloudflare Solver
+    networks:
+      - traefik
+    volumes:
+      - ./gluetun:/gluetun
+    environment:
+      - VPN_SERVICE_PROVIDER=nordvpn # https://github.com/qdm12/gluetun-wiki/tree/main/setup#setup
+      - VPN_TYPE=wireguard
+      - WIREGUARD_PRIVATE_KEY=${WIREGUARD_PRIVATE_KEY} # https://github.com/qdm12/gluetun-wiki/blob/main/setup/providers/nordvpn.md#obtain-your-wireguard-private-key
+      - WIREGUARD_ADDRESSES=10.5.0.2/32
+      - SERVER_COUNTRIES="United States"
+      - TZ=US/Denver
+      - UPDATER_PERIOD=24h # https://github.com/qdm12/gluetun-wiki/blob/main/setup/servers.md#update-the-vpn-servers-list
+      - FIREWALL_OUTBOUND_SUBNETS=172.20.100.0/24 # Allow API connections to Jellyfin 172.20.100.202:8096
+    labels:
+      - traefik.enable=true
+      - traefik.docker.network=traefik
+      # qbittorrent
+      - traefik.http.routers.qbittorrent.rule=Host(`qbittorrent.internal.earles.io`)
+      - traefik.http.routers.qbittorrent.entrypoints=websecure
+      - traefik.http.routers.qbittorrent.service=qbittorrent
+      - traefik.http.routers.qbittorrent.tls.certresolver=production
+      - traefik.http.services.qbittorrent.loadbalancer.server.port=8085
+      # sabnzbd
+      - traefik.http.routers.sabnzbd.rule=Host(`sabnzbd.internal.earles.io`)
+      - traefik.http.routers.sabnzbd.entrypoints=websecure
+      - traefik.http.routers.sabnzbd.service=sabnzbd
+      - traefik.http.routers.sabnzbd.tls.certresolver=production
+      - traefik.http.services.sabnzbd.loadbalancer.server.port=8080
+      # sonarr
+      - traefik.http.routers.sonarr.rule=Host(`sonarr.internal.earles.io`)
+      - traefik.http.routers.sonarr.entrypoints=websecure
+      - traefik.http.routers.sonarr.service=sonarr
+      - traefik.http.routers.sonarr.tls.certresolver=production
+      - traefik.http.services.sonarr.loadbalancer.server.port=8989
+      # radarr
+      - traefik.http.routers.radarr.rule=Host(`radarr.internal.earles.io`)
+      - traefik.http.routers.radarr.entrypoints=websecure
+      - traefik.http.routers.radarr.service=radarr
+      - traefik.http.routers.radarr.tls.certresolver=production
+      - traefik.http.services.radarr.loadbalancer.server.port=7878
+      # prowlarr
+      - traefik.http.routers.prowlarr.rule=Host(`prowlarr.internal.earles.io`)
+      - traefik.http.routers.prowlarr.entrypoints=websecure
+      - traefik.http.routers.prowlarr.service=prowlarr
+      - traefik.http.routers.prowlarr.tls.certresolver=production
+      - traefik.http.services.prowlarr.loadbalancer.server.port=9696
+#      # flaresolverr
+#      - traefik.http.routers.flaresolverr.rule=Host(`flaresolverr.internal.earles.io`)
+#      - traefik.http.routers.flaresolverr.entrypoints=websecure
+#      - traefik.http.routers.flaresolverr.service=flaresolverr
+#      - traefik.http.routers.flaresolverr.tls.certresolver=production
+#      - traefik.http.services.flaresolverr.loadbalancer.server.port=8191
+
+  qbittorrent:
+    image: lscr.io/linuxserver/qbittorrent:latest
+    container_name: arr-qbittorrent
+    restart: unless-stopped
+    network_mode: "service:gluetun"
+    environment:
+      - PUID=1000
+      - PGID=1000
+      - TZ=US/Denver
+      - WEBUI_PORT=8085
+    volumes:
+      - ./qbittorrent/config:/config
+      - /mnt/media/Downloads:/downloads
+    depends_on:
+      - gluetun
+
+  sabnzbd:
+    image: lscr.io/linuxserver/sabnzbd
+    container_name: sabnzbd
+    network_mode: "service:gluetun"
+    environment:
+      - PUID=1000
+      - PGID=1000
+      - TZ=US/Denver
+    volumes:
+      - ./sabnzbd/config:/config
+      - /mnt/media/Downloads:/downloads
+      - /mnt/media/Downloads/incomplete:/incomplete-downloads
+    depends_on:
+      - gluetun
+
+  sonarr:
+    image: lscr.io/linuxserver/sonarr:latest
+    container_name: arr-sonarr
+    restart: unless-stopped
+    network_mode: "service:gluetun"
+    environment:
+      - PUID=1000
+      - PGID=1000
+      - TZ=US/Denver
+    volumes:
+      - ./sonarr/config:/config
+      - /mnt/media/Shows:/tv
+      - /mnt/media/Downloads:/downloads
+
+  radarr:
+    image: lscr.io/linuxserver/radarr:latest
+    container_name: arr-radarr
+    restart: unless-stopped
+    network_mode: "service:gluetun"
+    environment:
+      - PUID=1000
+      - PGID=1000
+      - TZ=US/Denver
+    volumes:
+      - ./radarr/config:/config
+      - /mnt/media/Movies:/movies
+      - /mnt/media/Downloads:/downloads
+
+  prowlarr:
+    image: lscr.io/linuxserver/prowlarr:latest
+    container_name: arr-prowlarr
+    restart: unless-stopped
+    network_mode: "service:gluetun"
+    environment:
+      - PUID=1000
+      - PGID=1000
+      - TZ=US/Denver
+    volumes:
+      - ./prowlarr/config:/config
+
+  flaresolverr:
+    image: ghcr.io/flaresolverr/flaresolverr:latest
+    container_name: arr-flaresolverr
+    restart: unless-stopped
+    network_mode: "service:gluetun"
+    environment:
+      - LOG_LEVEL=${LOG_LEVEL:-info}
+      - LOG_HTML=${LOG_HTML:-false}
+      - CAPTCHA_SOLVER=${CAPTCHA_SOLVER:-none}
+      - PUID=1000
+      - PGID=1000
+      - TZ=US/Denver
+
+  jellyseerr:
+    image: fallenbagel/jellyseerr:latest
+    container_name: arr-jellyseerr
+    restart: unless-stopped
+    networks:
+      - traefik
+    environment:
+      - PUID=1000
+      - PGID=1000
+      - TZ=US/Denver
+    volumes:
+        - ./jellyseerr/config:/app/config
+    labels:
+      - traefik.enable=true
+      - traefik.docker.network=traefik
+      - traefik.http.routers.jellyseerr.rule=Host(`jellyseerr.internal.earles.io`)
+      - traefik.http.routers.jellyseerr.entrypoints=websecure
+      - traefik.http.routers.jellyseerr.tls.certresolver=production
+
+networks:
+  traefik:
+    external: true

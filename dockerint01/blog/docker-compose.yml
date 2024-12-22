@@ -1,0 +1,48 @@
+services:
+
+  wordpress:
+    image: wordpress
+    container_name: blog-wordpress
+    restart: unless-stopped
+    env_file:
+      - .env
+    environment:
+      - PUID=1000
+      - PGID=1000
+      - TZ=US/Denver
+      - WORDPRESS_DB_HOST=${WORDPRESS_DB_HOST}
+      - WORDPRESS_DB_USER=${WORDPRESS_DB_USER}
+      - WORDPRESS_DB_PASSWORD=${WORDPRESS_DB_PASSWORD}
+      - WORDPRESS_DB_NAME=${WORDPRESS_DB_NAME}
+    depends_on:
+      - db
+    volumes:
+      - /mnt/data/blog/var/www/html:/var/www/html
+    networks:
+      - traefik
+      - backend
+    labels:
+      - traefik.enable=true
+      - traefik.docker.network=traefik
+      - traefik.http.routers.blog.rule=Host(`blog.internal.earles.io`)
+      - traefik.http.routers.blog.entrypoints=websecure
+      - traefik.http.routers.blog.tls.certresolver=production
+
+  db:
+    image: mysql:8.0
+    container_name: blog-db
+    restart: unless-stopped
+    environment:
+      - MYSQL_DATABASE=${WORDPRESS_DB_NAME}
+      - MYSQL_USER=${WORDPRESS_DB_USER}
+      - MYSQL_PASSWORD=${WORDPRESS_DB_PASSWORD}
+      - MYSQL_RANDOM_ROOT_PASSWORD=1
+    volumes:
+      - ./data/blog/var/lib/mysql:/var/lib/mysql
+    networks:
+      - backend
+
+networks:
+  traefik:
+    external: true
+  backend:

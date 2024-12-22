@@ -1,0 +1,16 @@
+http:
+  routers:
+    router-nas:
+      rule: "Host(`nas.internal.earles.io`) && PathPrefix(`/`)"
+      service: nas
+      # priority: 1000
+      entryPoints:
+        - websecure
+      tls:
+        certresolver: production
+
+  services:
+    nas:
+      loadBalancer:
+        servers:
+          - url: "https://nas.earles.internal:5001"

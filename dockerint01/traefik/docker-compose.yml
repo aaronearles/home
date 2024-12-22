@@ -1,0 +1,41 @@
+services:
+
+  traefik:
+    image: traefik:latest
+    container_name: traefik
+    restart: unless-stopped
+    ports:
+      - "25:25"     # SMTP Entrypoint | TCP/25
+      - "80:80"     # WEB ENTRYPOINT | HTTP/80
+      - "443:443"   # WEBSECURE ENTRYPOINT | HTTPS/443
+      - "3128:3128" # SQUID CACHING PROXY | TCP/3128
+      - "8080:8080" # TRAEFIK ENTRYPOINT | API Dashboard (enabled by --api.insecure=true)
+    env_file:
+      - .env
+    environment:
+      - CF_API_EMAIL=${CF_API_EMAIL}             # Account email
+      - CF_API_KEY=${CF_API_KEY}                 # API Key
+      - CF_DNS_API_TOKEN=${CF_DNS_API_TOKEN}     # API token with DNS:Edit permission
+      # - CF_ZONE_API_TOKEN=${CF_ZONE_API_TOKEN} # API token with Zone:Read permission | Not necessary if CF_DNS_API_TOKEN has both permissions
+    volumes:
+      - '/var/run/docker.sock:/var/run/docker.sock'
+      - ./config/traefik.yaml:/etc/traefik/traefik.yaml:ro
+      - ./config/conf/:/etc/traefik/conf/
+      - ./config/certs/:/etc/traefik/certs/
+      - ./logs/:/logs/:rw
+    networks:
+      - traefik
+
+  whoami:
+    image: traefik/whoami
+    container_name: whoami
+    labels:
+      - traefik.enable=true
+      - traefik.http.routers.whoami.rule=Host(`whoami.internal.earles.io`)
+      - traefik.http.routers.whoami.entrypoints=websecure
+      - traefik.http.routers.whoami.tls.certresolver=production
+    networks:
+      - traefik
+networks:
+  traefik:
+    external: true

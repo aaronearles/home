@@ -1,0 +1,15 @@
+http:
+  routers:
+    router-lab:
+      rule: "Host(`lab.lab.earles.io`) && PathPrefix(`/`)"
+      service: lab
+      entryPoints:
+        - websecure
+      # tls:
+      #   certresolver: production
+
+  services:
+    lab:
+      loadBalancer:
+        servers:
+          - url: "http://lab.earles.lab:8443"

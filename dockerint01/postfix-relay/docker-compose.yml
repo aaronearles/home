@@ -1,0 +1,32 @@
+services:
+  postfixrelay:
+    image: loganmarchione/docker-postfixrelay:latest
+    container_name: postfix-relay
+    restart: unless-stopped
+    env_file:
+      - .env
+    environment:
+      - TZ=America/Denver
+      - RELAY_HOST=smtp.sendgrid.net
+      - RELAY_PORT=587
+      - RELAY_USER=${RELAY_USER}
+      - RELAY_PASS=${RELAY_PASS}
+      - TEST_EMAIL=aaronearles@gmail.com
+      - MYORIGIN=earles.io
+      - FROMADDRESS=admin@earles.io
+      - MYNETWORKS=172.16.0.0/12
+      - MSG_SIZE=18874368 #18MB to align w/ 20MB Sendgrid Limit after overhead
+    networks:
+      - backend
+    volumes:
+      - './data:/var/spool/postfix'
+    # ports:
+    #   - 25:25
+    labels:
+      - traefik.enable=true
+      - traefik.docker.network=traefik
+      - traefik.tcp.routers.smtp.entrypoints=smtp
+      - traefik.tcp.routers.smtp.rule=ClientIP(`172.16.0.0/12`)
+      - traefik.tcp.services.smtp.loadbalancer.server.port=25
+networks:
+  backend:

@@ -1,0 +1,88 @@
+global:
+  checkNewVersion: false
+  sendAnonymousUsage: false
+
+api:
+  dashboard: true
+  insecure: true
+  disableDashboardAd: true
+
+entryPoints:
+  web:
+    address: :80
+    http:
+      redirections:
+        entryPoint:
+          to: websecure
+          scheme: https
+  websecure:
+    address: :443
+  # custom:
+  #   address: :8080
+
+providers:
+  docker:
+    exposedByDefault: false
+  file:
+    directory: /etc/traefik
+    watch: true
+
+experimental:
+  plugins:
+    coraza:
+      moduleName: github.com/jcchavezs/coraza-http-wasm-traefik
+      version: v0.2.2
+
+tls:
+  stores:
+    default:
+      defaultCertificate:
+        certFile: /etc/traefik/certs/cert.pem
+        keyFile: /etc/traefik/certs/cert-key.pem
+  options:
+    default:
+      minVersion: VersionTLS12
+
+# serversTransport:
+#   insecureSkipVerify: true # (Optional) Disable TLS Cert verification
+
+certificatesResolvers:
+  staging:
+    acme:
+      email: aaronearles@gmail.com
+      storage: /etc/traefik/certs/acme.json
+      caServer: "https://acme-staging-v02.api.letsencrypt.org/directory"
+#       httpChallenge:
+#         entryPoint: web
+      dnsChallenge:
+        provider: cloudflare
+        disablePropagationCheck: true
+        delayBeforeCheck: 60
+        resolvers:
+          - "1.1.1.1:53"
+          - "8.8.8.8:53"
+  production:
+    acme:
+      email: aaronearles@gmail.com
+      storage: /etc/traefik/certs/acme.json
+      caServer: "https://acme-v02.api.letsencrypt.org/directory"
+#       httpChallenge:
+#         entryPoint: web
+      dnsChallenge:
+        provider: cloudflare
+        disablePropagationCheck: true
+        delayBeforeCheck: 60
+        resolvers:
+          - "1.1.1.1:53"
+          - "8.8.8.8:53"
+
+#log:
+#  level: DEBUG # [DEBUG, INFO, WARNING, ERROR, CRITICAL]
+#  format: common # [common, json, logfmt]
+#  #filePath: /var/log/traefik/traefik.log
+#  filePath: /logs/traefik.log
+
+#accesslog:
+#  format: common # [common, json, logfmt]
+#  #filePath: /var/log/traefik/access.log
+#  filePath: /logs/access.log

@@ -1,0 +1,20 @@
+#https://github.com/jlesage/docker-firefox?tab=readme-ov-file#quick-start
+services:
+  firefox:
+    image: jlesage/firefox
+    container_name: firefox
+    restart: unless-stopped
+    volumes:
+      - ./config:/config:rw
+    networks:
+      - traefik
+    labels:
+      - traefik.enable=true
+      - traefik.docker.network=traefik
+      - traefik.http.routers.firefox.rule=Host(`firefox.internal.earles.io`)
+      - traefik.http.routers.firefox.entrypoints=websecure
+      - traefik.http.routers.firefox.tls.certresolver=production
+
+networks:
+  traefik:
+    external: true

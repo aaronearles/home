@@ -1,0 +1,23 @@
+services:
+  squid:
+    image: ubuntu/squid
+    container_name: squid
+    restart: unless-stopped
+    environment:
+      - TZ=America/Denver
+    networks:
+      - traefik
+#    volumes:
+#      - ./logs:/var/log/squid
+#      - ./data:/var/spool/squid
+#      - ./config/squid.conf:/etc/squid/squid.conf
+#      - ./config/snippet.conf:/etc/squid/conf.d/snippet.conf
+    labels:
+      - traefik.enable=true
+      - traefik.docker.network=traefik
+      - traefik.tcp.routers.squid.entrypoints=squid
+      - traefik.tcp.routers.squid.rule=ClientIP(`172.16.0.0/12`)
+      # - traefik.tcp.services.squid.loadbalancer.server.port=3128 # Caused errors "unable to find the IP address for the container"
+networks:
+  traefik:
+    external: true
