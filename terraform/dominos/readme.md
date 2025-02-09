@@ -1,0 +1,1 @@
+https://registry.terraform.io/providers/MNThomson/dominos/latest/docs
