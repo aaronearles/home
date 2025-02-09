@@ -1,0 +1,8 @@
+- hosts: rhel
+
+  become: yes
+  tasks:
+
+  - name: Execute the command in remote shell; stdout goes to the specified file on the remote
+    #https://docs.ansible.com/ansible/latest/collections/ansible/builtin/shell_module.html
+    ansible.builtin.shell: systemctl enable --now cockpit.socket

@@ -1,0 +1,19 @@
+services:
+  it-tools:
+    image: corentinth/it-tools:latest
+    container_name: it-tools
+    restart: unless-stopped
+    # ports:
+      # - "8080:80"
+    networks:
+      - traefik
+    labels:
+      - traefik.enable=true
+      - traefik.docker.network=traefik
+      - traefik.http.routers.it-tools.rule=Host(`it-tools.internal.earles.io`)
+      - traefik.http.routers.it-tools.entrypoints=websecure
+      - traefik.http.routers.it-tools.tls.certresolver=production
+
+networks:
+  traefik:
+    external: true

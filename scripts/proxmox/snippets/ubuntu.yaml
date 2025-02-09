@@ -1,0 +1,25 @@
+#cloud-config
+ssh_pwauth: true
+disable_root: true
+chpasswd:
+  list: |
+    root:password
+  expire: false
+
+write_files:
+  - path: /etc/sudoers.d/cloud-init
+    content: |
+      Defaults !requiretty
+
+package_update: true
+package_upgrade: true
+packages:
+  - qemu-guest-agent
+
+runcmd:
+  # - sed -i 's/^#PermitRootLogin.*/PermitRootLogin yes/' /etc/ssh/sshd_config
+  # - sed -i -e 's/^GSSAPIAuthentication yes/GSSAPIAuthentication no/g' /etc/ssh/sshd_config
+  # - sed -i -e 's/^PasswordAuthentication no/PasswordAuthentication yes/g' /etc/ssh/sshd_config
+  # - systemctl restart sshd
+  - systemctl enable qemu-guest-agent
+  - systemctl start qemu-guest-agent

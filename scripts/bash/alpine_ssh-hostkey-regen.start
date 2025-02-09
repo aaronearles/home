@@ -1,0 +1,7 @@
+#!/bin/sh
+# Place this file at '/etc/local.d/ssh-hostkey-regen.start'
+# Host keys will be regenerated at next boot.
+
+rm -f -v /etc/ssh/ssh_host_*_key*
+ssh-keygen -A -v
+rm -f /etc/local.d/ssh-hostkey-regen.start

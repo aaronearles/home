@@ -1,0 +1,78 @@
+$env:VAULT_ADDR="https://vault.internal.earles.io"
+VAULT_ADDR="https://vault.internal.earles.io"
+
+vault operator unseal <key1> (keys are stored in VaultWarden)
+vault operator unseal <key2>
+vault operator unseal <key3>
+
+vault kv get kv-v1/test
+==== Data ====
+Key     Value
+---     -----
+this    s3cret
+
+vault kv get -format json kv-v1/test | jq -r .data.this
+
+
+https://developer.hashicorp.com/vault/docs/commands
+
+
+https://medium.com/@jagunathan22/hashicorp-vault-cheatsheet-8f13dc6a95a9
+Most commonly used Vault commands (Cheatsheet): Please note that few of the below commands will have “-tls-skip-verify”, which is required for executing Vault Cli commands in servers which is enabled with TLS.
+
+Set up environment variables, VAULT_ADDR=https://<IP address of machine>:8200.
+
+vault status (Displays the details about your Vault cluster).
+
+Key Value
+— — — — -
+Seal Type shamir
+Initialized true
+Sealed false
+Total Shares 5
+Threshold 3
+Version 1.0.3
+Cluster Name vault-cluster-XXXXXXX
+Cluster ID XXXXXXX-XXXXXXX-XXXXXXX–XXXXXXX
+HA Enabled true
+HA Cluster https://127.0.0.1:8201
+HA Mode active
+
+vault status -tls-skip-verify (If Vault is enabled with ‘https’ i.e., TLS certificate
+
+To initialize a vault use “vault operator init” (Depending on the seal type configured in the Vault config file, i.e., shamir (default), Auto & Transit) you will get relevant output for this command
+
+vault operator init -key-shares=3 -key-threshold=2. This command will initialize Vault server with 3 unseal keys out of which 2 should be used to unseal the vault. And Command for unseal is “vault operator unseal <unseal key
+Vault login (Command to login into Vault using root token, which is the default option
+
+    //Vault login command will create a ~/.vault-token file permenantly storing the token provided for future use.
+    //Alternatively "$env:VAULT_TOKEN = "<Vault Root Token>"
+    //Alternatively you could create ~/.vault-token manually.
+
+    //Once a login method of "userpass" is configured, and a user created, you can login with "vault login -method=userpass username=<username>"
+    //You can also configure login methods of various SSO scenarios or LDAP,RADIUS
+
+vault login -method=userpass username=my-username (Provide the password when prompte
+vault login -method=github -path=github-prod (Provide the token when prompte
+vault auth list -tls-skip-verify (This command lists the various auth methods enabled in the vault server/cluste
+vault token renew <Token> (Renew a toke
+vault policy list -tls-skip-verify (To list all policies created in the existing vault cluste
+vault policy read -tls-skip-verify <policy_name> (To show the details of policy create
+vault token create -policy=<existing_policy_name> -tls-skip-verify (To create a new token with permission assigned as in the policy associate
+vault policy write -tls-skip-verify <policy_name> <policy-file.hcl> (To create a new policy with required capabilities against required secret path
+vault write -tls-skip-verify auth/github/map/teams/<github_team_name> value=<policy_name> (To Map the users/teams of that GitHub organization to policies in Vault
+vault kv get <Path to the secret> (to print the key/value details stored in the given path. Please note that unless you have got right permission to the given secret path, vault wont output the detail
+vault kv get -tls-skip-verify — field=value secret/test/test (to print the value of the mentioned key alone in the mentioned key pat
+vault kv put secret/test/test key=value (to add a new kv pair in the existing pat
+vault kv enable-versioning <Path to the secret> (to enable versioning of the K=V stored in the given pat
+vault kv put <Path to the secret> same_key=new_vaule (This is to add a new value for the existing key and validate the versioning status by executing the next comman
+vault kv get -version=<version_number> <Path to the secre
+vault auth enable userpass (To enable userpass as the authentication metho
+vault auth enable kubernetes (To enable K8s as the authentication metho
+vault write auth/kubernetes/login role=demo jwt=… (The default path is /kubernetes. If this auth method was enabled at a different path, specify -path=/my-path in the CLI
+vault kv delete secret/creds (To Delete the latest version of the key “creds
+vault kv delete -versions=2 secret/creds (To [K/V Version 2] Delete version 2 of key “creds
+vault audit list (To List all audit devices enabled in your vault serve
+vault audit enable file file_path=/tmp/my-file.txt (To Enable the audit device “file” enabled at “file/
+vault secrets enable <aws/azure/mongodbatlas/gcp> (Mention the required secret engines which are supported by the vault version used by you and mention the path, if you need a customized path instead of the defaul
+vault secrets enable database (Depending one the type of databases used, the configuration steps will change. Refer https://www.vaultproject.io/docs/secrets/databases)

@@ -1,27 +1,46 @@
 services:
 
   open-webui:
-    image: ghcr.io/open-webui/open-webui:latest
+#    image: ghcr.io/open-webui/open-webui:0.4.8
+    image: ghcr.io/open-webui/open-webui:${WEBUI_DOCKER_TAG-main}
     container_name: openwebui
     restart: unless-stopped
     env_file:
       - .env
     environment:
-      - OPENAI_API_BASE_URL=${OPENAI_API_BASE_URL}
-      - OPENAI_API_KEY=${OPENAI_API_KEY}
+      - OPENAI_API_BASE_URLS=${OPENAI_API_BASE_URLS}
+      - OPENAI_API_KEYS=${OPENAI_API_KEYS}
+#      - 'OLLAMA_BASE_URL=http://ollama:11434'
     volumes:
       - /etc/localtime:/etc/localtime:ro
       - /etc/timezone:/etc/timezone:ro
       - ./open-webui:/app/backend/data
+#    ports:
+#      - 8000:8080
     labels:
       - traefik.enable=true
       - traefik.docker.network=traefik
       - traefik.http.routers.openwebui.rule=Host(`openwebui.internal.earles.io`)
       - traefik.http.routers.openwebui.entrypoints=websecure
       - traefik.http.routers.openwebui.tls.certresolver=production
+#      - traefik.http.services.openwebui.loadbalancer.server.port=8080
     networks:
       - traefik
+#      - backend
 
-networks:
-  traefik:
-    external: true
+#  ollama:
+#    image: ollama/ollama:latest
+#    container_name: ollama
+#    restart: unless-stopped
+#    environment:
+#      - PUID=${PUID:-1000}
+#      - PGID=${PGID:-1000}
+#      - OLLAMA_KEEP_ALIVE=24h
+#    networks:
+#      - backend
+#    volumes:
+#      - /etc/localtime:/etc/localtime:ro
+#      - /etc/timezone:/etc/timezone:ro
+#      - ./ollama:/root/.ollama
+
+                                    

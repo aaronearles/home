@@ -1,0 +1,32 @@
+---
+- name: Install Hugo and prereqs
+  hosts: all
+  become: yes
+  tasks:
+    - name: Update apt cache
+      apt:
+        update_cache: yes
+
+    - name: Install required packages for Hugo
+      apt:
+        name: 
+          - curl
+          - git
+          - golang-go
+          - npm
+          # - hugo #apt version 0.92, replaced with snap below
+
+    - name: Install "sass" node.js package.
+      community.general.npm:
+        name: sass
+        global: true
+        # path: /app/location
+
+    - name: Install Hugo (Snap)
+      community.general.snap:
+        name: hugo
+        channel: latest/stable
+        # Throws deprecation warning below:
+        # [DEPRECATION WARNING]: The CmdMixin used in classes CmdModuleHelper and CmdStateModuleHelper is being deprecated. Modules should use
+        #community.general.plugins.module_utils.cmd_runner.CmdRunner instead. This feature will be removed from community.general in version 8.0.0. Deprecation warnings can be disabled by setting
+        #deprecation_warnings=False in ansible.cfg.

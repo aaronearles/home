@@ -1,0 +1,14 @@
+##### DESTROY A VM #####
+vmid=xxx
+qm destroy $vmid -skiplock -purge
+
+##### CREATE A VM #####
+# Creates a new Ubuntu Tiny VM
+vmid=xxx && vmname=yyy
+sudo qm create $vmid --cdrom local:iso/ubuntu-22.04-live-server-amd64.iso \
+  --name $vmname --numa 0 --ostype l26 \ # <l24 | l26 | other | solaris | w2k | w2k3 | w2k8 | win10 | win11 | win7 | win8 | wvista | wxp>
+  --cpu cputype=host --cores 1 --sockets 1 \
+  --memory 2048  \
+  --net0 bridge=vmbr0,virtio \
+  --bootdisk scsi0 --scsihw virtio-scsi-pci --scsi0 file=local-lvm:32 \
+  --serial0 socket

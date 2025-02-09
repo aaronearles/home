@@ -20,12 +20,11 @@ services:
       - backend
     volumes:
       - './data:/var/spool/postfix'
-    # ports:
-    #   - 25:25
     labels:
       - traefik.enable=true
       - traefik.docker.network=traefik
       - traefik.tcp.routers.smtp.entrypoints=smtp
+      # - traefik.tcp.routers.smtp.rule=HostSNI(`*`) #SNI is an extension of TLS and only available to TLS connections; only wildcard is acceptable for plaintext SMTP/25. https://doc.traefik.io/traefik/routing/routers/#hostsni-and-hostsniregexp
       - traefik.tcp.routers.smtp.rule=ClientIP(`172.16.0.0/12`)
       - traefik.tcp.services.smtp.loadbalancer.server.port=25
 networks:

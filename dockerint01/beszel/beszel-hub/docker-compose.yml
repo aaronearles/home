@@ -1,0 +1,22 @@
+services:
+
+  beszel:
+    image: henrygd/beszel
+    container_name: beszel
+    restart: unless-stopped
+    volumes:
+      - ./data:/beszel_data
+    # ports:
+    #   - 8090:8090
+    networks:
+      - traefik
+    labels:
+      - traefik.enable=true
+      - traefik.docker.network=traefik
+      - traefik.http.routers.beszel.rule=Host(`beszel.internal.earles.io`)
+      - traefik.http.routers.beszel.entrypoints=websecure
+      - traefik.http.routers.beszel.tls.certresolver=production
+
+networks:
+  traefik:
+    external: true

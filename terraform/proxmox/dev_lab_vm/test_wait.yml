@@ -1,0 +1,29 @@
+---
+- name: Test wait for SSH and proceed to apt upgrade
+  hosts: all
+  gather_facts: false
+  become: yes
+  tasks:
+    - name: Wait 300 seconds for port 22 to become open and contain "OpenSSH"
+      ansible.builtin.wait_for:
+        port: 22
+        host: '{{ (ansible_ssh_host|default(ansible_host))|default(inventory_hostname) }}'
+        search_regex: OpenSSH
+        delay: 10
+      connection: local
+
+    - name: Update and upgrade apt packages
+      apt:
+        upgrade: yes
+        update_cache: yes
+        cache_valid_time: 86400 #One day
+
+    - name: install core packages
+      apt:
+        name:
+          - net-tools
+          - tmux
+          - nfs-common
+          
+        update_cache: yes
+        cache_valid_time: 86400 #One day

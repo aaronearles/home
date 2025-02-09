@@ -9,12 +9,12 @@ services:
       - TZ=US/Denver
     volumes:
       - ./config:/config
+    # ports:
+    #   - 8123:8123 #optional
     # devices:
     #   - /path/to/device:/path/to/device #optional
     networks:
       - traefik
-    # ports:
-    #   - 8123:8123 #optional
     labels:
       - traefik.enable=true
       - traefik.docker.network=traefik

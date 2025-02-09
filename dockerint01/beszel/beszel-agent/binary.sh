@@ -1,0 +1,2 @@
+#!/bin/bash
+curl -sL https://raw.githubusercontent.com/henrygd/beszel/main/supplemental/scripts/install-agent.sh -o install-agent.sh && chmod +x install-agent.sh && ./install-agent.sh -p 45876 -k "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIOwdX4dSCy1+ausEBfQ66M6ZNu9PYkEF4yQCKw5GW7lo"

@@ -1,0 +1,57 @@
+services:
+  synapse:
+    container_name: synapse
+    image: docker.io/matrixdotorg/synapse:latest
+    restart: unless-stopped
+    environment:
+    # config file location - be sure to create one first!
+    # https://github.com/matrix-org/synapse/tree/develop/docker#generating-a-configuration-file
+      - SYNAPSE_CONFIG_PATH=/data/homeserver.yaml
+      - UID=1000
+      - GID=1000
+    volumes:
+      - ./data:/data
+      # .. or you may split this between different storage points
+      # - ./files:/data
+      # - /path/to/ssd:/data/uploads
+      # - /path/to/large_hdd:/data/media
+    # depends_on:
+    #   - synapse-db
+    networks:
+      - traefik
+    # ports:
+    # - 8448:8448/tcp
+    # - 8008:8008/tcp
+    labels:
+      - traefik.enable=true
+      - traefik.docker.network=traefik
+      - traefik.http.routers.synapse.rule=Host(`synapse.internal.earles.io`)
+      - traefik.http.routers.synapse.entrypoints=websecure
+      - traefik.http.routers.synapse.tls
+      - traefik.http.routers.synapse.service=synapse
+      - traefik.http.services.synapse.loadbalancer.server.port=8008
+
+  # synapse-db:
+  #   image: docker.io/postgres:15-alpine
+  #   container_name: synapse-db
+  #   restart: unless-stopped
+  #   # Change password below, of course!
+  #   environment:
+  #     - POSTGRES_USER=synapse_user
+  #     - POSTGRES_PASSWORD=2ooUydmnkMgUcSpCTX5drkxL
+  #     - POSTGRES_DB=synapse
+  #     # ensure the database gets created correctly
+  #     # https://github.com/matrix-org/synapse/blob/master/docs/postgres.md#set-up-database
+  #     - POSTGRES_INITDB_ARGS=--encoding=UTF-8 --lc-collate=C --lc-ctype=C
+  #   volumes:
+  #     # You may store the database tables in a local folder..
+  #     - ./synapse-db_data:/var/lib/postgresql/data
+  #     # .. or store them on some high performance storage for better results
+  #     # - /path/to/ssd/storage:/var/lib/postgresql/data
+  #   ports:
+  #     - 5432:5432
+  #   networks:
+  #      synapse:
+
+networks:
+  traefik:

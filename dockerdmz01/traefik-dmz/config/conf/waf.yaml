@@ -1,0 +1,16 @@
+# http:
+#   middlewares:
+#     waf:
+#       plugin:
+#         coraza:
+#           directives:
+#             - SecRuleEngine On 
+#             - Include @recommended-conf
+#             - Include @crs-setup-conf
+#             - Include @owasp_crs/*.conf
+#             # - SecRuleUpdateTargetById 932130 "REQUEST_HEADERS"
+#             # - SecRule REQUEST_URI "@streq /admin" "id:101,phase:1,log,deny,status:403" # Used for string testing
+#             # - SecDebugLog /dev/stdout
+#             # - SecDebugLogLevel 9
+# https://coraza.io/docs/tutorials/coreruleset/
+# https://github.com/coreruleset/coreruleset

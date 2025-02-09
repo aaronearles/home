@@ -1,0 +1,60 @@
+services:
+
+  ollama:
+    image: ollama/ollama:rocm
+    container_name: ollama
+    restart: unless-stopped
+    environment:
+      - PUID=${PUID:-1000}
+      - PGID=${PGID:-1000}
+      - OLLAMA_KEEP_ALIVE=24h
+      - HSA_OVERRIDE_GFX_VERSION=9.0.0
+      - HSA_ENABLE_SDMA=0
+      - ENABLE_IMAGE_GENERATION=False
+      # - ENABLE_IMAGE_GENERATION=True
+      # - COMFYUI_BASE_URL=http://stable-diffusion-webui:7860
+    networks:
+      - ai-stack
+    volumes:
+      - /etc/localtime:/etc/localtime:ro
+      - /etc/timezone:/etc/timezone:ro
+      - ./ollama:/root/.ollama
+    ports:
+      - "11434:11434"
+    # deploy:
+    #   resources:
+    #     reservations:
+    #       devices:
+    #         - driver: amd
+    #           count: 1
+    #           capabilities: [gpu]
+
+  # open-webui:
+  #   image: ghcr.io/open-webui/open-webui:latest
+  #   container_name: open-webui
+  #   restart: unless-stopped
+  #   networks:
+  #     - ai-stack
+  #   environment:
+  #     - PUID=${PUID:-1000}
+  #     - PGID=${PGID:-1000}
+  #     - 'OLLAMA_BASE_URL=http://ollama:11434'
+  #     - ENABLE_RAG_WEB_SEARCH=False
+  #     # - RAG_WEB_SEARCH_ENGINE=searxng
+  #     # - RAG_WEB_SEARCH_RESULT_COUNT=3
+  #     # - RAG_WEB_SEARCH_CONCURRENT_REQUESTS=10
+  #     # - SEARXNG_QUERY_URL=http://searxng:8080/search?q=<query>
+  #   volumes:
+  #     - /etc/localtime:/etc/localtime:ro
+  #     - /etc/timezone:/etc/timezone:ro
+  #     - ./open-webui:/app/backend/data
+  #   depends_on:
+  #     - ollama
+  #   extra_hosts:
+  #     - host.docker.internal:host-gateway
+  #   ports:
+  #     - "8082:8080"
+
+networks:
+  ai-stack:
+    external: true

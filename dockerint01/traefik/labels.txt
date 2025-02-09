@@ -16,6 +16,8 @@
       - traefik.http.services.vault.loadbalancer.server.port=8200
       - traefik.http.services.vault.loadbalancer.server.scheme=https
 
+      - traefik.http.services.jekyll.loadbalancer.passHostHeader=false
+
 
 networks:
   traefik:

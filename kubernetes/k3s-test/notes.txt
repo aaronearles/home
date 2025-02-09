@@ -1,0 +1,19 @@
+k3s-test-601,602,603 are currently running and joined per quickstart, deployed from '../../terraform/proxmox/k3s_cluster' (a clone of vm_cluster)
+
+TODO: K3S WORKSPACES, switch to rhel? and Ansible Register RHEL! Wanted to do this to help Eddie w/ RHEL images/clones
+
+https://docs.k3s.io/quick-start
+
+IMPORTANT -- EACH NODE MUST HAVE UNIQUE HOSTNAME 
+If your machines do not have unique hostnames, pass the K3S_NODE_NAME environment variable and provide a value with a valid and unique hostname for each node.
+
+control node:
+curl -sfL https://get.k3s.io | sh -
+sudo cat /var/lib/rancher/k3s/server/node-token
+
+agent/worker nodes:
+NODE_TOKEN=abc123 #/var/lib/rancher/k3s/server/node-token
+curl -sfL https://get.k3s.io | K3S_URL=https://k3s-node0.earles.internal:6443 K3S_TOKEN=${NODE_TOKEN} sh -
+
+
+Need to review: https://technotim.live/posts/k3s-etcd-ansible/

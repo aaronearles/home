@@ -1,0 +1,10 @@
+ansible-inventory -i inventory.ini --list
+ansible hosts -m ping -i inventory.ini
+ansible-playbook -i inventory.ini playbook/apt-setup.yml
+ansible-playbook -i inventory.ini playbook/apt-setup.yml -u root
+ansible-playbook -i "172.20.100.57," playbook/apt-setup.yml
+
+ansible-doc -t inventory -l to see the list of available plugins
+ansible-doc -t inventory <plugin name> (ie. "ansible-doc -t inventory azure.azcollection.azure_rm" )
+
+aearles@util:~/home/terraform/linode/hugo$ ansible-playbook -i ~/home/ansible/inventory/terraform.yml ~/home/ansible/playbook/install-hugo.yml -u root --private-key ~/.ssh/id_linode

@@ -17,9 +17,9 @@ secret.auto.tfvars
 secrets.auto.tfvars
 secret.tfvars
 secrets.tfvars
-# *.tfvars
-# *.tfvars.json
-# !sample.tfvars
+*.tfvars
+*.tfvars.json
+!sample.tfvars
 
 # Ignore override files as they are usually used to override resources locally and so
 # are not checked in
@@ -43,3 +43,5 @@ terraform.rc
 
 # Ignore .env files which contain docker secrets
 *.env
+
+*.conf

@@ -1,0 +1,37 @@
+default-endpoint: &defaults
+  interval: 60s
+  client:
+    insecure: true
+    timeout: 30s
+  conditions:
+    - "[CONNECTED] == true"
+  alerts:
+    - type: ntfy
+
+endpoints:
+
+  - name: Thermostat
+    group: Home
+    url: icmp://thermostat.earles.internal
+    conditions:
+      - "[CONNECTED] == true"
+
+  # - name: DMZ_Reverse_Proxy
+  #   group: Infrastructure
+  #   <<: *defaults
+  #   url: "http://dmz.earles.internal:81/"
+
+  # - name: Self
+  #   group: Infrastructure
+  #   <<: *defaults
+  #   url: http://docker.earles.internal:8080
+
+  - name: EarlesGoneWild External
+    group: Public
+    <<: *defaults
+    url: https://earlesgonewild.blog
+
+  # - name: EarlesGoneWild Internal
+  #   group: Public
+  #   <<: *defaults
+  #   url: http://earlesgonewild.earles.internal

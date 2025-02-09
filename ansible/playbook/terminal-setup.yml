@@ -1,0 +1,20 @@
+---
+- name: Install Zsh and Oh my zsh
+  hosts: all
+  become: yes
+  tasks:
+    - name: Update apt cache
+      apt:
+        update_cache: yes
+
+    - name: Install required packages for for zsh
+      apt:
+        name: 
+          - curl
+          - git
+          - zsh
+          - powerline
+          - fonts-powerline
+
+    - name: Install Oh my Zsh
+      ansible.builtin.shell: sh -c "$(curl -fsSL https://raw.githubusercontent.com/ohmyzsh/ohmyzsh/master/tools/install.sh)" "" --unattended

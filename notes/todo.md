@@ -1,0 +1,16 @@
+- [X] Create gha-runner lxc in pve (or rPi... or both?)
+- [ ] Replace dmz (vm) with docker-dmz (lxc) and automate from ground up w/ GHA
+    - [X] Standardize on ubuntu 24.04 vs debian 12? or Rocky/RHEL? (podman)
+        - Proceeding w/ Debian12 and Docker.
+    - [X] Create lxc via pve
+        - [X] Install docker/podman & cockpit
+        - [X] Deploy containers
+            - [X] Cloudflared using secrets
+    - [ ] Need to figure out podman and decide whether to replace docker
+- [ ] Replace docker with docker/podman-internal ?
+- [ ] New Labs:
+    - [X] k3s/microk8s
+    - [ ] ceph/microceph
+    - [ ] lxd
+- [X] Jellyfin GPU transcoding
+    - [X] Reduce iGPU VRAM (2GB to 512MB?)

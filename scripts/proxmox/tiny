@@ -1,0 +1,8 @@
+args="\
+  --cdrom local:iso/ubuntu-22.04-live-server-amd64.iso --ostype l26 \
+  --cpu cputype=host --cores 1 --sockets 1 --numa 0 \
+  --memory 2048  \
+  --net0 bridge=vmbr0,virtio \
+  --bootdisk scsi0 --scsihw virtio-scsi-pci --scsi0 file=local-lvm:32 \
+  --serial0 socket
+"

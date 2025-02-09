@@ -1,0 +1,62 @@
+{
+    "global": {
+        "Region": "global",
+        "RegionName": "Global External HTTPS Load Balancer",
+        "URL": "https://global.gcping.com"
+    },
+    "northamerica-northeast1": {
+        "Region": "northamerica-northeast1",
+        "RegionName": "Montréal",
+        "URL": "https://northamerica-northeast1-5tkroniexa-nn.a.run.app"
+    },
+    "northamerica-northeast2": {
+        "Region": "northamerica-northeast2",
+        "RegionName": "Toronto",
+        "URL": "https://northamerica-northeast2-5tkroniexa-pd.a.run.app"
+    },
+    "us-central1": {
+        "Region": "us-central1",
+        "RegionName": "Iowa",
+        "URL": "https://us-central1-5tkroniexa-uc.a.run.app"
+    },
+    "us-east1": {
+        "Region": "us-east1",
+        "RegionName": "South Carolina",
+        "URL": "https://us-east1-5tkroniexa-ue.a.run.app"
+    },
+    "us-east4": {
+        "Region": "us-east4",
+        "RegionName": "North Virginia",
+        "URL": "https://us-east4-5tkroniexa-uk.a.run.app"
+    },
+    "us-east5": {
+        "Region": "us-east5",
+        "RegionName": "Columbus",
+        "URL": "https://us-east5-5tkroniexa-ul.a.run.app"
+    },
+    "us-south1": {
+        "Region": "us-south1",
+        "RegionName": "Dallas",
+        "URL": "https://us-south1-5tkroniexa-vp.a.run.app"
+    },
+    "us-west1": {
+        "Region": "us-west1",
+        "RegionName": "Oregon",
+        "URL": "https://us-west1-5tkroniexa-uw.a.run.app"
+    },
+    "us-west2": {
+        "Region": "us-west2",
+        "RegionName": "Los Angeles",
+        "URL": "https://us-west2-5tkroniexa-wl.a.run.app"
+    },
+    "us-west3": {
+        "Region": "us-west3",
+        "RegionName": "Salt Lake City",
+        "URL": "https://us-west3-5tkroniexa-wm.a.run.app"
+    },
+    "us-west4": {
+        "Region": "us-west4",
+        "RegionName": "Las Vegas",
+        "URL": "https://us-west4-5tkroniexa-wn.a.run.app"
+    }
+}

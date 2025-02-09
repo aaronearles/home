@@ -68,6 +68,13 @@ certificatesResolvers:
           - "1.1.1.1:53"
           - "8.8.8.8:53"
 
+  authSources:
+    oidcSource:
+      oidc:
+        issuer: https://pocket.lab.earles.io
+        clientID: 39721abe-4e64-4aea-a88f-db1df289cb3f
+        clientSecret: c9v7AXUPhalhzEuhWuZiTt3b0l8LrcVg
+
 # log:
 #  level: ERROR # [DEBUG, INFO, WARNING, ERROR, CRITICAL]
 #  format: common # [common, json, logfmt]

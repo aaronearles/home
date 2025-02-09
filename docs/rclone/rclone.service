@@ -1,0 +1,11 @@
+[Unit]
+Description=Rclone Mount Service
+After=network.target
+
+[Service]
+User=root
+ExecStart=/usr/bin/rclone mount b2:/ /mnt/b2 --allow-other --vfs-cache-mode full
+Restart=always
+
+[Install]
+WantedBy=multi-user.target

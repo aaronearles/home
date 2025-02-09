@@ -1,0 +1,21 @@
+services:
+  node-red:
+    image: nodered/node-red
+    container_name: node-red
+    restart: unless-stopped
+    # ports:
+    #   - 1880:1880
+    networks:
+      - traefik
+    volumes:
+      - ./data:/data
+    labels:
+      - traefik.enable=true
+      - traefik.docker.network=traefik
+      - traefik.http.routers.nodered.rule=Host(`nodered.internal.earles.io`)
+      - traefik.http.routers.nodered.entrypoints=websecure
+      - traefik.http.routers.nodered.tls.certresolver=production
+
+networks:
+  traefik:
+    external: true

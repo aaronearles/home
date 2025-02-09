@@ -1,0 +1,13 @@
+version: '3'
+services:
+  nginx-proxy-test-2:
+    image: nginx:latest
+    container_name: nginx-proxy-test-2
+    ports:
+      # - 8086:80
+      - 5443:443
+    volumes:
+      - ./config/nginx_https.conf:/etc/nginx/nginx.conf:ro
+      # - ./config/proxy.conf:/etc/nginx/conf.d/include/proxy.conf:ro #TESTING
+      - ./data/custom_ssl:/data/custom_ssl
+      # - ./data/server_cache:/server_cache:rw

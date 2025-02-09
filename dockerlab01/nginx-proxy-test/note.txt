@@ -1,0 +1,1 @@
+This one is modeled after NPM using includes and separate directory with individual .conf files for each proxy host. All of the config is still on `docker` for now.

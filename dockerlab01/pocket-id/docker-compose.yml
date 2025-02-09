@@ -1,0 +1,27 @@
+services:
+  pocket-id:
+    image: stonith404/pocket-id  # or ghcr.io/stonith404/pocket-id
+    restart: unless-stopped
+    env_file: .env
+#    ports:
+#      - 3000:80
+    volumes:
+      - "./data:/app/backend/data"
+    # Optional healthcheck
+    healthcheck:
+      test: "curl -f http://localhost/health"
+      interval: 1m30s
+      timeout: 5s
+      retries: 2
+      start_period: 10s
+    networks:
+      - traefik
+    labels:
+      - traefik.enable=true
+      - traefik.docker.network=traefik
+      - traefik.http.routers.pocket.rule=Host(`pocket.lab.earles.io`)
+      - traefik.http.routers.pocket.entrypoints=websecure
+      - traefik.http.routers.pocket.tls.certresolver=production
+networks:
+  traefik:
+    external: true

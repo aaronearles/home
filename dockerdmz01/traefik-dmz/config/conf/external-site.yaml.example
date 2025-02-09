@@ -1,0 +1,16 @@
+http:
+  routers:
+    router-SITE:
+      rule: "Host(`SITE.earles.io`) && PathPrefix(`/`)"
+      service: SITE
+      # priority: 1000
+      entryPoints:
+        - websecure
+      tls:
+        certresolver: production
+
+  services:
+    SITE:
+      loadBalancer:
+        servers:
+          - url: "https://SITE.earles.internal:8443"

@@ -1,0 +1,8 @@
+alerting:
+  ntfy:
+    url:  https://ntfy.sh
+    topic: "aearles_alerts"
+    priority: 5
+    default-alert:
+      failure-threshold: 3
+      send-on-resolved: true

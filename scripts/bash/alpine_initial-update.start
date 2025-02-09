@@ -1,0 +1,5 @@
+#!/bin/sh
+# Place this file at '/etc/local.d/'
+
+apk update && apk upgrade
+rm -f /etc/local.d/initial-update.start

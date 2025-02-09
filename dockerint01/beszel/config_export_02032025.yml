@@ -1,0 +1,59 @@
+# Values for port and users are optional.
+# Defaults are port 45876 and the first created user.
+
+systems:
+    - name: desktop
+      host: desktop.earles.internal
+      port: 45876
+      users:
+        - aaronearles@gmail.com
+    - name: dockerdmz01
+      host: dockerdmz01.earles.internal
+      port: 45876
+      users:
+        - aaronearles@gmail.com
+    - name: dockerint01
+      host: host.docker.internal
+      port: 45876
+      users:
+        - aaronearles@gmail.com
+    - name: dockerlab01
+      host: dockerlab01.earles.internal
+      port: 45876
+      users:
+        - aaronearles@gmail.com
+    - name: k3s-node0
+      host: k3s-node0.earles.internal
+      port: 45876
+      users:
+        - aaronearles@gmail.com
+    - name: k3s-node1
+      host: k3s-node1.earles.internal
+      port: 45876
+      users:
+        - aaronearles@gmail.com
+    - name: k3s-node2
+      host: k3s-node2.earles.internal
+      port: 45876
+      users:
+        - aaronearles@gmail.com
+    - name: k3s-node3
+      host: k3s-node3.earles.internal
+      port: 45876
+      users:
+        - aaronearles@gmail.com
+    - name: pve
+      host: pve.earles.internal
+      port: 45876
+      users:
+        - aaronearles@gmail.com
+    - name: runner
+      host: runner.earles.internal
+      port: 45876
+      users:
+        - aaronearles@gmail.com
+    - name: unifi
+      host: unifi.earles.internal
+      port: 45876
+      users:
+        - aaronearles@gmail.com

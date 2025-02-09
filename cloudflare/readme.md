@@ -1,3 +1,3 @@
 ## To Do:
 * Terraform for necessary cloudflare configuration
-* Review...
+* Move from */terraform/cloudflare, cleanup, and test

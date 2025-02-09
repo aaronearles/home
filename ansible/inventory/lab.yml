@@ -1,0 +1,21 @@
+lab:
+  hosts:
+    lab-1001:
+      ansible_port: 22
+      ansible_host: 172.20.110.31
+    lab-1002:
+      ansible_port: 22
+      ansible_host: 172.20.110.67
+  
+rhel:
+  hosts:
+    clone-rocky:
+      ansible_port: 22
+      ansible_host: 172.20.100.25
+    clone-rhel:
+      ansible_port: 22
+      ansible_host: 172.20.100.73
+
+    rhel-clone2:
+      ansible_port: 22
+      ansible_host: 172.20.100.60

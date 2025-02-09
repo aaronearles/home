@@ -1,0 +1,8 @@
+- hosts: rhel
+
+  become: yes
+  tasks:
+    - name: Install the latest version of Apache
+      ansible.builtin.yum:
+        name: podman
+        state: latest

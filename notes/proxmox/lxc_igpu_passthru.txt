@@ -1,0 +1,20 @@
+# /etc/pve/lxc/xyz.conf:
+lxc.cgroup2.devices.allow: c 226:* rwm
+dev0: /dev/dri/card0
+dev1: /dev/dri/renderD128
+dev2: /dev/kfd
+
+# Inside LXC:
+sudo apt install vainfo radeontop mesa-va-drivers
+
+
+# lxc.mount.entry: /dev/xyz are no longer needed with devX mapping above
+
+
+# Docker:
+    #Add the following to docker-compose.yml.
+    devices:
+      - /dev/dri/renderD128:/dev/dri/renderD128
+
+
+# Above config is tested with successful transcoding in Jellyfin.

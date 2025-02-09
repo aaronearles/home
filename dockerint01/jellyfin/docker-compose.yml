@@ -3,8 +3,8 @@ services:
     image: jellyfin/jellyfin:latest
     container_name: jellyfin
     restart: unless-stopped
-    ports:
-      - "8096:8096" # Expose Jellyfin for API notifications from external Arr stack.
+    # ports:
+      # - "8096:8096"
     environment:
       - TZ=US/Denver
       - JELLYFIN_PublishedServerUrl=https://jellyfin.internal.earles.io

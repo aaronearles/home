@@ -1,0 +1,10 @@
+Docker provider doesn't seem to support SSH on Windows so you must enable Docker API Remote Access: https://docs.docker.com/config/daemon/remote-access/
+
+$ sudo systemctl edit docker.service
+---
+[Service]
+ExecStart=
+ExecStart=/usr/bin/dockerd -H fd:// -H tcp://0.0.0.0:2375 --containerd=/run/containerd/containerd.sock
+---
+$ sudo systemctl daemon-reload
+$ sudo systemctl restart docker.service

@@ -1,0 +1,2 @@
+this one will use a single consolidated nginx.conf passed as volume. This was modeled after openai-api-proxy which came from:
+https://github.com/gpt4thewin/docker-nginx-openai-api-cache/tree/master

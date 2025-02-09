@@ -1,0 +1,8 @@
+# https://github.com/Smart-IT-Kirkham/easyrsa
+services:
+  easyrsa:
+    build: build
+    volumes:
+      - "${PWD}/vars:/usr/local/bin/vars:ro"
+      - "${PWD}/pki/:/easyrsa/pki/:rw"
+    network_mode: none

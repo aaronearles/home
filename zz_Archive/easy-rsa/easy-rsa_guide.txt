@@ -1,0 +1,28 @@
+https://www.digitalocean.com/community/tutorials/how-to-set-up-and-configure-a-certificate-authority-on-ubuntu-22-04
+
+#EXAMPLE:
+cert=wildcard.lan
+~/easy-rsa/easyrsa gen-req $cert
+~/easy-rsa/easyrsa --days=10950 sign-req server $cert
+mkdir ~/$cert && cp ~/easy-rsa/pki/issued/$cert.crt ~/easy-rsa/pki/private/$cert.key  ~/$cert
+openssl rsa -in ~/$cert/$cert.key -out ~/$cert/${cert}_decrypted.key
+scp -r ~/$cert/ admin@172.20.100.250:/volume1/documents/certs/
+
+#util install notes:
+sudo apt install easy-rsa
+mkdir ~/easy-rsa
+chmod 700 ~/easy-rsa/
+cd ~/easy-rsa
+./easyrsa init-pki
+    "'init-pki' complete; you may now create a CA or requests."
+nano vars (included example in this repo)
+./easyrsa build-ca
+    Set passphrase...
+    CN: util.earles.internal
+
+    "You now have two important files — ~/easy-rsa/pki/ca.crt and ~/easy-rsa/pki/private/ca.key"
+cert=wildcard.pdxsandbox.net
+~/easy-rsa/easyrsa gen-req $cert
+~/easy-rsa/easyrsa --days=10950 sign-req server $cert
+mkdir ~/$cert && cp ~/easy-rsa/pki/issued/$cert.crt ~/easy-rsa/pki/private/$cert.key  ~/$cert
+openssl rsa -in ~/$cert/$cert.key -out ~/$cert/${cert}_decrypted.key

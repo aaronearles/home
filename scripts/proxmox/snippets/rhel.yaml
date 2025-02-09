@@ -1,0 +1,7 @@
+#cloud-config
+runcmd:
+    - yum update
+    - yum install -y qemu-guest-agent
+    - systemctl start qemu-guest-agent
+    - reboot
+# Taken from https://forum.proxmox.com/threads/combining-custom-cloud-init-with-auto-generated.59008/page-3#post-428772

@@ -1,0 +1,9 @@
+version: '3.8'
+services:
+  nginx-base:
+    image: 'nginx:latest'
+    restart: unless-stopped
+    ports:
+      - '8081:80'
+    volumes:
+      - ./data:/data
