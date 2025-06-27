@@ -23,3 +23,9 @@ services:
       - traefik.http.routers.dev.rule=Host(`dev.internal.earles.io`)
       - traefik.http.routers.dev.entrypoints=websecure
       - traefik.http.routers.dev.tls.certresolver=production
+    networks:
+      - traefik
+
+networks:
+  traefik:
+    external: true
