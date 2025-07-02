@@ -1,32 +1,54 @@
 ---
-- name: Install Hugo and prereqs
+- name: Install Hugo and prerequisites
   hosts: all
   become: yes
+  vars:
+    required_packages:
+      - curl
+      - git
+      - golang-go
+      - npm
+      - snapd
+  
   tasks:
-    - name: Update apt cache
+    - name: Update apt cache and install packages
       apt:
+        name: "{{ required_packages }}"
+        state: present
         update_cache: yes
+        cache_valid_time: 3600
+      register: package_install
+      retries: 3
+      delay: 5
+      until: package_install is succeeded
 
-    - name: Install required packages for Hugo
-      apt:
-        name: 
-          - curl
-          - git
-          - golang-go
-          - npm
-          # - hugo #apt version 0.92, replaced with snap below
+    - name: Ensure snapd is started and enabled
+      systemd:
+        name: snapd
+        state: started
+        enabled: yes
 
-    - name: Install "sass" node.js package.
-      community.general.npm:
-        name: sass
-        global: true
-        # path: /app/location
-
-    - name: Install Hugo (Snap)
-      community.general.snap:
+    - name: Install Hugo via snap
+      snap:
         name: hugo
         channel: latest/stable
-        # Throws deprecation warning below:
-        # [DEPRECATION WARNING]: The CmdMixin used in classes CmdModuleHelper and CmdStateModuleHelper is being deprecated. Modules should use
-        #community.general.plugins.module_utils.cmd_runner.CmdRunner instead. This feature will be removed from community.general in version 8.0.0. Deprecation warnings can be disabled by setting
-        #deprecation_warnings=False in ansible.cfg.
+      register: hugo_install
+      retries: 2
+      delay: 10
+      until: hugo_install is succeeded
+
+    - name: Install sass globally via npm
+      npm:
+        name: sass
+        global: yes
+        state: present
+      register: sass_install
+      retries: 2
+      delay: 5
+      until: sass_install is succeeded
+
+    - name: Verify Hugo installation
+      command: hugo version
+      register: hugo_version
+      changed_when: false
+      failed_when: hugo_version.rc != 0
