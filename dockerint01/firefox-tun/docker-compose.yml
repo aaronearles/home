@@ -1,16 +1,10 @@
+# Firefox with VPN tunnel via Gluetun
+# See https://github.com/qdm12/gluetun-wiki/blob/main/setup/connect-a-container-to-gluetun.md#external-container-to-gluetun
 services:
-  gluetun: # See https://github.com/qdm12/gluetun-wiki/blob/main/setup/connect-a-container-to-gluetun.md#external-container-to-gluetun
+  gluetun:
     image: qmcgaw/gluetun:latest
     container_name: firefox2-gluetun
     restart: unless-stopped
-    cap_add:
-      - NET_ADMIN
-    devices:
-      - /dev/net/tun:/dev/net/tun
-    networks:
-      - traefik
-    volumes:
-      - ./gluetun:/gluetun
     environment:
       - VPN_SERVICE_PROVIDER=nordvpn # https://github.com/qdm12/gluetun-wiki/tree/main/setup#setup
       - VPN_TYPE=wireguard
@@ -19,17 +13,24 @@ services:
       - SERVER_COUNTRIES="United States"
       - TZ=US/Denver
       - UPDATER_PERIOD=24h # https://github.com/qdm12/gluetun-wiki/blob/main/setup/servers.md#update-the-vpn-servers-list
+    volumes:
+      - ./gluetun:/gluetun
+    networks:
+      - traefik
+    devices:
+      - /dev/net/tun:/dev/net/tun
+    cap_add:
+      - NET_ADMIN
     labels:
       - traefik.enable=true
       - traefik.docker.network=traefik
-      # firefox2
       - traefik.http.routers.firefox2.rule=Host(`firefox2.internal.earles.io`)
       - traefik.http.routers.firefox2.entrypoints=websecure
       - traefik.http.routers.firefox2.service=firefox2
       - traefik.http.routers.firefox2.tls.certresolver=production
       - traefik.http.services.firefox2.loadbalancer.server.port=5800
 
-  firefox: # See #https://github.com/jlesage/docker-firefox?tab=readme-ov-file#quick-start
+  firefox:
     image: jlesage/firefox
     container_name: firefox2
     restart: unless-stopped
@@ -37,7 +38,7 @@ services:
     volumes:
       - ./config:/config:rw
     depends_on:
-     - gluetun
+      - gluetun
 
 networks:
   traefik:

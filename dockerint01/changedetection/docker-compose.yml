@@ -4,16 +4,16 @@ services:
     container_name: changedetection
     hostname: changedetection
     restart: unless-stopped
-    volumes:
-      - ./data:/datastore
     environment:
       - PLAYWRIGHT_DRIVER_URL=ws://playwright-chrome:3000
+    volumes:
+      - ./data:/datastore
     networks:
       - traefik
       - backend
     depends_on:
       playwright-chrome:
-            condition: service_started
+        condition: service_started
     labels:
       - traefik.enable=true
       - traefik.docker.network=traefik
@@ -26,9 +26,6 @@ services:
     container_name: changedetection-playwright
     hostname: playwright-chrome
     restart: unless-stopped
-    #  cap_add:
-    #      - SYS_ADMIN
-# SYS_ADMIN might be too much, but it can be needed on your platform https://github.com/puppeteer/puppeteer/blob/main/docs/troubleshooting.md#running-puppeteer-on-gitlabci
     environment:
       - SCREEN_WIDTH=1920
       - SCREEN_HEIGHT=1024
@@ -36,7 +33,11 @@ services:
       - MAX_CONCURRENT_CHROME_PROCESSES=10
     networks:
       - backend
+    # cap_add:
+    #   - SYS_ADMIN
+    # SYS_ADMIN might be too much, but it can be needed on your platform https://github.com/puppeteer/puppeteer/blob/main/docs/troubleshooting.md#running-puppeteer-on-gitlabci
 networks:
   traefik:
     external: true
   backend:
+    external: false

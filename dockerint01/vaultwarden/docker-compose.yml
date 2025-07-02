@@ -7,34 +7,34 @@ services:
       - .env
     volumes:
       - ./data:/data
+    networks:
+      - traefik
     labels:
       - traefik.enable=true
       - traefik.http.routers.vaultwarden.rule=Host(`vaultwarden.internal.earles.io`)
       - traefik.http.routers.vaultwarden.entrypoints=websecure
       - traefik.http.routers.vaultwarden.tls.certresolver=production
-    networks:
-      - traefik
 
   vaultwarden-backup:
     image: bruceforce/vaultwarden-backup
     container_name: vaultwarden-backup
     restart: unless-stopped
     init: true
-    depends_on:
-      - vaultwarden
-    volumes:
-      - ./data:/data/
-      - ./backup:/backup/
-      # - /etc/timezone:/etc/timezone:ro
-      # - /etc/localtime:/etc/localtime:ro
     environment:
-      # - DB_FILE=/data/db.sqlite3
       - BACKUP_DIR=/backup/
       - CRON_TIME=0 5 * * * # EVERY DAY 5am
       - TIMESTAMP=true
       - DELETE_AFTER=30
       - UID=1000
       - GID=1000
+      # - DB_FILE=/data/db.sqlite3
+    volumes:
+      - ./data:/data/
+      - ./backup:/backup/
+      # - /etc/timezone:/etc/timezone:ro
+      # - /etc/localtime:/etc/localtime:ro
+    depends_on:
+      - vaultwarden
 
 networks:
   traefik:

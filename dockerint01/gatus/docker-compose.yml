@@ -1,8 +1,13 @@
 services:
   gatus:
-    container_name: gatus
     image: twinproduction/gatus:latest
+    container_name: gatus
     restart: unless-stopped
+    environment:
+      - GATUS_CONFIG_PATH=/config/
+    volumes:
+      - ./config:/config/
+      - ./data:/data/
     # ports:
     #   - 8080:8080
     networks:
@@ -13,11 +18,6 @@ services:
       - traefik.http.routers.gatus.rule=Host(`gatus.internal.earles.io`)
       - traefik.http.routers.gatus.entrypoints=websecure
       - traefik.http.routers.gatus.tls.certresolver=production
-    volumes:
-      - ./config:/config/
-      - ./data:/data/
-    environment:
-      - GATUS_CONFIG_PATH=/config/
 networks:
   traefik:
     external: true

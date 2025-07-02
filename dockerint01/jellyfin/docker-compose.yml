@@ -3,8 +3,6 @@ services:
     image: jellyfin/jellyfin:latest
     container_name: jellyfin
     restart: unless-stopped
-    # ports:
-      # - "8096:8096"
     environment:
       - TZ=US/Denver
       - JELLYFIN_PublishedServerUrl=https://jellyfin.internal.earles.io
@@ -12,16 +10,18 @@ services:
       - ./config:/config
       - ./cache:/cache
       - /mnt/media:/media:ro
+    # ports:
+    #   - "8096:8096"
+    networks:
+      - traefik
     devices:
       - /dev/dri/renderD128:/dev/dri/renderD128 # Required for transcoding. See notes/proxmox/lxc_igpu_passthru.txt
     labels:
-    - traefik.enable=true
-    - traefik.docker.network=traefik
-    - traefik.http.routers.jellyfin.rule=Host(`jellyfin.internal.earles.io`)
-    - traefik.http.routers.jellyfin.entrypoints=websecure
-    - traefik.http.routers.jellyfin.tls.certresolver=production
-    networks:
-      - traefik
+      - traefik.enable=true
+      - traefik.docker.network=traefik
+      - traefik.http.routers.jellyfin.rule=Host(`jellyfin.internal.earles.io`)
+      - traefik.http.routers.jellyfin.entrypoints=websecure
+      - traefik.http.routers.jellyfin.tls.certresolver=production
 
 networks:
   traefik:

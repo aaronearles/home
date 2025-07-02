@@ -1,33 +1,33 @@
 services:
   immich-server:
-    container_name: immich_server
     image: ghcr.io/immich-app/immich-server:${IMMICH_VERSION:-release}
-    # extends:
-    #   file: hwaccel.transcoding.yml
-    #   service: cpu # set to one of [nvenc, quicksync, rkmpp, vaapi, vaapi-wsl] for accelerated transcoding
+    container_name: immich_server
+    restart: unless-stopped
+    env_file:
+      - .env
     volumes:
       # Do not edit the next line. If you want to change the media storage location on your system, edit the value of UPLOAD_LOCATION in the .env file
       - ${UPLOAD_LOCATION}:/usr/src/app/upload
       - /etc/localtime:/etc/localtime:ro
-    env_file:
-      - .env
     # ports:
     #   - '2283:2283'
     networks:
       - traefik
       - backend
+    depends_on:
+      - redis
+      - database
+    healthcheck:
+      disable: false
+    # extends:
+    #   file: hwaccel.transcoding.yml
+    #   service: cpu # set to one of [nvenc, quicksync, rkmpp, vaapi, vaapi-wsl] for accelerated transcoding
     labels:
       - traefik.enable=true
       - traefik.docker.network=traefik
       - traefik.http.routers.immich.rule=Host(`immich.internal.earles.io`)
       - traefik.http.routers.immich.entrypoints=websecure
       - traefik.http.routers.immich.tls.certresolver=production
-    depends_on:
-      - redis
-      - database
-    restart: unless-stopped
-    healthcheck:
-      disable: false
 
   immich-machine-learning:
     container_name: immich_machine_learning

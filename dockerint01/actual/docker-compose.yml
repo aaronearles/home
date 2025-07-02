@@ -3,20 +3,10 @@ services:
     image: docker.io/actualbudget/actual-server:latest
     container_name: actual
     restart: unless-stopped
-    # ports:
-    #   - '5006:5006'
-    # environment:
-      # Uncomment any of the lines below to set configuration options.
-      # - ACTUAL_HTTPS_KEY=/data/selfhost.key
-      # - ACTUAL_HTTPS_CERT=/data/selfhost.crt
-      # - ACTUAL_PORT=5006
-      # - ACTUAL_UPLOAD_FILE_SYNC_SIZE_LIMIT_MB=20
-      # - ACTUAL_UPLOAD_SYNC_ENCRYPTED_FILE_SYNC_SIZE_LIMIT_MB=50
-      # - ACTUAL_UPLOAD_FILE_SIZE_LIMIT_MB=20
-      # See all options and more details at https://actualbudget.github.io/docs/Installing/Configuration
-      # !! If you are not using any of these options, remove the 'environment:' tag entirely.
     volumes:
       - ./data:/data
+    # ports:
+    #   - '5006:5006'
     networks:
       - traefik
     labels:

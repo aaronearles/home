@@ -1,4 +1,5 @@
-#https://github.com/jlesage/docker-firefox?tab=readme-ov-file#quick-start
+# Firefox Docker configuration
+# https://github.com/jlesage/docker-firefox?tab=readme-ov-file#quick-start
 services:
   firefox:
     image: jlesage/firefox

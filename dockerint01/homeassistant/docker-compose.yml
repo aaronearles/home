@@ -11,10 +11,10 @@ services:
       - ./config:/config
     # ports:
     #   - 8123:8123 #optional
-    # devices:
-    #   - /path/to/device:/path/to/device #optional
     networks:
       - traefik
+    # devices:
+    #   - /path/to/device:/path/to/device #optional
     labels:
       - traefik.enable=true
       - traefik.docker.network=traefik

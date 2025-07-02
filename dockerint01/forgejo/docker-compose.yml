@@ -2,12 +2,10 @@ services:
   server:
     image: codeberg.org/forgejo/forgejo:9
     container_name: forgejo
+    restart: unless-stopped
     environment:
       - USER_UID=1000
       - USER_GID=1000
-    restart: unless-stopped
-    networks:
-      - traefik
     volumes:
       - ./forgejo:/data
       - /etc/timezone:/etc/timezone:ro
@@ -15,6 +13,8 @@ services:
     # ports:
     #   - '3000:3000'
     #   - '222:22'
+    networks:
+      - traefik
     labels:
       - traefik.enable=true
       - traefik.docker.network=traefik

@@ -1,5 +1,4 @@
 services:
-
   wordpress:
     image: wordpress
     container_name: blog-wordpress
@@ -14,13 +13,13 @@ services:
       - WORDPRESS_DB_USER=${WORDPRESS_DB_USER}
       - WORDPRESS_DB_PASSWORD=${WORDPRESS_DB_PASSWORD}
       - WORDPRESS_DB_NAME=${WORDPRESS_DB_NAME}
-    depends_on:
-      - db
     volumes:
       - /mnt/data/blog/var/www/html:/var/www/html
     networks:
       - traefik
       - backend
+    depends_on:
+      - db
     labels:
       - traefik.enable=true
       - traefik.docker.network=traefik
@@ -46,3 +45,4 @@ networks:
   traefik:
     external: true
   backend:
+    external: false

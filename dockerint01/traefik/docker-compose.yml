@@ -1,16 +1,9 @@
 services:
-
   traefik:
     image: traefik:latest
-#    image: traefik:v3.2.3 #Latest version w/ working websockets prior to v3.2.4 or 3.3.0
+    # image: traefik:v3.2.3 # Latest version w/ working websockets prior to v3.2.4 or 3.3.0
     container_name: traefik
     restart: unless-stopped
-    ports:
-      - "25:25"     # SMTP Entrypoint | TCP/25
-      - "80:80"     # WEB ENTRYPOINT | HTTP/80
-      - "443:443"   # WEBSECURE ENTRYPOINT | HTTPS/443
-      - "3128:3128" # SQUID CACHING PROXY | TCP/3128
-      - "8080:8080" # TRAEFIK ENTRYPOINT | API Dashboard (enabled by --api.insecure=true)
     env_file:
       - .env
     environment:
@@ -19,25 +12,31 @@ services:
       - CF_DNS_API_TOKEN=${CF_DNS_API_TOKEN}     # API token with DNS:Edit permission
       # - CF_ZONE_API_TOKEN=${CF_ZONE_API_TOKEN} # API token with Zone:Read permission | Not necessary if CF_DNS_API_TOKEN has both permissions
     volumes:
-      - '/var/run/docker.sock:/var/run/docker.sock'
+      - /var/run/docker.sock:/var/run/docker.sock
       - ./config/traefik.yaml:/etc/traefik/traefik.yaml:ro
       - ./config/conf/:/etc/traefik/conf/
       - ./config/certs/:/etc/traefik/certs/
       - ./logs/:/logs/:rw
+    ports:
+      - "25:25"     # SMTP Entrypoint | TCP/25
+      - "80:80"     # WEB ENTRYPOINT | HTTP/80
+      - "443:443"   # WEBSECURE ENTRYPOINT | HTTPS/443
+      - "3128:3128" # SQUID CACHING PROXY | TCP/3128
+      - "8080:8080" # TRAEFIK ENTRYPOINT | API Dashboard (enabled by --api.insecure=true)
     networks:
       - traefik
 
   whoami:
     image: traefik/whoami
     container_name: whoami
+    networks:
+      - traefik
     labels:
       - traefik.enable=true
       - traefik.http.routers.whoami.rule=Host(`whoami.internal.earles.io`)
       - traefik.http.routers.whoami.entrypoints=websecure
       - traefik.http.routers.whoami.tls.certresolver=production
       # - traefik.tcp.services.squid.loadbalancer.server.port=3128 # Caused errors "unable to find the IP address for the container"
-    networks:
-      - traefik
 networks:
   traefik:
     external: true

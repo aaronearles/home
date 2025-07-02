@@ -4,21 +4,21 @@ services:
     container_name: hashicorp-vault
     restart: unless-stopped
     env_file:
-    - .env
+      - .env
     environment:
       - VAULT_ADDR=${VAULT_ADDR}
       - VAULT_API_ADDR=${VAULT_API_ADDR}
       - VAULT_ADDRESS=${VAULT_ADDRESS}
       - VAULT_TOKEN=${VAULT_TOKEN}
       - VAULT_UI=true
-    networks:
-      - traefik
     volumes:
       - ./logs:/vault/logs/:rw
       - ./data:/vault/data/:rw
       - ./config:/vault/config/:rw
       - ./certs:/certs/:rw
       - ./file:/vault/file/:rw
+    networks:
+      - traefik
     cap_add:
       - IPC_LOCK
     entrypoint: vault server -config /vault/config/config.hcl

@@ -3,17 +3,17 @@ services:
     image: louislam/uptime-kuma:1
     container_name: uptimekuma
     restart: unless-stopped
-    # env_file:
-    #   - .env
     volumes:
       - ./data:/app/data
+    # env_file:
+    #   - .env
+    networks:
+      - traefik
     labels:
       - traefik.enable=true
       - traefik.http.routers.uptime.rule=Host(`uptime.internal.earles.io`)
       - traefik.http.routers.uptime.entrypoints=websecure
       - traefik.http.routers.uptime.tls.certresolver=production
-    networks:
-      - traefik
 
 networks:
   traefik:

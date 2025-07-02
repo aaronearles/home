@@ -1,3 +1,5 @@
+# Watchtower configuration
+# https://containrrr.dev/watchtower/arguments/
 services:
   watchtower:
     image: containrrr/watchtower
@@ -5,5 +7,3 @@ services:
     restart: unless-stopped
     volumes:
       - /var/run/docker.sock:/var/run/docker.sock
-
-# https://containrrr.dev/watchtower/arguments/
