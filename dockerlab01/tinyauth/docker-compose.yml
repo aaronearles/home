@@ -1,0 +1,56 @@
+# TinyAuth - Simple authentication middleware for self-hosted apps
+# Documentation: https://tinyauth.app/docs/
+services:
+  tinyauth:
+    image: ghcr.io/steveiliop56/tinyauth:v3
+    container_name: tinyauth
+    restart: unless-stopped
+    env_file:
+      - .env
+    environment:
+      - APP_URL=https://tinyauth.lab.earles.io
+      - SECRET=${SECRET}
+      - USERS=${USERS}
+      # Optional OAuth configuration
+      # - GITHUB_CLIENT_ID=${GITHUB_CLIENT_ID}
+      # - GITHUB_CLIENT_SECRET=${GITHUB_CLIENT_SECRET}
+    # ports:
+    #   - "3000:3000"
+    networks:
+      - traefik
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:3000/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+    labels:
+      - traefik.enable=true
+      - traefik.docker.network=traefik
+      - traefik.http.routers.tinyauth.rule=Host(`tinyauth.lab.earles.io`)
+      - traefik.http.routers.tinyauth.entrypoints=websecure
+      - traefik.http.routers.tinyauth.tls.certresolver=production
+      - traefik.http.services.tinyauth.loadbalancer.server.port=3000
+      # Forward auth middleware configuration
+      - traefik.http.middlewares.tinyauth.forwardauth.address=http://tinyauth:3000/api/auth
+      - traefik.http.middlewares.tinyauth.forwardauth.trustForwardHeader=true
+      - traefik.http.middlewares.tinyauth.forwardauth.authResponseHeaders=X-User,X-Email,X-Groups
+
+  # Example protected service - whoami for testing
+  whoami:
+    image: traefik/whoami
+    container_name: tinyauth-whoami
+    restart: unless-stopped
+    networks:
+      - traefik
+    labels:
+      - traefik.enable=true
+      - traefik.docker.network=traefik
+      - traefik.http.routers.tinyauth-whoami.rule=Host(`whoami-protected.lab.earles.io`)
+      - traefik.http.routers.tinyauth-whoami.entrypoints=websecure
+      - traefik.http.routers.tinyauth-whoami.tls.certresolver=production
+      - traefik.http.routers.tinyauth-whoami.middlewares=tinyauth@docker
+
+networks:
+  traefik:
+    external: true
