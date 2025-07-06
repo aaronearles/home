@@ -1,15 +1,14 @@
 services:
-
-  apprise:
+  n8n:
     image: 'docker.n8n.io/n8nio/n8n'
     container_name: n8n
     restart: unless-stopped
+    volumes:
+      - ./data:/home/node/.n8n
     # ports:
     #   - '5678:5678'
     networks:
       - traefik
-    volumes:
-      - ./data:/home/node/.n8n
     labels:
       - traefik.enable=true
       - traefik.docker.network=traefik

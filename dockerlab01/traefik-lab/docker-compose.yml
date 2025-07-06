@@ -1,13 +1,8 @@
 services:
-
   traefik:
     image: traefik:latest
     container_name: traefik
     restart: unless-stopped
-    ports:
-      - "80:80"     # WEB ENTRYPOINT | HTTP/80
-      - "443:443"   # WEBSECURE ENTRYPOINT | HTTPS/443
-      - "8080:8080" # TRAEFIK ENTRYPOINT | API Dashboard (enabled by --api.insecure=true)
     env_file:
       - .env
     environment:
@@ -15,15 +10,22 @@ services:
       - CF_API_KEY=${CF_API_KEY}                 # API Key
       - CF_DNS_API_TOKEN=${CF_DNS_API_TOKEN}     # API token with DNS:Edit permission
     volumes:
-      - '/var/run/docker.sock:/var/run/docker.sock'
+      - /var/run/docker.sock:/var/run/docker.sock
       - ./config/traefik.yaml:/etc/traefik/traefik.yaml:ro
       - ./config/conf/:/etc/traefik/conf/
       - ./config/certs/:/etc/traefik/certs/
+    ports:
+      - "80:80"     # WEB ENTRYPOINT | HTTP/80
+      - "443:443"   # WEBSECURE ENTRYPOINT | HTTPS/443
+      - "8080:8080" # TRAEFIK ENTRYPOINT | API Dashboard (enabled by --api.insecure=true)
     networks:
       - traefik
 
   whoami:
     image: traefik/whoami
+    container_name: whoami
+    networks:
+      - traefik
     labels:
       - traefik.enable=true
       - traefik.docker.network=traefik
@@ -34,8 +36,6 @@ services:
       # - traefik.http.routers.whoami.tls.certresolver=production
       # - traefik.http.routers.whoami.middlewares=auth
       # - traefik.http.middlewares.auth.basicauth.usersfile=/etc/traefik/conf/authorizedusers # Use htpasswd to generate user:hash
-    networks:
-      - traefik
 networks:
   traefik:
     external: true

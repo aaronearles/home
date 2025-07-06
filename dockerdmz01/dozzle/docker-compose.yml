@@ -7,14 +7,14 @@ services:
       - /var/run/docker.sock:/var/run/docker.sock
     # ports:
     #   - 8080:8080
+    networks:
+      - traefik
     labels:
       - traefik.enable=true
       - traefik.docker.network=traefik
       - traefik.http.routers.dozzle.rule=Host(`dozzle.earles.io`)
       - traefik.http.routers.dozzle.entrypoints=websecure
       - traefik.http.routers.dozzle.tls.certresolver=production
-    networks:
-      - traefik
 
 networks:
   traefik:

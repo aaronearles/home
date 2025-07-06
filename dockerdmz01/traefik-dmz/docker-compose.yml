@@ -1,13 +1,8 @@
 services:
-
   traefik:
     image: traefik:latest
     container_name: traefik
     restart: unless-stopped
-    ports:
-      - "80:80"     # Ingress HTTP
-      - "443:443"   # Ingress HTTPS
-      - "8080:8080" # API Dashboard (enabled by --api.insecure=true)
     env_file:
       - .env
     environment:
@@ -16,39 +11,41 @@ services:
       - CF_DNS_API_TOKEN=${CF_DNS_API_TOKEN}     # API token with DNS:Edit permission
       # - CF_ZONE_API_TOKEN=${CF_ZONE_API_TOKEN} # API token with Zone:Read permission | Not necessary if CF_DNS_API_TOKEN has both permissions
     volumes:
-      - '/var/run/docker.sock:/var/run/docker.sock'
+      - /var/run/docker.sock:/var/run/docker.sock
       - ./config/traefik.yaml:/etc/traefik/traefik.yaml:ro
       - ./config/conf/:/etc/traefik/conf/
       - ./config/certs/:/etc/traefik/certs/
       - ./logs/:/logs/:rw
+    ports:
+      - "80:80"     # Ingress HTTP
+      - "443:443"   # Ingress HTTPS
+      - "8080:8080" # API Dashboard (enabled by --api.insecure=true)
     networks:
       - traefik
 
   whoami:
     image: traefik/whoami
     container_name: whoami
+    networks:
+      - traefik
     labels:
       - traefik.enable=true
       - traefik.docker.network=traefik
       - traefik.http.routers.whoami.rule=Host(`whoami.earles.io`)
       - traefik.http.routers.whoami.entrypoints=websecure
       - traefik.http.routers.whoami.tls.certresolver=production
-#      - traefik.http.routers.whoami.middlewares=waf@file,auth
-#      - traefik.http.routers.whoami.middlewares=auth
-#      - traefik.http.routers.whoami.middlewares=waf@file
-#      - traefik.http.middlewares.auth.basicauth.usersfile=/etc/traefik/conf/authorizedusers
       - traefik.http.routers.whoami.middlewares=authentik@docker
-    networks:
-      - traefik
+      # - traefik.http.routers.whoami.middlewares=waf@file,auth
+      # - traefik.http.routers.whoami.middlewares=auth
+      # - traefik.http.routers.whoami.middlewares=waf@file
+      # - traefik.http.middlewares.auth.basicauth.usersfile=/etc/traefik/conf/authorizedusers
 
   authentik-proxy:
     image: ghcr.io/goauthentik/proxy
     container_name: authentik-proxy
-    #ports:
-    #    - 9000:9000
-    #    - 9443:9443
+    restart: unless-stopped
     env_file:
-    - .env
+      - .env
     environment:
       AUTHENTIK_HOST: https://authentik.internal.earles.io
       AUTHENTIK_INSECURE: "false"
@@ -56,18 +53,20 @@ services:
       # Starting with 2021.9, you can optionally set this too
       # when authentik_host for internal communication doesn't match the public URL
       AUTHENTIK_HOST_BROWSER: https://auth.earles.io
-    labels:
-      traefik.enable: true
-      traefik.docker.network: traefik
-      traefik.port: 9000
-      traefik.http.routers.authentik.rule: Host(`whoami.earles.io`) && PathPrefix(`/outpost.goauthentik.io/`)
-      # `authentik-proxy` refers to the service name in the compose file.
-      traefik.http.middlewares.authentik.forwardauth.address: http://authentik-proxy:9000/outpost.goauthentik.io/auth/traefik
-      traefik.http.middlewares.authentik.forwardauth.trustForwardHeader: true
-      traefik.http.middlewares.authentik.forwardauth.authResponseHeaders: X-authentik-username,X-authentik-groups,X-authentik-email,X-authentik-name,X-authentik-uid,X-authentik-jwt,X-authentik-meta-jwks,X-authentik-meta-outpost,X-authentik-meta-provider,X-authentik-meta-app,X-authentik-meta-version
-      restart: unless-stopped
+    # ports:
+    #   - 9000:9000
+    #   - 9443:9443
     networks:
       - traefik
+    labels:
+      - traefik.enable=true
+      - traefik.docker.network=traefik
+      - traefik.port=9000
+      - traefik.http.routers.authentik.rule=Host(`whoami.earles.io`) && PathPrefix(`/outpost.goauthentik.io/`)
+      # `authentik-proxy` refers to the service name in the compose file.
+      - traefik.http.middlewares.authentik.forwardauth.address=http://authentik-proxy:9000/outpost.goauthentik.io/auth/traefik
+      - traefik.http.middlewares.authentik.forwardauth.trustForwardHeader=true
+      - traefik.http.middlewares.authentik.forwardauth.authResponseHeaders=X-authentik-username,X-authentik-groups,X-authentik-email,X-authentik-name,X-authentik-uid,X-authentik-jwt,X-authentik-meta-jwks,X-authentik-meta-outpost,X-authentik-meta-provider,X-authentik-meta-app,X-authentik-meta-version
 
 networks:
   traefik:

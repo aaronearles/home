@@ -1,8 +1,8 @@
- services:
-
+services:
   searxng:
     image: searxng/searxng:latest
     container_name: searxng
+    restart: unless-stopped
     environment:
       - PUID=${PUID:-1000}
       - PGID=${PGID:-1000}
@@ -10,6 +10,5 @@
       - /etc/localtime:/etc/localtime:ro
       - /etc/timezone:/etc/timezone:ro
       - ./searxng:/etc/searxng
-    restart: unless-stopped
     ports:
       - "8081:8080" # Add this line to expose the port
