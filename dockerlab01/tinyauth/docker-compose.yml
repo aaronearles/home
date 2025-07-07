@@ -32,7 +32,8 @@ services:
       - traefik.http.routers.tinyauth.tls.certresolver=production
       - traefik.http.services.tinyauth.loadbalancer.server.port=3000
       # Forward auth middleware configuration
-      - traefik.http.middlewares.tinyauth.forwardauth.address=http://tinyauth:3000/api/auth
+      # - traefik.http.middlewares.tinyauth.forwardauth.address=http://tinyauth:3000/api/auth
+      - traefik.http.middlewares.tinyauth.forwardauth.address=http://tinyauth:3000/api/auth/traefik
       - traefik.http.middlewares.tinyauth.forwardauth.trustForwardHeader=true
       - traefik.http.middlewares.tinyauth.forwardauth.authResponseHeaders=X-User,X-Email,X-Groups
 
