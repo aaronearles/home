@@ -318,4 +318,30 @@ Services are discoverable via:
 - Regular backups via automated scripts
 - Secret rotation through Vault
 
+## Common Issues & Troubleshooting
+
+### Authentication Service Configuration
+
+#### Bcrypt Hash Escaping in Docker Compose
+**Problem**: Authentication services (like TinyAuth) fail with "invalid username/password" despite correct credentials.
+
+**Root Cause**: Docker Compose `.env` files require special escaping for bcrypt hashes containing `$` characters.
+
+**Solution**: Double every `$` sign in bcrypt hashes when using `.env` files:
+```bash
+# ❌ Wrong - Raw bcrypt hash
+USERS=username:$2a$10$abcdef123456
+
+# ✅ Correct - Escaped for Docker Compose  
+USERS=username:$$2a$$10$$abcdef123456
+```
+
+**Process**:
+1. Generate bcrypt hash using IT-Tools or similar
+2. Copy the raw hash: `$2a$10$hash...`
+3. Replace every `$` with `$$` in the `.env` file
+4. Restart the authentication service
+
+This applies to any service using bcrypt hashes in environment variables (TinyAuth, Authentik, etc.).
+
 This repository maintains Infrastructure as Code principles with Git as the single source of truth for all infrastructure configurations.
