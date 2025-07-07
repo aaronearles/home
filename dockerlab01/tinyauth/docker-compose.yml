@@ -10,11 +10,17 @@ services:
     environment:
       - APP_URL=https://tinyauth.lab.earles.io
       - SECRET=${SECRET}
-      - USERS=${USERS}
+      # - USERS=${USERS}
       # Optional OAuth configuration
       - GITHUB_CLIENT_ID=${GITHUB_CLIENT_ID}
       - GITHUB_CLIENT_SECRET=${GITHUB_CLIENT_SECRET}
+      - OAUTH_WHITELIST=${OAUTH_WHITELIST}
+      # Additional configuration
       - DISABLE_CONTINUE=true
+      - APP_TITLE=EARLES.IO LAB
+      - OAUTH_AUTO_REDIRECT=github
+
+
     # ports:
     #   - "3000:3000"
     networks:
