@@ -13,11 +13,15 @@ This Docker container provides a complete development environment with all the t
 
 ### Infrastructure Tools
 - **Terraform** - Infrastructure as Code
+- **OpenTofu** - Open-source Terraform fork
 - **Ansible** - Configuration management
 - **AWS CLI** - Amazon Web Services CLI
+- **Azure CLI** - Microsoft Azure CLI
+- **Linode CLI** - Linode cloud platform CLI
 - **kubectl** - Kubernetes command line tool
 - **Helm** - Kubernetes package manager
 - **Docker CLI** - Container management
+- **PowerShell** - Cross-platform automation framework
 
 ### Node.js Development Tools
 - **npm & yarn** - Package managers
@@ -47,7 +51,7 @@ This Docker container provides a complete development environment with all the t
 
 ```bash
 # Navigate to the directory containing the Dockerfile
-cd /mnt/c/Users/aearles/Onedrive\ -\ Pediatrix/Documents/code/gh_aaronearles/home/claude_container
+cd ./custom_containers/dev
 
 # Build the image (this will take several minutes)
 docker build -t dev-environment:latest .
@@ -130,6 +134,18 @@ terraform plan
 terraform apply
 ```
 
+### Using OpenTofu
+```bash
+# Initialize an OpenTofu project
+tofu init
+
+# Plan infrastructure changes
+tofu plan
+
+# Apply changes
+tofu apply
+```
+
 ### Using Ansible
 ```bash
 # Run an Ansible playbook
@@ -137,6 +153,42 @@ ansible-playbook -i inventory playbook.yml
 
 # Run ad-hoc commands
 ansible all -i inventory -m ping
+```
+
+### Using Azure CLI
+```bash
+# Login to Azure
+az login
+
+# List subscriptions
+az account list
+
+# List virtual machines
+az vm list
+```
+
+### Using Linode CLI
+```bash
+# Configure Linode CLI
+linode-cli configure
+
+# List Linode instances
+linode-cli linodes list
+
+# List domains
+linode-cli domains list
+```
+
+### Using PowerShell
+```bash
+# Start PowerShell
+pwsh
+
+# Get help
+Get-Help
+
+# Import Azure PowerShell module (if installed)
+Import-Module Az
 ```
 
 ### Development Workflow Examples

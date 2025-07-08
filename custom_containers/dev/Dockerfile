@@ -52,6 +52,13 @@ RUN wget -O- https://apt.releases.hashicorp.com/gpg | gpg --dearmor | tee /usr/s
     && apt-get install -y terraform \
     && rm -rf /var/lib/apt/lists/*
 
+# Install OpenTofu
+RUN curl -fsSL https://get.opentofu.org/opentofu.gpg | gpg --dearmor > /usr/share/keyrings/opentofu.gpg \
+    && echo "deb [signed-by=/usr/share/keyrings/opentofu.gpg] https://packages.opentofu.org/opentofu/tofu/any/ any main" > /etc/apt/sources.list.d/opentofu.list \
+    && apt-get update \
+    && apt-get install -y tofu \
+    && rm -rf /var/lib/apt/lists/*
+
 # Install Ansible
 RUN python3 -m pip install --upgrade pip \
     && pip3 install ansible ansible-core \
@@ -80,6 +87,15 @@ RUN curl "https://awscli.amazonaws.com/awscli-exe-linux-x86_64.zip" -o "awscliv2
     && ./aws/install \
     && rm -rf awscliv2.zip aws
 
+# Install PowerShell
+RUN curl -L https://github.com/PowerShell/PowerShell/releases/download/v7.4.0/powershell_7.4.0-1.deb_amd64.deb -o powershell.deb \
+    && dpkg -i powershell.deb \
+    && apt-get install -f -y \
+    && rm powershell.deb
+
+# Install Azure CLI
+RUN curl -sL https://aka.ms/InstallAzureCLIDeb | bash
+
 # Install kubectl
 RUN curl -LO "https://dl.k8s.io/release/$(curl -L -s https://dl.k8s.io/release/stable.txt)/bin/linux/amd64/kubectl" \
     && install -o root -g root -m 0755 kubectl /usr/local/bin/kubectl
@@ -100,7 +116,8 @@ RUN pip3 install \
     pyyaml \
     jinja2 \
     paramiko \
-    cryptography
+    cryptography \
+    linode-cli
 
 # Create non-root user
 RUN groupadd --gid $USER_GID $USERNAME \
@@ -120,6 +137,8 @@ RUN echo 'export PATH=$PATH:/home/$USERNAME/.local/bin' >> /home/$USERNAME/.bash
     && echo 'alias ll="ls -la"' >> /home/$USERNAME/.bashrc \
     && echo 'alias k="kubectl"' >> /home/$USERNAME/.bashrc \
     && echo 'alias tf="terraform"' >> /home/$USERNAME/.bashrc \
+    && echo 'alias tofu="tofu"' >> /home/$USERNAME/.bashrc \
+    && echo 'alias linode="linode-cli"' >> /home/$USERNAME/.bashrc \
     && mkdir -p /home/$USERNAME/.npm-global \
     && npm config set prefix '/home/$USERNAME/.npm-global' \
     && echo 'export PATH=$PATH:/home/$USERNAME/.npm-global/bin' >> /home/$USERNAME/.bashrc
