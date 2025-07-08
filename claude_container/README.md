@@ -9,7 +9,7 @@ This Docker container provides a complete development environment with all the t
 - **Python 3** - With pip and venv
 - **Git** - Version control
 - **VS Code Server** (code-server) - Web-based IDE
-- **Claude CLI** - AI assistant command line tool
+- **Claude CLI** (@anthropic-ai/claude-code) - Official Anthropic AI coding assistant
 
 ### Infrastructure Tools
 - **Terraform** - Infrastructure as Code
@@ -108,11 +108,14 @@ Then access VS Code at `http://localhost:8080`
 
 ### Using Claude CLI
 ```bash
-# Authenticate with Claude (you'll need your API key)
-claude auth login
+# Verify Claude CLI installation
+claude doctor
 
-# Start an interactive session
+# Start an interactive session (will prompt for authentication)
 claude
+
+# Note: Authentication requires active billing at console.anthropic.com
+# Follow the OAuth process when prompted
 ```
 
 ### Using Terraform

@@ -60,11 +60,9 @@ RUN python3 -m pip install --upgrade pip \
 # Install VS Code Server (code-server)
 RUN curl -fsSL https://code-server.dev/install.sh | sh
 
-# Install Claude CLI
-RUN curl -fsSL https://claude.ai/cli/install.sh | sh
-
-# Install additional useful tools
+# Install Node.js global packages (including Claude CLI)
 RUN npm install -g \
+    @anthropic-ai/claude-code \
     yarn \
     pm2 \
     @angular/cli \
@@ -117,11 +115,14 @@ RUN mkdir -p /workspace \
 # Switch to non-root user
 USER $USERNAME
 
-# Set up user environment
+# Set up user environment and npm configuration
 RUN echo 'export PATH=$PATH:/home/$USERNAME/.local/bin' >> /home/$USERNAME/.bashrc \
     && echo 'alias ll="ls -la"' >> /home/$USERNAME/.bashrc \
     && echo 'alias k="kubectl"' >> /home/$USERNAME/.bashrc \
-    && echo 'alias tf="terraform"' >> /home/$USERNAME/.bashrc
+    && echo 'alias tf="terraform"' >> /home/$USERNAME/.bashrc \
+    && mkdir -p /home/$USERNAME/.npm-global \
+    && npm config set prefix '/home/$USERNAME/.npm-global' \
+    && echo 'export PATH=$PATH:/home/$USERNAME/.npm-global/bin' >> /home/$USERNAME/.bashrc
 
 # Set working directory
 WORKDIR /workspace
