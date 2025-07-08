@@ -62,8 +62,9 @@ RUN TOFU_VERSION="1.6.0" \
 
 # Install Ansible
 RUN python3 -m pip install --upgrade pip \
-    && pip3 install ansible ansible-core \
-    && pip3 install hvac requests jmespath netaddr
+    && pip3 install --timeout=120 --retries=5 ansible-core \
+    && pip3 install --timeout=120 --retries=5 ansible \
+    && pip3 install --timeout=120 --retries=5 hvac requests jmespath netaddr
 
 # Install VS Code Server (code-server)
 RUN curl -fsSL https://code-server.dev/install.sh | sh
@@ -109,7 +110,7 @@ RUN curl https://baltocdn.com/helm/signing.asc | gpg --dearmor | tee /usr/share/
     && rm -rf /var/lib/apt/lists/*
 
 # Install additional Python packages for development
-RUN pip3 install \
+RUN pip3 install --timeout=120 --retries=5 \
     black \
     flake8 \
     pytest \
