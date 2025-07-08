@@ -32,7 +32,14 @@ RUN apt-get update && apt-get install -y \
     tree \
     jq \
     zip \
+    locales \
     && rm -rf /var/lib/apt/lists/*
+
+# Generate locales
+RUN locale-gen en_US.UTF-8
+ENV LANG=en_US.UTF-8
+ENV LANGUAGE=en_US:en
+ENV LC_ALL=en_US.UTF-8
 
 # Install Node.js 20.x LTS
 RUN curl -fsSL https://deb.nodesource.com/setup_20.x | bash - \
