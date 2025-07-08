@@ -1,0 +1,30 @@
+version: '3.8'
+
+services:
+  dev-environment:
+    build: .
+    container_name: dev-environment
+    restart: unless-stopped
+    ports:
+      - "8080:8080"   # VS Code Server
+      - "3000:3000"   # Node.js development server
+      - "4200:4200"   # Angular development server
+      - "8000:8000"   # Python development server
+      - "9000:9000"   # Additional development server
+    volumes:
+      - dev-workspace:/workspace
+      - /var/run/docker.sock:/var/run/docker.sock
+    environment:
+      - USERNAME=developer
+      - USER_UID=1000
+      - USER_GID=1000
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8080"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+
+volumes:
+  dev-workspace:
+    driver: local

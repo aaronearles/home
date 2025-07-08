@@ -144,11 +144,18 @@ RUN echo 'export PATH=$PATH:/home/$USERNAME/.local/bin' >> /home/$USERNAME/.bash
     && npm config set prefix '/home/$USERNAME/.npm-global' \
     && echo 'export PATH=$PATH:/home/$USERNAME/.npm-global/bin' >> /home/$USERNAME/.bashrc
 
+# Add user to docker group for Docker-in-Docker support
+RUN sudo usermod -aG docker $USERNAME
+
+# Copy startup script
+COPY start.sh /home/$USERNAME/start.sh
+RUN sudo chmod +x /home/$USERNAME/start.sh
+
 # Set working directory
 WORKDIR /workspace
 
 # Expose ports for VS Code Server and development servers
-EXPOSE 8080 3000 4200 8000 8080 9000
+EXPOSE 8080 3000 4200 8000 9000
 
 # Default command
-CMD ["bash"]
+CMD ["/home/developer/start.sh"]
