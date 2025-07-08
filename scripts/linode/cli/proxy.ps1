@@ -16,7 +16,7 @@ if (-not (Get-Module -ListAvailable -Name PSPasswordGenerator)) {
 Import-Module PSPasswordGenerator
 
 # Generate password using correct syntax for PSPasswordGenerator module
-$password = New-Password -Length 32
+$password = Get-RandomPassword -Length 32 -AsPlainText
 $output = linode-cli linodes create `
 --label "proxy" `
 --root_pass $password `
