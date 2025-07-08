@@ -38,7 +38,7 @@ $linodeArgs = @(
     "--delimiter", ","
 )
 
-$output = & linode-cli @linodeArgs
+$output = & linode-cli --no-defaults @linodeArgs
 
 # Check if linode-cli command succeeded
 if ($LASTEXITCODE -ne 0 -or [string]::IsNullOrEmpty($output)) {
