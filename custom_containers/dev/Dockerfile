@@ -144,8 +144,9 @@ RUN echo 'export PATH=$PATH:/home/$USERNAME/.local/bin' >> /home/$USERNAME/.bash
     && npm config set prefix '/home/$USERNAME/.npm-global' \
     && echo 'export PATH=$PATH:/home/$USERNAME/.npm-global/bin' >> /home/$USERNAME/.bashrc
 
-# Add user to docker group for Docker-in-Docker support
-RUN sudo usermod -aG docker $USERNAME
+# Create docker group and add user for Docker-in-Docker support
+RUN groupadd docker || true \
+    && usermod -aG docker $USERNAME
 
 # Copy startup script
 COPY start.sh /home/$USERNAME/start.sh
