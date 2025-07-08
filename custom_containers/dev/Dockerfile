@@ -120,9 +120,11 @@ RUN pip3 install \
     cryptography \
     linode-cli
 
-# Create non-root user
-RUN groupadd --gid $USER_GID $USERNAME \
+# Create docker group and non-root user
+RUN groupadd docker || true \
+    && groupadd --gid $USER_GID $USERNAME \
     && useradd --uid $USER_UID --gid $USER_GID -m $USERNAME \
+    && usermod -aG docker $USERNAME \
     && echo $USERNAME ALL=\(root\) NOPASSWD:ALL > /etc/sudoers.d/$USERNAME \
     && chmod 0440 /etc/sudoers.d/$USERNAME
 
@@ -144,9 +146,6 @@ RUN echo 'export PATH=$PATH:/home/$USERNAME/.local/bin' >> /home/$USERNAME/.bash
     && npm config set prefix '/home/$USERNAME/.npm-global' \
     && echo 'export PATH=$PATH:/home/$USERNAME/.npm-global/bin' >> /home/$USERNAME/.bashrc
 
-# Create docker group and add user for Docker-in-Docker support
-RUN groupadd docker || true \
-    && usermod -aG docker $USERNAME
 
 # Copy startup script
 COPY start.sh /home/$USERNAME/start.sh
