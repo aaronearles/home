@@ -123,7 +123,7 @@ RUN pip3 install --timeout=120 --retries=5 \
 
 # Create docker group and non-root user
 RUN groupadd docker || true \
-    && groupadd --gid $USER_GID $USERNAME \
+    && (groupadd --gid $USER_GID $USERNAME || true) \
     && useradd --uid $USER_UID --gid $USER_GID -m $USERNAME \
     && usermod -aG docker $USERNAME \
     && echo $USERNAME ALL=\(root\) NOPASSWD:ALL > /etc/sudoers.d/$USERNAME \
