@@ -51,7 +51,7 @@ Write-Host "Raw output: $output" -ForegroundColor Yellow
 
 # Parse the output safely
 try {
-    $splitOutput = $output | ConvertFrom-Csv -Header id, label, region, type, image, status, ipv4
+    $splitOutput = $output | ConvertFrom-Csv -Header id, label, region, type, image, status, ipv4, disk_encryption, interface_generation, placement_group_label
     $linodeCliOutput = $splitOutput | Select-Object -Skip 2
     $newhostip = $linodeCliOutput.ipv4
     $newhostid = $linodeCliOutput.id
