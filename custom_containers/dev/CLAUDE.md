@@ -33,6 +33,9 @@ This is a **containerized development environment** that provides a comprehensiv
 # Build the development container
 docker build -t dev-environment:latest .
 
+# Run with Docker Compose (recommended method)
+docker-compose up -d
+
 # Run interactive container with port forwarding
 docker run -it --rm \
   --name dev-container \
@@ -53,7 +56,8 @@ docker run -it --rm \
 
 ### Development Environment Setup
 ```bash
-# Start VS Code Server (web-based IDE)
+# Start VS Code Server (web-based IDE) - auto-started via start.sh
+# Access at: http://localhost:8080
 code-server --bind-addr 0.0.0.0:8080 --auth none
 
 # Initialize Claude CLI (requires authentication)
@@ -66,6 +70,10 @@ alias tf="terraform"
 alias tofu="tofu"
 alias linode="linode-cli"
 alias ll="ls -la"
+
+# Container startup provides workspace permissions and info
+# Access VS Code Server at: http://localhost:8080
+# Workspace directory: /workspace
 ```
 
 ### Framework-Specific Development
@@ -229,6 +237,22 @@ groups
 
 # Add user to docker group if needed
 sudo usermod -aG docker $USER
+```
+
+### Build Issues
+```bash
+# Common build problems and solutions:
+
+# Network timeouts during pip installations
+# - Dockerfile includes --timeout=120 --retries=5 for pip installs
+# - If build fails, retry: docker build -t dev-environment:latest .
+
+# GID conflicts (if group already exists)
+# - Fixed in Dockerfile with (groupadd --gid $USER_GID $USERNAME || true)
+
+# Clean build if needed
+docker system prune -a
+docker build --no-cache -t dev-environment:latest .
 ```
 
 This development container provides a complete, portable development environment suitable for modern software development, infrastructure management, and cloud-native application development.
