@@ -5,17 +5,18 @@
 # Requires a valid SSH key! You can generate a keypaid using 'ssh-keygen -m PEM -t rsa -b 2048'
 # Requires a valid stackscript_id, 1117817 is private. It's contents are available in ../stackscripts/proxy.sh
 
-# function Get-RandomPassword {
-#     param (
-#         [Parameter(Mandatory)]
-#         [int] $length,
-#         [int] $amountOfNonAlphanumeric = 1
-#     )
-#     Add-Type -AssemblyName 'System.Web'
-#     return [System.Web.Security.Membership]::GeneratePassword($length, $amountOfNonAlphanumeric)
-# }
-#Replaced above function with PSPasswordGenerator module for pwsh7 compatibility, see https://github.com/rhymeswithmogul/PSPasswordGenerator or 'Install-Module PSPasswordGenerator'
-$password = Get-RandomPassword -Length 32
+# Check for PSPasswordGenerator module and install if missing
+if (-not (Get-Module -ListAvailable -Name PSPasswordGenerator)) {
+    Write-Host "PSPasswordGenerator module not found. Installing..." -ForegroundColor Yellow
+    Install-Module -Name PSPasswordGenerator -Force -Scope CurrentUser
+    Write-Host "PSPasswordGenerator module installed successfully." -ForegroundColor Green
+}
+
+# Import the module
+Import-Module PSPasswordGenerator
+
+# Generate password using correct syntax (no -Length parameter)
+$password = Get-RandomPassword 32
 $output = linode-cli linodes create `
 --label "proxy" `
 --root_pass $password `
