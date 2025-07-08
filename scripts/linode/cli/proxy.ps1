@@ -17,42 +17,75 @@ Import-Module PSPasswordGenerator
 
 # Generate password using correct syntax for PSPasswordGenerator module
 $password = Get-RandomPassword -Length 32 -AsPlainText
-$output = linode-cli linodes create `
---label "proxy" `
---root_pass $password `
---region us-west `
---type g6-nanode-1 `
---image linode/alpine3.17 `
---authorized_keys "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAILfgFgJzAiboiYACBkcCVEkc7LRcdT1JD77PQ56uCR5p weston_nt\aearles@LAP121-105863" `
---authorized_users "aearles" `
---stackscript_id "1117817" `
---text `
---delimiter ","
 
-$output.split(",")
-$splitOutput = $output |ConvertFrom-Csv -Header id, label, region, type, image, status, ipv4
-$linodeCliOutput = $splitOutput | Select-Object -skip 2
-$newhostip = $linodeCliOutput.ipv4
-$newhostid = $linodeCliOutput.id
+# Generate unique label with timestamp
+$timestamp = Get-Date -Format "yyyyMMdd-HHmmss"
+$label = "proxy-$timestamp"
+
+Write-Host "Creating Linode instance with label: $label" -ForegroundColor Green
+
+$linodeArgs = @(
+    "linodes", "create",
+    "--label", $label,
+    "--root_pass", $password,
+    "--region", "us-west",
+    "--type", "g6-nanode-1",
+    "--image", "linode/alpine3.20",
+    "--authorized_keys", "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAILfgFgJzAiboiYACBkcCVEkc7LRcdT1JD77PQ56uCR5p weston_nt\aearles@LAP121-105863",
+    "--authorized_users", "aearles",
+    "--stackscript_id", "1117817",
+    "--text",
+    "--delimiter", ","
+)
+
+$output = & linode-cli @linodeArgs
+
+# Check if linode-cli command succeeded
+if ($LASTEXITCODE -ne 0 -or [string]::IsNullOrEmpty($output)) {
+    Write-Host "ERROR: Failed to create Linode instance" -ForegroundColor Red
+    Write-Host "Output: $output" -ForegroundColor Red
+    exit 1
+}
+
+Write-Host "Raw output: $output" -ForegroundColor Yellow
+
+# Parse the output safely
+try {
+    $splitOutput = $output | ConvertFrom-Csv -Header id, label, region, type, image, status, ipv4
+    $linodeCliOutput = $splitOutput | Select-Object -Skip 2
+    $newhostip = $linodeCliOutput.ipv4
+    $newhostid = $linodeCliOutput.id
+    
+    if ([string]::IsNullOrEmpty($newhostid) -or [string]::IsNullOrEmpty($newhostip)) {
+        Write-Host "ERROR: Failed to parse Linode instance details" -ForegroundColor Red
+        Write-Host "Parsed output: $linodeCliOutput" -ForegroundColor Red
+        exit 1
+    }
+} catch {
+    Write-Host "ERROR: Failed to parse linode-cli output" -ForegroundColor Red
+    Write-Host "Error: $($_.Exception.Message)" -ForegroundColor Red
+    Write-Host "Raw output: $output" -ForegroundColor Red
+    exit 1
+}
 Remove-Variable password
-clear
+Clear-Host
 Write-Host New Linode ID is $newhostid
 Write-Host IP Address: $newhostip
 Write-Host 
 Write-Host "Sleeping for 90 more seconds"
-sleep 30
+Start-Sleep 30
 Write-Host "Sleeping for 60 more seconds"
-sleep 30
+Start-Sleep 30
 Write-Host "Sleeping for 30 more seconds"
-sleep 20
+Start-Sleep 20
 Write-Host "Sleeping for 10 more seconds"
-sleep 10
+Start-Sleep 10
 Write-Host Attempting to connect to $newhostip on SSH...
 Write-Host
 ssh -L 127.0.0.1:443:localhost:3128 aearles@$newhostip -p 443
-clear
+Clear-Host
 Write-Host Sleeping for 10 seconds before deleting $newhostid
-sleep 10
+Start-Sleep 10
 linode-cli linodes delete $newhostid
 
 linode-cli linodes ls
