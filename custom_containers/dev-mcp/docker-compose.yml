@@ -1,0 +1,27 @@
+version: '3.8'
+
+services:
+  dev-container:
+    build: .
+    container_name: claude-dev-container
+    restart: unless-stopped
+    ports:
+      - "3000:3000"  # MCP server port
+    volumes:
+      - ./workspace:/workspace
+      - ./mcp-server/server.js:/mcp-server/server.js:ro
+      - ./mcp-server/package.json:/mcp-server/package.json:ro
+      - ./mcp-server/config.json:/mcp-server/config.json:ro
+      - /var/run/docker.sock:/var/run/docker.sock  # For Docker-in-Docker if needed
+    environment:
+      - NODE_ENV=development
+      - PORT=3000
+      - GIT_USER_NAME=${GIT_USER_NAME:-Claude Dev}
+      - GIT_USER_EMAIL=${GIT_USER_EMAIL:-claude@dev.local}
+    working_dir: /workspace
+    networks:
+      - dev-network
+
+networks:
+  dev-network:
+    driver: bridge
