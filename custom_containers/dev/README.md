@@ -1,6 +1,6 @@
-# Development Container with NodeJS, Claude, VS Code, Terraform & Ansible
+# Development Container with NodeJS, Claude, VS Code, Terraform & Ansible + MCP Server
 
-This Docker container provides a complete development environment with all the tools you need for modern infrastructure and application development.
+This Docker container provides a complete development environment with all the tools you need for modern infrastructure and application development, plus an integrated MCP (Model Context Protocol) server for enhanced Claude Code integration.
 
 ## Included Tools
 
@@ -10,6 +10,7 @@ This Docker container provides a complete development environment with all the t
 - **Git** - Version control
 - **VS Code Server** (code-server) - Web-based IDE
 - **Claude CLI** (@anthropic-ai/claude-code) - Official Anthropic AI coding assistant
+- **MCP Server** - Model Context Protocol server for direct Claude Code integration
 
 ### Infrastructure Tools
 - **Terraform** - Infrastructure as Code
@@ -105,18 +106,25 @@ docker run -it --rm \
 
 ### Starting VS Code Server
 ```bash
-# Inside the container, start code-server
-code-server --bind-addr 0.0.0.0:8080 --auth none
+# VS Code Server and MCP Server start automatically via start.sh script
+# No manual startup needed when using docker-compose
 ```
-Then access VS Code at `http://localhost:8080`
+Access VS Code at `http://localhost:8080`
+Access MCP Server at `http://localhost:3000`
 
-### Using Claude CLI
+### Using Claude CLI & MCP Server
 ```bash
 # Verify Claude CLI installation
 claude doctor
 
 # Start an interactive session (will prompt for authentication)
 claude
+
+# MCP Server provides direct Claude Code integration (auto-started on port 3000)
+# Available tools: read_file, write_file, execute_command, list_directory, git operations
+
+# Test MCP server tools via HTTP API:
+curl http://localhost:3000/tools
 
 # Note: Authentication requires active billing at console.anthropic.com
 # Follow the OAuth process when prompted
@@ -191,6 +199,40 @@ Get-Help
 Import-Module Az
 ```
 
+### Using MCP Server (Claude Code Integration)
+```bash
+# MCP Server starts automatically on port 3000
+# Provides direct file system and command execution access for Claude Code
+
+# List available tools
+curl http://localhost:3000/tools
+
+# Execute a command
+curl -X POST http://localhost:3000/tools/execute_command \
+  -H "Content-Type: application/json" \
+  -d '{"command": "ls -la", "cwd": "."}'
+
+# Read a file
+curl -X POST http://localhost:3000/tools/read_file \
+  -H "Content-Type: application/json" \
+  -d '{"path": "package.json"}'
+
+# Write a file
+curl -X POST http://localhost:3000/tools/write_file \
+  -H "Content-Type: application/json" \
+  -d '{"path": "test.txt", "content": "Hello World"}'
+
+# Git operations
+curl -X POST http://localhost:3000/tools/git_status \
+  -H "Content-Type: application/json" \
+  -d '{"path": "."}'
+
+# Create new projects
+curl -X POST http://localhost:3000/tools/create_project \
+  -H "Content-Type: application/json" \
+  -d '{"name": "my-project", "type": "node"}'
+```
+
 ### Development Workflow Examples
 
 #### Node.js Project
@@ -223,7 +265,7 @@ npm start
 
 The container exposes the following ports:
 - **8080**: VS Code Server
-- **3000**: Node.js development server
+- **3000**: MCP Server / Node.js development server
 - **4200**: Angular development server
 - **8000**: Python development server
 - **9000**: Additional development server
