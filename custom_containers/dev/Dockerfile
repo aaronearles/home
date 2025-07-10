@@ -32,7 +32,14 @@ RUN apt-get update && apt-get install -y \
     tree \
     jq \
     zip \
+    locales \
     && rm -rf /var/lib/apt/lists/*
+
+# Generate locales
+RUN locale-gen en_US.UTF-8
+ENV LANG=en_US.UTF-8
+ENV LANGUAGE=en_US:en
+ENV LC_ALL=en_US.UTF-8
 
 # Install Node.js 20.x LTS
 RUN curl -fsSL https://deb.nodesource.com/setup_20.x | bash - \
@@ -123,7 +130,7 @@ RUN pip3 install --timeout=120 --retries=5 \
 
 # Create docker group and non-root user
 RUN groupadd docker || true \
-    && groupadd --gid $USER_GID $USERNAME || true \
+    && (groupadd --gid $USER_GID $USERNAME || groupadd $USERNAME) \
     && useradd --uid $USER_UID --gid $USERNAME -m $USERNAME \
     && usermod -aG docker $USERNAME \
     && echo $USERNAME ALL=\(root\) NOPASSWD:ALL > /etc/sudoers.d/$USERNAME \
