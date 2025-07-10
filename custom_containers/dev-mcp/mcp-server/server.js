@@ -207,6 +207,98 @@ const toolHandlers = {
 // HTTP API endpoints
 app.use(express.json());
 
+// MCP JSON-RPC 2.0 endpoint
+app.post('/', async (req, res) => {
+  try {
+    const request = req.body;
+    
+    if (!request.jsonrpc || request.jsonrpc !== '2.0') {
+      return res.status(400).json({
+        jsonrpc: '2.0',
+        error: { code: -32600, message: 'Invalid Request' },
+        id: request.id || null
+      });
+    }
+
+    switch (request.method) {
+      case 'initialize':
+        res.json({
+          jsonrpc: '2.0',
+          result: {
+            protocolVersion: '2024-11-05',
+            capabilities: {
+              tools: {
+                listChanged: false
+              }
+            },
+            serverInfo: {
+              name: 'dev-mcp-server',
+              version: '1.0.0'
+            }
+          },
+          id: request.id
+        });
+        break;
+
+      case 'tools/list':
+        res.json({
+          jsonrpc: '2.0',
+          result: { tools },
+          id: request.id
+        });
+        break;
+
+      case 'tools/call':
+        const toolName = request.params?.name;
+        const toolArgs = request.params?.arguments || {};
+        
+        if (!toolName || !toolHandlers[toolName]) {
+          return res.json({
+            jsonrpc: '2.0',
+            error: { code: -32601, message: `Unknown tool: ${toolName}` },
+            id: request.id
+          });
+        }
+
+        try {
+          const result = await toolHandlers[toolName](toolArgs);
+          res.json({
+            jsonrpc: '2.0',
+            result: {
+              content: [
+                {
+                  type: 'text',
+                  text: JSON.stringify(result, null, 2)
+                }
+              ]
+            },
+            id: request.id
+          });
+        } catch (error) {
+          res.json({
+            jsonrpc: '2.0',
+            error: { code: -32603, message: error.message },
+            id: request.id
+          });
+        }
+        break;
+
+      default:
+        res.json({
+          jsonrpc: '2.0',
+          error: { code: -32601, message: 'Method not found' },
+          id: request.id
+        });
+    }
+  } catch (error) {
+    res.status(500).json({
+      jsonrpc: '2.0',
+      error: { code: -32603, message: 'Internal error' },
+      id: req.body?.id || null
+    });
+  }
+});
+
 app.get('/tools', (req, res) => {
   res.json({ tools });
 });
