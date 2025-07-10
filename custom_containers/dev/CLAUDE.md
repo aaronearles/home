@@ -4,14 +4,14 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Repository Overview
 
-This is a **containerized development environment** that provides a comprehensive, portable development setup with all necessary tools for modern software development, infrastructure management, and cloud operations. The container is built on Ubuntu 22.04 and includes a complete toolchain for Node.js, Python, cloud infrastructure, and DevOps workflows.
+This is a **containerized development environment** that provides a comprehensive, portable development setup with all necessary tools for modern software development, infrastructure management, and cloud operations. The container is built on Ubuntu 22.04 and includes a complete toolchain for Node.js, Python, cloud infrastructure, and DevOps workflows, plus an integrated **MCP (Model Context Protocol) server** for seamless Claude Code integration.
 
 ## Container Architecture
 
 ### Core Development Stack
 - **Runtime Environments**: Node.js 20.x LTS, Python 3 with pip/venv
 - **Development IDE**: VS Code Server (code-server) for web-based development
-- **AI Integration**: Claude CLI (@anthropic-ai/claude-code) for AI-assisted coding
+- **AI Integration**: Claude CLI (@anthropic-ai/claude-code) + integrated MCP Server for advanced Claude Code interaction
 - **Container Platform**: Docker CLI with Docker-in-Docker support
 
 ### Infrastructure & DevOps Tools
@@ -25,6 +25,13 @@ This is a **containerized development environment** that provides a comprehensiv
 - **JavaScript/TypeScript**: Angular CLI, Vue CLI, Create React App, PM2, ESLint, Prettier
 - **Python**: Black (formatter), Flake8 (linter), pytest (testing)
 - **System Tools**: htop, tree, jq, zip utilities
+
+### MCP Server Integration
+- **Protocol**: JSON-RPC 2.0 over HTTP and WebSocket
+- **Port**: 3000 (accessible at http://localhost:3000)
+- **Tools**: File operations, command execution, directory listing, git operations, project creation
+- **Claude Integration**: Direct interface for Claude Code to interact with container filesystem and execute commands
+- **Capabilities**: read_file, write_file, execute_command, list_directory, git_status, git_commit, create_project
 
 ## Common Development Commands
 
@@ -73,6 +80,7 @@ alias ll="ls -la"
 
 # Container startup provides workspace permissions and info
 # Access VS Code Server at: http://localhost:8080
+# Access MCP Server at: http://localhost:3000
 # Workspace directory: /workspace
 ```
 
@@ -145,7 +153,7 @@ Import-Module Az
 
 The container exposes these ports for development:
 - **8080**: VS Code Server web interface
-- **3000**: Node.js development server (Express, React default)
+- **3000**: MCP Server / Node.js development server (Express, React default)
 - **4200**: Angular development server
 - **8000**: Python development server (Django, Flask)
 - **9000**: Additional development server
@@ -166,10 +174,41 @@ The container includes comprehensive cloud-native development tools:
 - AWS CLI for cloud operations
 
 ### AI-Assisted Development
-The container includes the Claude CLI for AI-assisted coding:
-- Authenticate with `claude doctor` on first use
-- Use `claude` for interactive AI coding sessions
+The container includes comprehensive Claude integration:
+- **Claude CLI**: Authenticate with `claude doctor` on first use, use `claude` for interactive sessions
+- **MCP Server**: Automatically started, provides direct Claude Code access to container environment
+- **API Endpoints**: GET /tools (list capabilities), POST /tools/:toolName (execute tools)
+- **WebSocket**: Real-time communication for advanced Claude Code integration
 - Requires active billing at console.anthropic.com
+
+### MCP Server Operations
+```bash
+# MCP server automatically starts on container launch (port 3000)
+# Available tools can be accessed via HTTP API:
+
+# List all available tools
+curl http://localhost:3000/tools
+
+# Execute a tool (example: list directory)
+curl -X POST http://localhost:3000/tools/list_directory \
+  -H "Content-Type: application/json" \
+  -d '{"path": "."}'
+
+# Create a new project
+curl -X POST http://localhost:3000/tools/create_project \
+  -H "Content-Type: application/json" \
+  -d '{"name": "my-project", "type": "node"}'
+
+# Read a file
+curl -X POST http://localhost:3000/tools/read_file \
+  -H "Content-Type: application/json" \
+  -d '{"path": "package.json"}'
+
+# Execute commands
+curl -X POST http://localhost:3000/tools/execute_command \
+  -H "Content-Type: application/json" \
+  -d '{"command": "ls -la", "cwd": "."}'
+```
 
 ## Security Considerations
 

@@ -7,7 +7,7 @@ services:
     restart: unless-stopped
     ports:
       - "8080:8080"   # VS Code Server
-      - "3000:3000"   # Node.js development server
+      - "3000:3000"   # Node.js development server / MCP Server
       - "4200:4200"   # Angular development server
       - "8000:8000"   # Python development server
       - "9000:9000"   # Additional development server
@@ -18,6 +18,10 @@ services:
       - USERNAME=developer
       - USER_UID=1000
       - USER_GID=1000
+      - NODE_ENV=development
+      - MCP_PORT=3000
+      - GIT_USER_NAME=${GIT_USER_NAME:-Claude Dev}
+      - GIT_USER_EMAIL=${GIT_USER_EMAIL:-claude@dev.local}
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:8080"]
       interval: 30s
