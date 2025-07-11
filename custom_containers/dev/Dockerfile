@@ -140,8 +140,19 @@ RUN groupadd docker || true \
 RUN mkdir -p /workspace \
     && chown -R $USERNAME:$USERNAME /workspace
 
+# Install MCP server dependencies and setup
+COPY mcp-server/package.json /tmp/mcp-server/
+WORKDIR /tmp/mcp-server
+RUN npm install
+RUN mkdir -p /home/$USERNAME/mcp-server \
+    && cp -r node_modules /home/$USERNAME/mcp-server/ \
+    && chown -R $USERNAME:$USERNAME /home/$USERNAME/mcp-server
+
 # Switch to non-root user
 USER $USERNAME
+
+# Copy MCP server files
+COPY --chown=$USERNAME:$USERNAME mcp-server/ /home/$USERNAME/mcp-server/
 
 # Set up user environment and npm configuration
 RUN echo 'export PATH=$PATH:/home/$USERNAME/.local/bin' >> /home/$USERNAME/.bashrc \

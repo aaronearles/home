@@ -20,11 +20,17 @@ code-server \
     --user-data-dir /home/$(whoami)/.local/share/code-server \
     /workspace &
 
-# Wait for code-server to start
+# Start MCP server in the background
+echo "Starting MCP Server on port 3000..."
+cd /home/$(whoami)/mcp-server
+node server.js &
+
+# Wait for services to start
 sleep 5
 
 echo "Development container is ready!"
 echo "Access VS Code Server at: http://localhost:8080"
+echo "Access MCP Server at: http://localhost:3000"
 echo "Workspace directory: /workspace"
 echo ""
 echo "Available aliases:"
@@ -36,7 +42,7 @@ echo "  ll = ls -la"
 echo ""
 echo "Available ports:"
 echo "  8080 - VS Code Server"
-echo "  3000 - Node.js development server"
+echo "  3000 - MCP Server / Node.js development server"
 echo "  4200 - Angular development server"
 echo "  8000 - Python development server"
 echo "  9000 - Additional development server"
