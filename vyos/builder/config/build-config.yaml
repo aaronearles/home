@@ -1,0 +1,74 @@
+# VyOS Builder Configuration
+# This file contains the default build configuration settings
+
+build:
+  # Source configuration
+  repository: "https://github.com/vyos/vyos-build"
+  branch: "current"  # Options: current, sagitta, equuleus
+  
+  # Build target configuration
+  architecture: "amd64"  # Options: amd64, arm64
+  build_type: "generic"  # Options: generic, cloud-init, etc.
+  
+  # Build environment
+  container: "vyos/vyos-build:current"
+  privileged: true
+  
+  # Build options
+  clean_before_build: false
+  update_source_before_build: true
+  verbose_output: false
+
+# Output configuration
+output:
+  directory: "./output/current"
+  keep_artifacts: true
+  generate_checksums: true
+  include_build_info: true
+  
+  # File naming pattern
+  # Available variables: {version}, {branch}, {timestamp}, {architecture}
+  iso_name_pattern: "vyos-{version}-{branch}-{timestamp}-{architecture}.iso"
+
+# Logging configuration
+logging:
+  directory: "./logs"
+  keep_logs: true
+  max_log_files: 10  # Keep last 10 build logs
+  verbose: false
+
+# Future: Custom packages (not implemented yet)
+packages:
+  custom_directory: "./packages/custom"
+  include_custom: false
+  auto_detect: true
+
+# Future: Notifications (not implemented yet)
+notifications:
+  enabled: false
+  on_success: false
+  on_failure: true
+  
+  # Notification methods (future)
+  email:
+    enabled: false
+    smtp_server: ""
+    to_addresses: []
+  
+  webhook:
+    enabled: false
+    url: ""
+    
+# Future: Scheduling (not implemented yet)  
+schedule:
+  enabled: false
+  frequency: "monthly"  # Options: daily, weekly, monthly
+  day_of_month: 1  # For monthly builds
+  time: "02:00"    # 24-hour format
+
+# Advanced build options (future)
+advanced:
+  parallel_builds: false
+  build_timeout: 7200  # 2 hours in seconds
+  retry_on_failure: false
+  max_retries: 1

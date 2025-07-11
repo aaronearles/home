@@ -1,0 +1,28 @@
+# Build outputs
+output/
+logs/
+*.iso
+*.md5sum
+
+# Environment files
+.env
+
+# VyOS build artifacts
+vyos-build/build/
+vyos-build/.vagrant/
+
+# Temporary files
+*.tmp
+*.log
+.DS_Store
+Thumbs.db
+
+# Docker artifacts
+.docker/
+
+# Editor files
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
