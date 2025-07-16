@@ -13,7 +13,8 @@ LOGPATH="/var/log/ddns.log" #file path to log events
 now=$(date)
 
 # Check for current external IP
-IP=`dig +short txt ch whoami.cloudflare @1.0.0.1| tr -d '"'`
+# IP=`dig +short txt ch whoami.cloudflare @1.0.0.1| tr -d '"'` # Stopped working due to DNS inspection with Unifi Network 9.3 update
+IP=`curl -s https://ifconfig.io`
 
 # Set Cloudflare API
 URL="https://api.cloudflare.com/client/v4/zones/$ZONEID/dns_records/$RECORDID"
