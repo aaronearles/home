@@ -1,0 +1,20 @@
+{
+  "mcpServers": {
+    "puppeteer": {
+      "command": "docker",
+      "args": [
+        "run",
+        "-i",
+        "--rm",
+        "--init",
+        "--memory=2g",
+        "--shm-size=2g",
+        "--cap-add=SYS_ADMIN",
+        "--security-opt=no-new-privileges",
+        "-e",
+        "DOCKER_CONTAINER=true",
+        "mcp/puppeteer"
+      ]
+    }
+  }
+}
