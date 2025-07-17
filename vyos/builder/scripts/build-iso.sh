@@ -233,6 +233,9 @@ build_iso() {
     mkdir -p "$(pwd)/build"
     
     # Use Docker container but run debootstrap on host to bypass permission issues
+    # Create a temporary log file for Docker output
+    local docker_log_file="$LOG_DIR/docker-$TIMESTAMP.log"
+    
     if timeout 7200 docker run --rm \
         --privileged \
         --pid=host \
@@ -243,7 +246,10 @@ build_iso() {
         -v "$(pwd)":/vyos \
         -w /vyos \
         "$VYOS_BUILD_CONTAINER" \
-        bash -c "$build_cmd" 2>&1 | tee -a "$BUILD_LOG"; then
+        bash -c "$build_cmd" > "$docker_log_file" 2>&1; then
+        
+        # Append Docker output to main log file
+        cat "$docker_log_file" >> "$BUILD_LOG"
         
         local build_end_time
         build_end_time=$(date +%s)
@@ -251,12 +257,21 @@ build_iso() {
         
         log "✅ Build completed successfully in ${build_duration}s"
         info_log "Build artifacts should be in: $(pwd)/build/"
+        
+        # Clean up temporary Docker log
+        rm -f "$docker_log_file"
         return 0
     else
         local exit_code=$?
         local build_end_time
         build_end_time=$(date +%s)
         local build_duration=$((build_end_time - build_start_time))
+        
+        # Append Docker output to main log even on failure
+        if [[ -f "$docker_log_file" ]]; then
+            cat "$docker_log_file" >> "$BUILD_LOG"
+            rm -f "$docker_log_file"
+        fi
         
         if [[ $exit_code -eq 124 ]]; then
             error_log "Build timed out after 2 hours (${build_duration}s)"
@@ -274,8 +289,8 @@ build_iso() {
 }
 
 # Enhanced artifact management
-copy_artifacts() {
-    log "📦 Copying build artifacts..."
+manage_artifacts() {
+    log "📦 Managing build artifacts..."
     
     # Validate build directory exists
     if [[ ! -d "$PROJECT_ROOT/vyos-build/build" ]]; then
@@ -319,25 +334,34 @@ copy_artifacts() {
         warn_log "ISO file seems small: $(du -h "$iso_file" | cut -f1) - build may have failed"
     fi
     
-    # Generate new filename with timestamp
+    # Use original filename without timestamp
     local iso_basename
     iso_basename=$(basename "$iso_file")
-    local new_iso_name="${iso_basename%.iso}-$TIMESTAMP.iso"
     
-    # Copy ISO with verification
-    log "Copying ISO: $iso_file -> $OUTPUT_DIR/$new_iso_name"
-    if ! cp "$iso_file" "$OUTPUT_DIR/$new_iso_name"; then
-        error_log "Failed to copy ISO file"
+    # Move ISO to output directory (saves disk space)
+    log "Moving ISO: $iso_file -> $OUTPUT_DIR/$iso_basename"
+    if ! sudo mv "$iso_file" "$OUTPUT_DIR/$iso_basename"; then
+        error_log "Failed to move ISO file"
         return 1
     fi
     
-    # Verify copy
-    local original_size copied_size
-    original_size=$(stat -c%s "$iso_file")
-    copied_size=$(stat -c%s "$OUTPUT_DIR/$new_iso_name")
+    # Change ownership to current user
+    if ! sudo chown "$(whoami):$(whoami)" "$OUTPUT_DIR/$iso_basename"; then
+        error_log "Failed to change ISO file ownership"
+        return 1
+    fi
     
-    if [[ $original_size -ne $copied_size ]]; then
-        error_log "ISO copy verification failed: size mismatch"
+    # Verify move completed
+    if [[ ! -f "$OUTPUT_DIR/$iso_basename" ]]; then
+        error_log "ISO file not found after move operation"
+        return 1
+    fi
+    
+    local moved_size
+    moved_size=$(stat -c%s "$OUTPUT_DIR/$iso_basename")
+    
+    if [[ $iso_size -ne $moved_size ]]; then
+        error_log "ISO move verification failed: size mismatch"
         return 1
     fi
     
@@ -348,8 +372,8 @@ copy_artifacts() {
     }
     
     log "Generating checksums..."
-    md5sum "$new_iso_name" > "${new_iso_name%.iso}.md5sum"
-    sha256sum "$new_iso_name" > "${new_iso_name%.iso}.sha256sum"
+    md5sum "$iso_basename" > "${iso_basename%.iso}.md5sum"
+    sha256sum "$iso_basename" > "${iso_basename%.iso}.sha256sum"
     
     # Create detailed build info file
     cat > "build-info-$TIMESTAMP.txt" << EOF
@@ -372,10 +396,10 @@ Build Configuration:
   Verbose: $VERBOSE_BUILD
 
 Output Information:
-  ISO File: $new_iso_name
-  ISO Size: $(du -h "$new_iso_name" | cut -f1)
-  MD5: $(cat "${new_iso_name%.iso}.md5sum" | cut -d' ' -f1)
-  SHA256: $(cat "${new_iso_name%.iso}.sha256sum" | cut -d' ' -f1)
+  ISO File: $iso_basename
+  ISO Size: $(du -h "$iso_basename" | cut -f1)
+  MD5: $(cat "${iso_basename%.iso}.md5sum" | cut -d' ' -f1)
+  SHA256: $(cat "${iso_basename%.iso}.sha256sum" | cut -d' ' -f1)
 
 System Information:
   Build Host: $(hostname)
@@ -385,10 +409,10 @@ System Information:
   Docker Version: $(docker --version)
 EOF
     
-    log "✅ Artifacts copied to $OUTPUT_DIR"
-    log "   ISO: $new_iso_name"
-    log "   Size: $(du -h "$new_iso_name" | cut -f1)"
-    log "   MD5: $(cat "${new_iso_name%.iso}.md5sum" | cut -d' ' -f1)"
+    log "✅ Artifacts moved to $OUTPUT_DIR"
+    log "   ISO: $iso_basename"
+    log "   Size: $(du -h "$iso_basename" | cut -f1)"
+    log "   MD5: $(cat "${iso_basename%.iso}.md5sum" | cut -d' ' -f1)"
     info_log "Build info saved to: build-info-$TIMESTAMP.txt"
 }
 
@@ -439,7 +463,7 @@ main() {
     clean_build
     
     if build_iso; then
-        copy_artifacts
+        manage_artifacts
         local end_time
         end_time=$(date +%s)
         local duration=$((end_time - start_time))
