@@ -1,57 +1,59 @@
-# Browser Automation for Claude Code: Docker Setup Guide
+# Browser Automation for Claude Code: Remote Setup Guide
 
 ## Overview
 
-This guide provides comprehensive instructions for setting up browser automation capabilities for Claude Code on headless Docker hosts. It covers three main approaches: Puppeteer MCP Server (recommended), Custom Selenium MCP Server, and Playwright MCP Server, all using the Model Context Protocol (MCP) for seamless integration.
+This guide provides comprehensive instructions for setting up browser automation capabilities for Claude Code on headless Docker hosts. The **recommended approach is now Stagehand/Browserbase**, which provides cloud-based browser automation specifically designed for Claude Code. Legacy Docker-based options are included for reference.
+
+**⚠️ IMPORTANT UPDATE**: The official Puppeteer MCP server has been archived and is no longer maintained. Stagehand/Browserbase is now the recommended solution for browser automation with Claude Code.
 
 ## Table of Contents
 
-1. [Quick Start: Puppeteer MCP Server](#option-1-puppeteer-mcp-server-recommended)
-2. [Custom Selenium Setup](#option-2-custom-selenium-mcp-server)
-3. [Playwright Alternative](#option-3-playwright-mcp-server)
-4. [Implementation Details](#implementation-details)
-5. [Integration Examples](#integration-with-fortinet-api-crawler)
-6. [Troubleshooting](#troubleshooting)
-7. [Configuration Examples](#configuration-examples)
+1. [Recommended: Stagehand/Browserbase MCP](#option-1-stagehundbrowserbase-mcp-recommended)
+2. [Legacy: Archived Puppeteer MCP](#option-2-archived-puppeteer-mcp-not-recommended)  
+3. [Custom Selenium Setup](#option-3-custom-selenium-mcp-server)
+4. [Playwright Alternative](#option-4-playwright-mcp-server)
+5. [Implementation Details](#implementation-details)
+6. [Integration Examples](#integration-with-fortinet-api-crawler)
+7. [Troubleshooting](#troubleshooting)
+8. [Configuration Examples](#configuration-examples)
 
-## Option 1: Puppeteer MCP Server (Recommended)
+## Option 1: Stagehand/Browserbase MCP (Recommended)
 
-**Simplest setup with official Docker support from Anthropic**
+**AI-powered cloud browser automation designed specifically for Claude Code**
 
 ### Prerequisites
-- Docker installed on your headless host
 - Claude Code CLI installed
-- Access to configure Claude Desktop settings
+- Browserbase API key (sign up at browserbase.com)
+- Anthropic API key for AI-powered actions
 
 ### Setup Steps
 
-1. **Configure Claude Desktop MCP**
+1. **Clone and Build Stagehand MCP Server**
+
+   ```bash
+   git clone https://github.com/browserbase/stagehand
+   cd stagehand/mcp-server
+   npm install
+   npm run build
+   ```
+
+2. **Configure Claude Desktop MCP**
 
    Add the following to your `claude_desktop_config.json` file:
 
    ```json
    {
      "mcpServers": {
-       "puppeteer": {
-         "command": "docker",
-         "args": [
-           "run", 
-           "-i", 
-           "--rm", 
-           "--init", 
-           "-e", 
-           "DOCKER_CONTAINER=true", 
-           "mcp/puppeteer"
-         ]
+       "stagehand": {
+         "command": "node",
+         "args": ["path/to/stagehand/mcp-server/dist/index.js"],
+         "env": {
+           "BROWSERBASE_API_KEY": "your_browserbase_api_key",
+           "ANTHROPIC_API_KEY": "your_anthropic_api_key"
+         }
        }
      }
    }
-   ```
-
-2. **Alternative: Claude Code CLI Setup**
-
-   ```bash
-   claude mcp add puppeteer -s user -- npx -y @modelcontextprotocol/server-puppeteer
    ```
 
 3. **Project-specific Setup (Recommended)**
@@ -61,38 +63,134 @@ This guide provides comprehensive instructions for setting up browser automation
    ```json
    {
      "mcpServers": {
-       "puppeteer": {
-         "command": "docker",
-         "args": [
-           "run", 
-           "-i", 
-           "--rm", 
-           "--init", 
-           "-e", 
-           "DOCKER_CONTAINER=true", 
-           "mcp/puppeteer"
-         ]
+       "stagehand": {
+         "command": "node",
+         "args": ["./stagehand-mcp/dist/index.js"],
+         "env": {
+           "BROWSERBASE_API_KEY": "your_browserbase_api_key",
+           "ANTHROPIC_API_KEY": "your_anthropic_api_key"
+         }
        }
      }
    }
    ```
 
 ### Benefits
-- ✅ Official Docker image from Anthropic
-- ✅ Zero dependency management
-- ✅ Secure containerized execution
-- ✅ Built-in headless Chrome support
-- ✅ Automatic screenshot capabilities
-- ✅ JavaScript execution support
+- ✅ AI-powered browser interactions using natural language
+- ✅ Cloud-based execution (no local Docker/Chrome needed)
+- ✅ Built for Claude Code integration
+- ✅ Automatic screenshot and logging capabilities
+- ✅ Handles complex dynamic web applications
+- ✅ No infrastructure management required
+- ✅ Perfect for headless server deployment
 
 ### Capabilities
-- Navigate to websites and interact with pages
-- Take screenshots for debugging
-- Execute JavaScript in browser context
-- Handle dynamic content loading
-- Automate form filling and button clicks
+- **stagehand_navigate**: Navigate to URLs with intelligent waiting
+- **stagehand_act**: Perform actions using natural language descriptions
+- **stagehand_extract**: Extract structured data from web pages
+- **stagehand_observe**: Identify available interactions on current page
+- Advanced form filling and complex user workflows
+- Dynamic content handling with AI-powered element detection
 
-## Option 2: Custom Selenium MCP Server
+### Network Deployment for Headless Servers
+
+For deploying Stagehand MCP on headless Docker hosts with Traefik:
+
+1. **Create Docker Container for Stagehand MCP**
+
+   ```dockerfile
+   FROM node:20-alpine
+   
+   WORKDIR /app
+   
+   # Clone and build Stagehand MCP
+   RUN apk add --no-cache git
+   RUN git clone https://github.com/browserbase/stagehand.git .
+   RUN cd mcp-server && npm install && npm run build
+   
+   # Create non-root user
+   RUN adduser -D -s /bin/sh mcpuser
+   USER mcpuser
+   
+   WORKDIR /app/mcp-server
+   EXPOSE 3000
+   
+   CMD ["node", "dist/index.js"]
+   ```
+
+2. **Docker Compose Setup**
+
+   ```yaml
+   services:
+     stagehand-mcp:
+       build: .
+       container_name: stagehand-mcp-server
+       restart: unless-stopped
+       environment:
+         - BROWSERBASE_API_KEY=${BROWSERBASE_API_KEY}
+         - ANTHROPIC_API_KEY=${ANTHROPIC_API_KEY}
+         - PORT=3000
+       networks:
+         - traefik
+       labels:
+         - traefik.enable=true
+         - traefik.docker.network=traefik
+         - traefik.http.routers.stagehand.rule=Host(`browser.lab.earles.io`)
+         - traefik.http.routers.stagehand.entrypoints=websecure
+         - traefik.http.routers.stagehand.tls.certresolver=production
+         - traefik.http.services.stagehand.loadbalancer.server.port=3000
+   
+   networks:
+     traefik:
+       external: true
+   ```
+
+3. **Environment Configuration**
+
+   ```bash
+   # .env file
+   BROWSERBASE_API_KEY=your_browserbase_api_key_here
+   ANTHROPIC_API_KEY=your_anthropic_api_key_here
+   ```
+
+4. **Claude Code Remote Configuration**
+
+   ```json
+   {
+     "mcpServers": {
+       "stagehand-remote": {
+         "command": "curl",
+         "args": [
+           "-X", "POST",
+           "-H", "Content-Type: application/json",
+           "https://browser.lab.earles.io/mcp",
+           "-d", "@-"
+         ]
+       }
+     }
+   }
+   ```
+
+## Option 2: Archived Puppeteer MCP (Not Recommended)
+
+**⚠️ DEPRECATED: This option is archived and no longer maintained**
+
+The official Puppeteer MCP server has been moved to the archived servers repository and is no longer receiving updates or security patches. **Do not use this option for new deployments.**
+
+### Why It Was Archived
+- Security vulnerabilities in outdated dependencies
+- Maintenance burden of Docker-based browser automation
+- Better cloud-based alternatives now available (Stagehand/Browserbase)
+- Limited AI integration capabilities
+
+### Migration Path
+If you're currently using the Puppeteer MCP server, migrate to **Stagehand/Browserbase** for:
+- Better reliability and performance
+- AI-powered browser interactions
+- No infrastructure management
+- Active maintenance and support
+
+## Option 3: Custom Selenium MCP Server
 
 **More control and customization for specific needs**
 
@@ -446,7 +544,7 @@ docker run -it --rm \
   custom-selenium-mcp
 ```
 
-## Option 3: Playwright MCP Server
+## Option 4: Playwright MCP Server
 
 **Modern browser automation with multi-browser support**
 

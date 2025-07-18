@@ -1,0 +1,54 @@
+services:
+  mcp-playwright:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: mcp-playwright
+    restart: unless-stopped
+    environment:
+      - NODE_ENV=production
+      - PLAYWRIGHT_SKIP_BROWSER_DOWNLOAD=1
+      - PLAYWRIGHT_BROWSERS_PATH=0
+      - PLAYWRIGHT_CHROMIUM_EXECUTABLE_PATH=/usr/bin/chromium
+      - PLAYWRIGHT_FIREFOX_EXECUTABLE_PATH=/usr/bin/firefox-esr
+      - CHROME_EXECUTABLE_PATH=/usr/bin/chromium
+      - DISPLAY=:99
+    volumes:
+      - ./data:/app/data
+      - ./logs:/app/logs
+    # ports:
+    #   - "3000:3000"
+    networks:
+      - traefik
+      - backend
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:3000/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 60s
+    # security_opt:
+    #   - no-new-privileges:true
+    # cap_drop:
+    #   - ALL
+    # cap_add:
+    #   - CHOWN
+    #   - SETGID
+    #   - SETUID
+    labels:
+      - traefik.enable=true
+      - traefik.docker.network=traefik
+      - traefik.http.routers.mcp-playwright.rule=Host(`mcp-playwright.lab.earles.io`)
+      - traefik.http.routers.mcp-playwright.entrypoints=websecure
+      - traefik.http.routers.mcp-playwright.tls.certresolver=production
+      - traefik.http.services.mcp-playwright.loadbalancer.server.port=3000
+
+volumes:
+  data:
+  logs:
+
+networks:
+  traefik:
+    external: true
+  backend:
+    external: false

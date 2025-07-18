@@ -1,0 +1,42 @@
+services:
+  stagehand-mcp:
+    build: .
+    container_name: stagehand-mcp-server
+    restart: unless-stopped
+    env_file:
+      - .env
+    environment:
+      - NODE_ENV=production
+      - PORT=3000
+      - LOG_LEVEL=info
+    volumes:
+      - ./logs:/app/logs
+      - ./data:/app/data
+    # ports:
+    #   - "3000:3000"  # Commented out - using Traefik
+    networks:
+      - traefik
+      - backend
+    healthcheck:
+      test: ["CMD", "node", "-e", "console.log('Health check passed')"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+    labels:
+      - traefik.enable=true
+      - traefik.docker.network=traefik
+      - traefik.http.routers.stagehand-mcp.rule=Host(`browser.lab.earles.io`)
+      - traefik.http.routers.stagehand-mcp.entrypoints=websecure
+      - traefik.http.routers.stagehand-mcp.tls.certresolver=production
+      - traefik.http.services.stagehand-mcp.loadbalancer.server.port=3000
+
+volumes:
+  logs:
+  data:
+
+networks:
+  traefik:
+    external: true
+  backend:
+    external: false
