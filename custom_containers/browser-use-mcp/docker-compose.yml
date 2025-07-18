@@ -1,0 +1,41 @@
+services:
+  browser-use-mcp:
+    build: .
+    container_name: browser-use-mcp
+    restart: unless-stopped
+    env_file:
+      - .env
+    # ports:
+    #   - "8000:8000"  # HTTP API
+    #   - "5900:5900"  # VNC
+    networks:
+      - traefik
+    environment:
+      - ANONYMIZED_TELEMETRY=false
+      - DISPLAY=:0
+      - CHROME_BIN=/usr/bin/chromium
+      - CHROMIUM_FLAGS=--no-sandbox --headless --disable-gpu --disable-software-rasterizer --disable-dev-shm-usage
+    volumes:
+      - vnc_data:/root/.vnc
+    labels:
+      - traefik.enable=true
+      - traefik.docker.network=traefik
+      # HTTP API endpoint
+      - traefik.http.routers.browser-use-mcp.rule=Host(`browser-use.lab.earles.io`)
+      - traefik.http.routers.browser-use-mcp.entrypoints=websecure
+      - traefik.http.routers.browser-use-mcp.tls.certresolver=production
+      - traefik.http.routers.browser-use-mcp.service=browser-use-mcp
+      - traefik.http.services.browser-use-mcp.loadbalancer.server.port=8000
+      # VNC endpoint
+      - traefik.http.routers.browser-use-vnc.rule=Host(`browser-vnc.lab.earles.io`)
+      - traefik.http.routers.browser-vnc.entrypoints=websecure
+      - traefik.http.routers.browser-vnc.tls.certresolver=production
+      - traefik.http.routers.browser-vnc.service=browser-use-vnc
+      - traefik.http.services.browser-use-vnc.loadbalancer.server.port=5900
+
+volumes:
+  vnc_data:
+
+networks:
+  traefik:
+    external: true
