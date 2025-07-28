@@ -1,0 +1,139 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Home Automation Menu</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>Home Automation</h1>
+            <button id="add-button" class="add-btn" title="Add Button">+ Button</button>
+            <button id="add-toggle" class="add-btn" title="Add Toggle">+ Toggle</button>
+        </header>
+
+        <main id="controls-grid" class="controls-grid">
+            <!-- Dynamic buttons and toggles will be inserted here -->
+        </main>
+
+        <!-- Settings Modal -->
+        <div id="settings-modal" class="modal">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h2 id="modal-title">Configure Control</h2>
+                    <span class="close">&times;</span>
+                </div>
+                <form id="settings-form">
+                    <div class="form-group">
+                        <label for="control-label">Label:</label>
+                        <input type="text" id="control-label" placeholder="e.g., Garage Door" required>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="api-url">API URL:</label>
+                        <input type="url" id="api-url" placeholder="http://your-api.com/endpoint" required>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="http-method">HTTP Method:</label>
+                        <select id="http-method">
+                            <option value="GET">GET</option>
+                            <option value="POST">POST</option>
+                            <option value="PUT">PUT</option>
+                            <option value="DELETE">DELETE</option>
+                        </select>
+                    </div>
+                    
+                    <div class="form-group" id="toggle-status-group" style="display: none;">
+                        <label for="status-url">Status Check URL (for toggles):</label>
+                        <input type="url" id="status-url" placeholder="http://your-api.com/status">
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="headers">Custom Headers (JSON):</label>
+                        <textarea id="headers" placeholder='{"Authorization": "Bearer token", "Content-Type": "application/json"}'></textarea>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="body">Request Body (JSON):</label>
+                        <textarea id="body" placeholder='{"action": "toggle", "device": "light"}'></textarea>
+                    </div>
+                    
+                    <div class="form-actions">
+                        <button type="submit" class="btn btn-primary">Save</button>
+                        <button type="button" id="delete-control" class="btn btn-danger">Delete</button>
+                        <button type="button" class="btn btn-secondary" onclick="closeModal()">Cancel</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+
+        <!-- Response Viewer Modal -->
+        <div id="response-modal" class="modal">
+            <div class="modal-content response-modal">
+                <div class="modal-header">
+                    <h2 id="response-title">API Response</h2>
+                    <span class="close" onclick="closeResponseModal()">&times;</span>
+                </div>
+                <div class="response-content">
+                    <div class="response-tabs">
+                        <button class="tab-btn active" data-tab="response">Response</button>
+                        <button class="tab-btn" data-tab="headers">Headers</button>
+                        <button class="tab-btn" data-tab="request">Request</button>
+                    </div>
+                    
+                    <div class="tab-content active" id="response-tab">
+                        <div class="response-status">
+                            <span class="status-badge" id="status-badge">200</span>
+                            <span class="status-text" id="status-text">OK</span>
+                        </div>
+                        <div class="response-body">
+                            <pre id="response-body"></pre>
+                        </div>
+                    </div>
+                    
+                    <div class="tab-content" id="headers-tab">
+                        <pre id="response-headers"></pre>
+                    </div>
+                    
+                    <div class="tab-content" id="request-tab">
+                        <div class="request-details">
+                            <div class="request-url">
+                                <strong>URL:</strong> <span id="request-url"></span>
+                            </div>
+                            <div class="request-method">
+                                <strong>Method:</strong> <span id="request-method"></span>
+                            </div>
+                            <div class="request-headers-section">
+                                <strong>Headers:</strong>
+                                <pre id="request-headers"></pre>
+                            </div>
+                            <div class="request-body-section">
+                                <strong>Body:</strong>
+                                <pre id="request-body"></pre>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="response-actions">
+                    <button class="btn btn-secondary" onclick="copyResponse()">Copy Response</button>
+                    <button class="btn btn-secondary" onclick="closeResponseModal()">Close</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Export/Import Controls -->
+        <footer>
+            <button id="export-config" class="btn btn-secondary">Export Config</button>
+            <input type="file" id="import-file" accept=".json" style="display: none;">
+            <button id="import-config" class="btn btn-secondary">Import Config</button>
+        </footer>
+    </div>
+
+    <script src="config.js"></script>
+    <script src="app.js"></script>
+</body>
+</html>

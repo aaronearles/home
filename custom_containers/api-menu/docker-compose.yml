@@ -1,0 +1,23 @@
+services:
+  api-menu:
+    build: .
+    container_name: api-menu
+    restart: unless-stopped
+    # ports:
+    #   - "3000:3000"
+    networks:
+      - traefik
+    environment:
+      - NODE_ENV=production
+      - PORT=3000
+    labels:
+      - traefik.enable=true
+      - traefik.docker.network=traefik
+      - traefik.http.routers.api-menu.rule=Host(`api-menu.lab.earles.io`)
+      - traefik.http.routers.api-menu.entrypoints=websecure
+      - traefik.http.routers.api-menu.tls.certresolver=production
+      - traefik.http.services.api-menu.loadbalancer.server.port=3000
+
+networks:
+  traefik:
+    external: true
