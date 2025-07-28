@@ -1,0 +1,10 @@
+---
+# VyOS Users Role Handlers
+# Purpose: Handle configuration saves for user changes
+
+- name: save_config
+  vyos.vyos.vyos_config:
+    save: true
+  tags:
+    - vyos_users
+    - save

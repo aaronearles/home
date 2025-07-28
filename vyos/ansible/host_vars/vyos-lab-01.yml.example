@@ -1,0 +1,110 @@
+---
+# Example Host Variables for vyos-lab-01
+# Purpose: Demonstrate optional features configuration
+# Copy this file to host_vars/vyos-lab-01.yml and customize
+
+# VPN Configuration
+vyos_wireguard_enabled: true
+vyos_wireguard_network: 10.100.0.0/24
+vyos_wireguard_server_ip: 10.100.0.1/24
+vyos_wireguard_port: 51820
+
+# VPN clients (replace with actual public keys)
+vyos_wireguard_clients:
+  - name: admin-laptop
+    public_key: "your_laptop_public_key_here"
+    allowed_ips: "10.100.0.10/32"
+    description: "Administrator Laptop"
+  - name: admin-phone
+    public_key: "your_phone_public_key_here"
+    allowed_ips: "10.100.0.11/32"
+    description: "Administrator Phone"
+
+# Additional routes for VPN clients (access to internal networks)
+vyos_wireguard_additional_routes:
+  - 10.0.0.0/16      # Lab networks
+  - 192.168.1.0/24   # Home network (comment out for security)
+
+# QoS Configuration
+vyos_qos_enabled: true
+
+# QoS interface assignments
+vyos_qos_interface_assignments:
+  - interface: "eth1"  # WAN interface
+    direction: "out"
+    policy: "wan-upload"
+
+# Custom QoS policy (override default)
+vyos_qos_policies:
+  - name: "wan-upload"
+    type: "shaper"
+    bandwidth: "100mbit"  # Adjust to your WAN upload speed
+    description: "WAN Upload Bandwidth Management"
+    classes:
+      - class_id: 10
+        description: "Critical (SSH, DNS, VPN)"
+        bandwidth: "20mbit"
+        priority: 1
+        match_rules:
+          - name: "ssh"
+            protocol: "tcp"
+            destination_port: "22"
+          - name: "dns"
+            protocol: "udp"
+            destination_port: "53"
+          - name: "wireguard"
+            protocol: "udp"
+            destination_port: "51820"
+      - class_id: 20
+        description: "High Priority (Web, Email)"
+        bandwidth: "60mbit"
+        priority: 2
+        match_rules:
+          - name: "web"
+            protocol: "tcp"
+            destination_port: "80,443"
+          - name: "email"
+            protocol: "tcp"
+            destination_port: "25,110,143,993,995"
+      - class_id: 30
+        description: "Low Priority (Bulk Transfer)"
+        bandwidth: "20mbit"
+        priority: 3
+        default_class: true
+
+# Monitoring Configuration  
+vyos_monitoring_enabled: true
+
+# SNMP settings
+vyos_snmp_enabled: true
+vyos_snmp_community: "homelab_readonly"
+vyos_snmp_contact: "admin@homelab.local"
+vyos_snmp_location: "Home Lab Network"
+
+# SNMP client access (who can query SNMP)
+vyos_snmp_client_networks:
+  - 10.0.0.0/16      # Internal networks
+  - 192.168.1.0/24   # Home network
+
+# Remote syslog servers (optional)
+vyos_syslog_remote_servers:
+  - host: "192.168.1.100"  # Replace with your log server
+    port: 514
+    protocol: "udp"
+    facility: "all"
+    level: "info"
+
+# Flow accounting for network monitoring (optional)
+vyos_flow_accounting_enabled: false
+vyos_flow_accounting_interfaces:
+  - interface: "eth1"
+    direction: "ingress"
+  - interface: "eth1"
+    direction: "egress"
+
+vyos_flow_collectors:
+  - server: "192.168.1.100"  # Replace with your collector
+    port: 2055
+
+# Connection tracking logging (optional, can be verbose)
+vyos_conntrack_logging_enabled: false

@@ -1,0 +1,134 @@
+---
+# VyOS QoS Configuration Tasks
+# Purpose: Configure Quality of Service traffic shaping
+# Author: VyOS Ansible Framework
+# Dependencies: vyos.vyos collection
+
+- name: Check if QoS is enabled
+  debug:
+    msg: "QoS configuration: {{ 'enabled' if vyos_qos_enabled else 'disabled' }}"
+  tags:
+    - vyos_qos
+    - debug
+
+- name: Configure QoS policies
+  vyos.vyos.vyos_config:
+    lines:
+      - "set qos policy {{ item.type }} {{ item.name }} bandwidth {{ item.bandwidth }}"
+      - "set qos policy {{ item.type }} {{ item.name }} description '{{ item.description }}'"
+  loop: "{{ vyos_qos_policies }}"
+  when: 
+    - vyos_qos_enabled | bool
+    - vyos_qos_policies is defined
+  notify: save_config
+  tags:
+    - vyos_qos
+    - policies
+
+- name: Configure QoS policy classes
+  vyos.vyos.vyos_config:
+    lines:
+      - "set qos policy {{ policy.type }} {{ policy.name }} class {{ class.class_id }} bandwidth {{ class.bandwidth }}"
+      - "set qos policy {{ policy.type }} {{ policy.name }} class {{ class.class_id }} description '{{ class.description }}'"
+      - "set qos policy {{ policy.type }} {{ policy.name }} class {{ class.class_id }} priority {{ class.priority }}"
+  loop: "{{ vyos_qos_policies | subelements('classes') }}"
+  loop_control:
+    loop_var: policy_class
+  vars:
+    policy: "{{ policy_class[0] }}"
+    class: "{{ policy_class[1] }}"
+  when:
+    - vyos_qos_enabled | bool
+    - vyos_qos_policies is defined
+  notify: save_config
+  tags:
+    - vyos_qos
+    - classes
+
+- name: Configure QoS class match rules
+  vyos.vyos.vyos_config:
+    lines:
+      - "set qos policy {{ policy.type }} {{ policy.name }} class {{ class.class_id }} match {{ match.name }} protocol {{ match.protocol }}"
+      - "set qos policy {{ policy.type }} {{ policy.name }} class {{ class.class_id }} match {{ match.name }} destination port {{ match.destination_port }}"
+  loop: "{{ vyos_qos_policies | subelements('classes') | subelements('match_rules') }}"
+  loop_control:
+    loop_var: policy_class_match
+  vars:
+    policy: "{{ policy_class_match[0] }}"
+    class: "{{ policy_class_match[1] }}"
+    match: "{{ policy_class_match[2] }}"
+  when:
+    - vyos_qos_enabled | bool
+    - vyos_qos_policies is defined
+  notify: save_config
+  tags:
+    - vyos_qos
+    - match_rules
+
+- name: Set default class for policies
+  vyos.vyos.vyos_config:
+    lines:
+      - "set qos policy {{ policy.type }} {{ policy.name }} default class {{ class.class_id }}"
+  loop: "{{ vyos_qos_policies | subelements('classes') }}"
+  loop_control:
+    loop_var: policy_class
+  vars:
+    policy: "{{ policy_class[0] }}"
+    class: "{{ policy_class[1] }}"
+  when:
+    - vyos_qos_enabled | bool
+    - vyos_qos_policies is defined
+    - class.default_class | default(false) | bool
+  notify: save_config
+  tags:
+    - vyos_qos
+    - default_class
+
+- name: Apply QoS policies to interfaces
+  vyos.vyos.vyos_config:
+    lines:
+      - "set qos interface {{ item.interface }} egress {{ item.policy }}"
+  loop: "{{ vyos_qos_interface_assignments }}"
+  when:
+    - vyos_qos_enabled | bool
+    - vyos_qos_interface_assignments is defined
+    - item.direction == "out"
+  notify: save_config
+  tags:
+    - vyos_qos
+    - interface_assignment
+
+- name: Apply QoS policies to interfaces (ingress)
+  vyos.vyos.vyos_config:
+    lines:
+      - "set qos interface {{ item.interface }} ingress {{ item.policy }}"
+  loop: "{{ vyos_qos_interface_assignments }}"
+  when:
+    - vyos_qos_enabled | bool
+    - vyos_qos_interface_assignments is defined
+    - item.direction == "in"
+  notify: save_config
+  tags:
+    - vyos_qos
+    - interface_assignment
+
+- name: Display QoS configuration summary
+  debug:
+    msg:
+      - "QoS Policies Configured: {{ vyos_qos_policies | length if vyos_qos_policies is defined else 0 }}"
+      - "Interface Assignments: {{ vyos_qos_interface_assignments | length if vyos_qos_interface_assignments is defined else 0 }}"
+      - "Policies: {{ vyos_qos_policies | map(attribute='name') | list if vyos_qos_policies is defined else [] }}"
+  when: vyos_qos_enabled | bool
+  tags:
+    - vyos_qos
+    - debug
+
+- name: Remove QoS configuration
+  vyos.vyos.vyos_config:
+    lines:
+      - "delete qos"
+  when: not (vyos_qos_enabled | bool)
+  notify: save_config
+  tags:
+    - vyos_qos
+    - cleanup

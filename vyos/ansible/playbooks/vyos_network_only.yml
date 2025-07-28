@@ -1,0 +1,55 @@
+---
+# VyOS Network-Only Configuration Playbook
+# Purpose: Configure only network interfaces, routing, and DHCP
+# Author: VyOS Ansible Framework
+# Usage: ansible-playbook -i inventories/hosts.yml playbooks/vyos_network_only.yml
+# Dependencies: vyos.vyos collection
+
+- name: Configure VyOS Network Settings
+  hosts: vyos_routers
+  gather_facts: false
+  connection: network_cli
+  
+  vars:
+    ansible_python_interpreter: "{{ ansible_playbook_python }}"
+  
+  pre_tasks:
+    - name: Test VyOS connectivity
+      vyos.vyos.vyos_command:
+        commands:
+          - show version
+      register: vyos_version
+      tags:
+        - always
+        - connectivity
+
+  roles:
+    - role: vyos_network
+      tags:
+        - network
+        - interfaces
+        - routing
+        - dhcp
+        - nat
+
+  post_tasks:
+    - name: Save network configuration
+      vyos.vyos.vyos_config:
+        save: true
+      tags:
+        - always
+        - save
+        
+    - name: Show routing table
+      vyos.vyos.vyos_command:
+        commands:
+          - show ip route
+      register: routing_table
+      tags:
+        - verify
+        
+    - name: Display routing information
+      debug:
+        var: routing_table.stdout_lines[0]
+      tags:
+        - verify

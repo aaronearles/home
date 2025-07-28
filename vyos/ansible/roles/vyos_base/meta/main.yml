@@ -1,0 +1,22 @@
+---
+# VyOS Base Configuration Role Metadata
+galaxy_info:
+  author: VyOS Ansible Framework
+  description: Base configuration for VyOS routers
+  company: Homelab Infrastructure
+  license: MIT
+  min_ansible_version: 4.0
+  platforms:
+    - name: VyOS
+      versions:
+        - all
+  galaxy_tags:
+    - networking
+    - vyos
+    - router
+    - firewall
+
+dependencies: []
+
+collections:
+  - vyos.vyos

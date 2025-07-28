@@ -1,0 +1,10 @@
+---
+# VyOS Base Role Handlers
+# Purpose: Handle configuration saves and service restarts
+
+- name: save_config
+  vyos.vyos.vyos_config:
+    save: true
+  tags:
+    - vyos_base
+    - save

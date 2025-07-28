@@ -1,0 +1,63 @@
+---
+# VyOS Initial Setup Playbook
+# Purpose: Initial VyOS router setup with default credentials
+# Author: VyOS Ansible Framework
+# Usage: ansible-playbook -i inventories/hosts.yml playbooks/vyos_initial_setup.yml -e'ansible_user=vyos ansible_password=vyos'
+# Dependencies: vyos.vyos collection
+
+- name: Initial VyOS Router Setup
+  hosts: vyos_routers
+  gather_facts: false
+  connection: network_cli
+  
+  vars:
+    ansible_python_interpreter: "{{ ansible_playbook_python }}"
+  
+  pre_tasks:
+    - name: Test initial VyOS connectivity
+      vyos.vyos.vyos_command:
+        commands:
+          - show version
+      register: vyos_version
+      tags:
+        - always
+        - connectivity
+    
+    - name: Display connection status
+      debug:
+        msg: "Successfully connected to {{ inventory_hostname }} with default credentials"
+      tags:
+        - always
+        - connectivity
+
+  tasks:
+    - name: Configure initial users and SSH keys
+      include_role:
+        name: vyos_users
+      tags:
+        - users
+        - ssh_keys
+        
+    - name: Configure basic system settings
+      include_role:
+        name: vyos_base
+      tags:
+        - base
+        - system
+        
+    - name: Save initial configuration
+      vyos.vyos.vyos_config:
+        save: true
+      tags:
+        - always
+        - save
+
+  post_tasks:
+    - name: Display next steps
+      debug:
+        msg:
+          - "Initial setup complete for {{ inventory_hostname }}"
+          - "You can now run the full deployment playbook with SSH key authentication"
+          - "Next command: ansible-playbook -i inventories/hosts.yml playbooks/vyos_full_deploy.yml"
+      tags:
+        - always

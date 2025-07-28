@@ -1,0 +1,60 @@
+---
+# VyOS QoS Role Default Variables
+# Purpose: Default values for Quality of Service configuration
+
+# QoS enabled flag
+vyos_qos_enabled: false
+
+# Traffic control policies
+vyos_qos_policies:
+  # Example bandwidth limiting policy
+  - name: "wan-upload"
+    type: "shaper"
+    bandwidth: "50mbit"
+    description: "WAN Upload Bandwidth Limit"
+    classes:
+      - class_id: 10
+        description: "High Priority (VoIP, DNS)"
+        bandwidth: "10mbit"
+        priority: 1
+        match_rules:
+          - name: "voip"
+            protocol: "udp"
+            destination_port: "5060,5061"
+          - name: "dns"
+            protocol: "udp"
+            destination_port: "53"
+      - class_id: 20
+        description: "Normal Priority (Web, Email)"
+        bandwidth: "30mbit"
+        priority: 2
+        match_rules:
+          - name: "web"
+            protocol: "tcp"
+            destination_port: "80,443"
+          - name: "email"
+            protocol: "tcp"
+            destination_port: "25,110,143,993,995"
+      - class_id: 30
+        description: "Low Priority (File Transfer)"
+        bandwidth: "10mbit"
+        priority: 3
+        default_class: true
+
+# Interface QoS assignments
+vyos_qos_interface_assignments: []
+#  - interface: "eth1"
+#    direction: "out"
+#    policy: "wan-upload"
+
+# Default traffic classes
+vyos_qos_default_classes:
+  high_priority_ports:
+    tcp: [22, 53, 443]
+    udp: [53, 123, 5060, 5061]
+  normal_priority_ports:
+    tcp: [80, 443, 25, 110, 143, 993, 995]
+    udp: [67, 68]
+  low_priority_ports:
+    tcp: [21, 22, 8080]
+    udp: []

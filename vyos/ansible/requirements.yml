@@ -1,0 +1,16 @@
+---
+# Ansible Requirements File
+# Purpose: Define required collections and roles for VyOS management
+
+collections:
+  - name: vyos.vyos
+    version: ">=4.0.0"
+    source: https://galaxy.ansible.com
+
+  - name: community.general
+    version: ">=6.0.0"
+    source: https://galaxy.ansible.com
+
+  - name: ansible.posix
+    version: ">=1.4.0"  
+    source: https://galaxy.ansible.com

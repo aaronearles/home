@@ -1,0 +1,23 @@
+---
+# VyOS Network Configuration Role Metadata
+galaxy_info:
+  author: VyOS Ansible Framework
+  description: Network interface and routing configuration for VyOS
+  company: Homelab Infrastructure
+  license: MIT
+  min_ansible_version: 4.0
+  platforms:
+    - name: VyOS
+      versions:
+        - all
+  galaxy_tags:
+    - networking
+    - vyos
+    - interfaces
+    - routing
+    - dhcp
+
+dependencies: []
+
+collections:
+  - vyos.vyos

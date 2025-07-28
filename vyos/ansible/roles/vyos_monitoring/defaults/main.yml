@@ -1,0 +1,100 @@
+---
+# VyOS Monitoring Role Default Variables
+# Purpose: Default values for monitoring and logging configuration
+
+# Global monitoring settings
+vyos_monitoring_enabled: false
+
+# SNMP Configuration
+vyos_snmp_enabled: false
+vyos_snmp_community: "public"
+vyos_snmp_contact: "admin@homelab.local"
+vyos_snmp_location: "Home Lab"
+vyos_snmp_listen_address: "0.0.0.0"
+vyos_snmp_port: 161
+
+# SNMP allowed networks (who can query SNMP)
+vyos_snmp_client_networks:
+  - 10.0.0.0/16
+  - 192.168.1.0/24
+
+# Syslog Configuration
+vyos_syslog_enabled: true
+vyos_syslog_facilities:
+  - facility: "auth"
+    level: "info"
+  - facility: "authpriv"
+    level: "info"
+  - facility: "cron"
+    level: "info"
+  - facility: "daemon"
+    level: "info"
+  - facility: "kern"
+    level: "info"
+  - facility: "lpr"
+    level: "info"
+  - facility: "mail"
+    level: "info"
+  - facility: "mark"
+    level: "info"
+  - facility: "news"
+    level: "info"
+  - facility: "protocols"
+    level: "info"
+  - facility: "security"
+    level: "info"
+  - facility: "syslog"
+    level: "info"
+  - facility: "user"
+    level: "info"
+  - facility: "uucp"
+    level: "info"
+  - facility: "local0"
+    level: "info"
+  - facility: "local1"
+    level: "info"
+  - facility: "local2"
+    level: "info"
+  - facility: "local3"
+    level: "info"
+  - facility: "local4"
+    level: "info"
+  - facility: "local5"
+    level: "info"
+  - facility: "local6"
+    level: "info"
+  - facility: "local7"
+    level: "info"
+
+# Remote syslog servers
+vyos_syslog_remote_servers: []
+#  - host: "192.168.1.100"
+#    port: 514
+#    protocol: "udp"
+#    facility: "all"
+#    level: "info"
+
+# Log rotation settings  
+vyos_log_rotation_enabled: true
+vyos_log_rotation_max_size: "10M"
+vyos_log_rotation_files_count: 10
+
+# Flow accounting (NetFlow/sFlow)
+vyos_flow_accounting_enabled: false
+vyos_flow_accounting_interfaces: []
+#  - interface: "eth1"
+#    direction: "ingress"
+#  - interface: "eth1" 
+#    direction: "egress"
+
+# Flow collectors
+vyos_flow_collectors: []
+#  - server: "192.168.1.100"
+#    port: 2055
+
+# Connection tracking logging
+vyos_conntrack_logging_enabled: false
+vyos_conntrack_log_events:
+  - new
+  - update
+  - destroy

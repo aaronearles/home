@@ -1,0 +1,186 @@
+---
+# VyOS Monitoring Configuration Tasks
+# Purpose: Configure monitoring, logging, and observability features
+# Author: VyOS Ansible Framework
+# Dependencies: vyos.vyos collection
+
+- name: Check if monitoring is enabled
+  debug:
+    msg: "Monitoring configuration: {{ 'enabled' if vyos_monitoring_enabled else 'disabled' }}"
+  tags:
+    - vyos_monitoring
+    - debug
+
+# SNMP Configuration
+- name: Configure SNMP service
+  vyos.vyos.vyos_config:
+    lines:
+      - "set service snmp community {{ vyos_snmp_community }} authorization ro"
+      - "set service snmp contact {{ vyos_snmp_contact }}"
+      - "set service snmp location {{ vyos_snmp_location }}"
+      - "set service snmp listen-address {{ vyos_snmp_listen_address }} port {{ vyos_snmp_port }}"
+  when: 
+    - vyos_monitoring_enabled | bool
+    - vyos_snmp_enabled | bool
+  notify: save_config
+  tags:
+    - vyos_monitoring
+    - snmp
+
+- name: Configure SNMP client access
+  vyos.vyos.vyos_config:
+    lines:
+      - "set service snmp community {{ vyos_snmp_community }} client {{ item }}"
+  loop: "{{ vyos_snmp_client_networks }}"
+  when:
+    - vyos_monitoring_enabled | bool
+    - vyos_snmp_enabled | bool
+    - vyos_snmp_client_networks is defined
+  notify: save_config
+  tags:
+    - vyos_monitoring
+    - snmp
+
+- name: Configure SNMP firewall rule
+  vyos.vyos.vyos_config:
+    lines:
+      - "set firewall ipv4 input filter rule 200 action accept"
+      - "set firewall ipv4 input filter rule 200 protocol udp"
+      - "set firewall ipv4 input filter rule 200 destination port {{ vyos_snmp_port }}"
+      - "set firewall ipv4 input filter rule 200 description 'Allow SNMP'"
+  when:
+    - vyos_monitoring_enabled | bool
+    - vyos_snmp_enabled | bool
+  notify: save_config
+  tags:
+    - vyos_monitoring
+    - snmp
+    - firewall
+
+# Syslog Configuration
+- name: Configure syslog facilities
+  vyos.vyos.vyos_config:
+    lines:
+      - "set system syslog global facility {{ item.facility }} level {{ item.level }}"
+  loop: "{{ vyos_syslog_facilities }}"
+  when:
+    - vyos_monitoring_enabled | bool
+    - vyos_syslog_enabled | bool
+    - vyos_syslog_facilities is defined
+  notify: save_config
+  tags:
+    - vyos_monitoring
+    - syslog
+
+- name: Configure remote syslog servers
+  vyos.vyos.vyos_config:
+    lines:
+      - "set system syslog host {{ item.host }} port {{ item.port }}"
+      - "set system syslog host {{ item.host }} protocol {{ item.protocol }}"
+      - "set system syslog host {{ item.host }} facility {{ item.facility }} level {{ item.level }}"
+  loop: "{{ vyos_syslog_remote_servers }}"
+  when:
+    - vyos_monitoring_enabled | bool
+    - vyos_syslog_enabled | bool
+    - vyos_syslog_remote_servers is defined
+  notify: save_config
+  tags:
+    - vyos_monitoring
+    - syslog
+    - remote
+
+- name: Configure log rotation
+  vyos.vyos.vyos_config:
+    lines:
+      - "set system syslog global archive size {{ vyos_log_rotation_max_size }}"
+      - "set system syslog global archive files {{ vyos_log_rotation_files_count }}"
+  when:
+    - vyos_monitoring_enabled | bool
+    - vyos_log_rotation_enabled | bool
+  notify: save_config
+  tags:
+    - vyos_monitoring
+    - log_rotation
+
+# Flow Accounting Configuration
+- name: Configure flow accounting interfaces
+  vyos.vyos.vyos_config:
+    lines:
+      - "set system flow-accounting interface {{ item.interface }}"
+      - "set system flow-accounting interface {{ item.interface }} {{ item.direction }}"
+  loop: "{{ vyos_flow_accounting_interfaces }}"
+  when:
+    - vyos_monitoring_enabled | bool
+    - vyos_flow_accounting_enabled | bool
+    - vyos_flow_accounting_interfaces is defined
+  notify: save_config
+  tags:
+    - vyos_monitoring
+    - flow_accounting
+
+- name: Configure flow collectors
+  vyos.vyos.vyos_config:
+    lines:
+      - "set system flow-accounting netflow server {{ item.server }} port {{ item.port }}"
+  loop: "{{ vyos_flow_collectors }}"
+  when:
+    - vyos_monitoring_enabled | bool
+    - vyos_flow_accounting_enabled | bool
+    - vyos_flow_collectors is defined
+  notify: save_config
+  tags:
+    - vyos_monitoring
+    - flow_collectors
+
+# Connection Tracking Logging
+- name: Configure connection tracking logging
+  vyos.vyos.vyos_config:
+    lines:
+      - "set system conntrack log {{ item }}"
+  loop: "{{ vyos_conntrack_log_events }}"
+  when:
+    - vyos_monitoring_enabled | bool
+    - vyos_conntrack_logging_enabled | bool
+    - vyos_conntrack_log_events is defined
+  notify: save_config
+  tags:
+    - vyos_monitoring
+    - conntrack
+
+# System Performance Monitoring
+- name: Enable system performance monitoring
+  vyos.vyos.vyos_config:
+    lines:
+      - "set system console device ttyS0 speed 115200"
+      - "set system syslog console facility all level info"
+  when: vyos_monitoring_enabled | bool
+  notify: save_config
+  tags:
+    - vyos_monitoring
+    - performance
+
+- name: Display monitoring configuration summary
+  debug:
+    msg:
+      - "SNMP Enabled: {{ vyos_snmp_enabled if vyos_monitoring_enabled else false }}"
+      - "Syslog Enabled: {{ vyos_syslog_enabled if vyos_monitoring_enabled else false }}"
+      - "Remote Syslog Servers: {{ vyos_syslog_remote_servers | length if vyos_syslog_remote_servers is defined else 0 }}"
+      - "Flow Accounting: {{ vyos_flow_accounting_enabled if vyos_monitoring_enabled else false }}"
+      - "Connection Tracking Logging: {{ vyos_conntrack_logging_enabled if vyos_monitoring_enabled else false }}"
+  when: vyos_monitoring_enabled | bool
+  tags:
+    - vyos_monitoring
+    - debug
+
+- name: Remove monitoring configuration
+  vyos.vyos.vyos_config:
+    lines:
+      - "delete service snmp"
+      - "delete system flow-accounting"
+      - "delete system conntrack log"
+      - "delete firewall ipv4 input filter rule 200"
+  when: not (vyos_monitoring_enabled | bool)
+  notify: save_config
+  tags:
+    - vyos_monitoring
+    - cleanup

@@ -1,0 +1,33 @@
+---
+# VyOS Base Role Default Variables
+# Purpose: Default values for base VyOS configuration
+
+# Hostname configuration
+vyos_hostname: "{{ inventory_hostname_short }}"
+
+# SSH Configuration
+vyos_ssh_port: 22
+vyos_ssh_disable_password_auth: true
+
+# DNS Configuration
+vyos_name_servers:
+  - 1.1.1.1
+  - 8.8.8.8
+
+# NTP Configuration
+vyos_ntp_servers:
+  - 0.pool.ntp.org
+  - 1.pool.ntp.org
+
+# System configuration
+vyos_domain_name: "homelab.local"
+vyos_time_zone: "America/New_York"
+
+# Login banner
+vyos_login_banner: |
+  **************************************************************************
+  *                          AUTHORIZED ACCESS ONLY                       *
+  *                                                                        *
+  *         This system is for authorized users only. All activity        *
+  *         is monitored and logged. Unauthorized access is prohibited.   *
+  **************************************************************************

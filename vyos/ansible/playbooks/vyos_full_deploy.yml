@@ -1,0 +1,97 @@
+---
+# VyOS Full Deployment Playbook
+# Purpose: Complete VyOS router configuration deployment
+# Author: VyOS Ansible Framework
+# Usage: ansible-playbook -i inventories/hosts.yml playbooks/vyos_full_deploy.yml
+# Dependencies: vyos.vyos collection
+
+- name: Deploy VyOS Router Configuration
+  hosts: vyos_routers
+  gather_facts: false
+  connection: network_cli
+  
+  vars:
+    ansible_python_interpreter: "{{ ansible_playbook_python }}"
+  
+  pre_tasks:
+    - name: Test VyOS connectivity
+      vyos.vyos.vyos_command:
+        commands:
+          - show version
+      register: vyos_version
+      tags:
+        - always
+        - connectivity
+    
+    - name: Display VyOS version information
+      debug:
+        msg: "Connected to {{ inventory_hostname }}: {{ vyos_version.stdout[0] | regex_search('Version:\\s+(.+)', '\\1') | first | default('Unknown') }}"
+      tags:
+        - always
+        - connectivity
+
+  roles:
+    - role: vyos_users
+      tags:
+        - users
+        - initial_setup
+        
+    - role: vyos_base
+      tags:
+        - base
+        - system
+        
+    - role: vyos_network
+      tags:
+        - network
+        - interfaces
+        - routing
+        
+    - role: vyos_firewall
+      tags:
+        - firewall
+        - security
+
+    # Optional advanced features (disabled by default)
+    - role: vyos_vpn
+      tags:
+        - vpn
+        - wireguard
+        - optional
+        
+    - role: vyos_qos
+      tags:
+        - qos
+        - traffic_shaping
+        - optional
+        
+    - role: vyos_monitoring
+      tags:
+        - monitoring
+        - logging
+        - snmp
+        - optional
+
+  post_tasks:
+    - name: Final configuration save
+      vyos.vyos.vyos_config:
+        save: true
+      tags:
+        - always
+        - save
+        
+    - name: Show final interface configuration
+      vyos.vyos.vyos_command:
+        commands:
+          - show interfaces
+      register: interface_status
+      tags:
+        - always
+        - verify
+        
+    - name: Display interface status
+      debug:
+        var: interface_status.stdout_lines[0]
+      tags:
+        - always
+        - verify

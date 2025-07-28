@@ -1,0 +1,134 @@
+---
+# VyOS VPN Configuration Tasks
+# Purpose: Configure WireGuard VPN server on VyOS routers
+# Author: VyOS Ansible Framework
+# Dependencies: vyos.vyos collection
+
+- name: Check if WireGuard VPN is enabled
+  debug:
+    msg: "WireGuard VPN configuration: {{ 'enabled' if vyos_wireguard_enabled else 'disabled' }}"
+  tags:
+    - vyos_vpn
+    - debug
+
+- name: Configure WireGuard interface
+  vyos.vyos.vyos_config:
+    lines:
+      - "set interfaces wireguard {{ vyos_wireguard_interface }} address {{ vyos_wireguard_server_ip }}"
+      - "set interfaces wireguard {{ vyos_wireguard_interface }} description '{{ vyos_wireguard_description }}'"
+      - "set interfaces wireguard {{ vyos_wireguard_interface }} port {{ vyos_wireguard_port }}"
+  when: vyos_wireguard_enabled | bool
+  notify: save_config
+  tags:
+    - vyos_vpn
+    - interface
+
+- name: Generate WireGuard private key if not exists
+  vyos.vyos.vyos_command:
+    commands:
+      - generate pki wireguard key-pair install interface {{ vyos_wireguard_interface }}
+  when: vyos_wireguard_enabled | bool
+  register: wg_key_result
+  failed_when: false
+  changed_when: "'Generated' in wg_key_result.stdout[0]"
+  notify: save_config
+  tags:
+    - vyos_vpn
+    - keys
+
+- name: Configure WireGuard clients
+  vyos.vyos.vyos_config:
+    lines:
+      - "set interfaces wireguard {{ vyos_wireguard_interface }} peer {{ item.name }} public-key '{{ item.public_key }}'"
+      - "set interfaces wireguard {{ vyos_wireguard_interface }} peer {{ item.name }} allowed-ips '{{ item.allowed_ips }}'"
+      - "set interfaces wireguard {{ vyos_wireguard_interface }} peer {{ item.name }} description '{{ item.description | default(item.name) }}'"
+  loop: "{{ vyos_wireguard_clients }}"
+  when: 
+    - vyos_wireguard_enabled | bool
+    - vyos_wireguard_clients is defined
+    - vyos_wireguard_clients | length > 0
+  notify: save_config
+  tags:
+    - vyos_vpn
+    - clients
+
+- name: Configure firewall rules for WireGuard
+  vyos.vyos.vyos_config:
+    lines:
+      - "set firewall ipv4 input filter rule 100 action accept"
+      - "set firewall ipv4 input filter rule 100 protocol udp"
+      - "set firewall ipv4 input filter rule 100 destination port {{ vyos_wireguard_port }}"
+      - "set firewall ipv4 input filter rule 100 description 'Allow WireGuard'"
+  when: vyos_wireguard_enabled | bool
+  notify: save_config
+  tags:
+    - vyos_vpn
+    - firewall
+
+- name: Configure NAT for WireGuard clients
+  vyos.vyos.vyos_config:
+    lines:
+      - "set nat source rule 100 outbound-interface name {{ wan_interface }}"
+      - "set nat source rule 100 source address {{ vyos_wireguard_network }}"
+      - "set nat source rule 100 translation address masquerade"
+      - "set nat source rule 100 description 'WireGuard NAT'"
+  vars:
+    wan_interface: "{{ networks | dict2items | selectattr('value.wan', 'defined') | selectattr('value.wan', 'equalto', true) | map(attribute='value.interface') | first | default('eth1') }}"
+  when: 
+    - vyos_wireguard_enabled | bool
+    - networks is defined
+  notify: save_config
+  tags:
+    - vyos_vpn
+    - nat
+
+- name: Configure additional routing for VPN clients
+  vyos.vyos.vyos_config:
+    lines:
+      - "set protocols static route {{ item }} interface {{ vyos_wireguard_interface }}"
+  loop: "{{ vyos_wireguard_additional_routes }}"
+  when:
+    - vyos_wireguard_enabled | bool
+    - vyos_wireguard_additional_routes is defined
+    - vyos_wireguard_additional_routes | length > 0
+  notify: save_config
+  tags:
+    - vyos_vpn
+    - routing
+
+- name: Display WireGuard server public key
+  vyos.vyos.vyos_command:
+    commands:
+      - show interfaces wireguard {{ vyos_wireguard_interface }} public-key
+  when: vyos_wireguard_enabled | bool
+  register: wg_public_key
+  tags:
+    - vyos_vpn
+    - keys
+    - display
+
+- name: Show WireGuard configuration summary
+  debug:
+    msg:
+      - "WireGuard Interface: {{ vyos_wireguard_interface }}"
+      - "Listen Port: {{ vyos_wireguard_port }}"
+      - "Server IP: {{ vyos_wireguard_server_ip }}"
+      - "Network: {{ vyos_wireguard_network }}"
+      - "Clients Configured: {{ vyos_wireguard_clients | length if vyos_wireguard_clients is defined else 0 }}"
+      - "Server Public Key: {{ wg_public_key.stdout[0] if wg_public_key is defined and wg_public_key.stdout is defined else 'Run playbook to generate' }}"
+  when: vyos_wireguard_enabled | bool
+  tags:
+    - vyos_vpn
+    - debug
+
+- name: Remove WireGuard configuration
+  vyos.vyos.vyos_config:
+    lines:
+      - "delete interfaces wireguard {{ vyos_wireguard_interface }}"
+      - "delete firewall ipv4 input filter rule 100"
+      - "delete nat source rule 100"
+  when: not (vyos_wireguard_enabled | bool)
+  notify: save_config
+  tags:
+    - vyos_vpn
+    - cleanup

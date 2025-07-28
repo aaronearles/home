@@ -1,0 +1,83 @@
+---
+# VyOS Network Configuration Tasks
+# Purpose: Configure network interfaces, routing, and DHCP services
+# Author: VyOS Ansible Framework
+# Dependencies: vyos.vyos collection
+
+- name: Configure network interfaces
+  vyos.vyos.vyos_config:
+    lines:
+      - "set interfaces ethernet {{ item.value.interface }} address {{ item.value.address }}"
+      - "set interfaces ethernet {{ item.value.interface }} description {{ item.value.description | upper }}"
+  loop: "{{ networks | dict2items }}"
+  when: networks is defined
+  notify: save_config
+  tags:
+    - vyos_network
+    - interfaces
+
+- name: Configure default route for WAN interfaces
+  vyos.vyos.vyos_config:
+    lines:
+      - "set protocols static route 0.0.0.0/0 next-hop {{ item.value.gateway | regex_replace('/.*', '') }}"
+  loop: "{{ networks | dict2items }}"
+  when: 
+    - networks is defined
+    - item.value.wan | default(false) | bool
+    - item.value.gateway is defined
+  notify: save_config
+  tags:
+    - vyos_network
+    - routing
+
+- name: Configure DHCP servers for LAN networks
+  vyos.vyos.vyos_config:
+    lines:
+      - "set service dhcp-server shared-network-name {{ item.value.description | upper }} authoritative"
+      - "set service dhcp-server shared-network-name {{ item.value.description | upper }} subnet {{ item.value.cidr }} range 0 start {{ item.value.dhcp.range_start }}"
+      - "set service dhcp-server shared-network-name {{ item.value.description | upper }} subnet {{ item.value.cidr }} range 0 stop {{ item.value.dhcp.range_stop }}"
+      - "set service dhcp-server shared-network-name {{ item.value.description | upper }} subnet {{ item.value.cidr }} default-router {{ item.value.address | regex_replace('/.*', '') }}"
+      - "set service dhcp-server shared-network-name {{ item.value.description | upper }} subnet {{ item.value.cidr }} name-server {{ vyos_name_servers[0] | default('1.1.1.1') }}"
+  loop: "{{ networks | dict2items }}"
+  when: 
+    - networks is defined
+    - not (item.value.wan | default(false) | bool)
+    - item.value.dhcp.enabled | default(false) | bool
+  notify: save_config
+  tags:
+    - vyos_network
+    - dhcp
+
+- name: Configure NAT for internal networks
+  vyos.vyos.vyos_config:
+    lines:
+      - "set nat source rule {{ (loop_index + 1) * 10 }} outbound-interface name {{ wan_interface.value.interface }}"
+      - "set nat source rule {{ (loop_index + 1) * 10 }} source address {{ item.value.cidr }}"
+      - "set nat source rule {{ (loop_index + 1) * 10 }} translation address masquerade"
+  loop: "{{ networks | dict2items }}"
+  loop_control:
+    index_var: loop_index
+  vars:
+    wan_interface: "{{ networks | dict2items | selectattr('value.wan', 'defined') | selectattr('value.wan', 'equalto', true) | first }}"
+  when: 
+    - networks is defined
+    - not (item.value.wan | default(false) | bool)
+    - wan_interface is defined
+  notify: save_config
+  tags:
+    - vyos_network
+    - nat
+
+- name: Display network configuration summary
+  debug:
+    msg:
+      - "Network Interface: {{ item.value.interface }}"
+      - "IP Address: {{ item.value.address }}"
+      - "Description: {{ item.value.description }}"
+      - "WAN Interface: {{ item.value.wan | default(false) }}"
+      - "DHCP Enabled: {{ item.value.dhcp.enabled | default(false) if item.value.dhcp is defined else false }}"
+  loop: "{{ networks | dict2items }}"
+  when: networks is defined
+  tags:
+    - vyos_network
+    - debug

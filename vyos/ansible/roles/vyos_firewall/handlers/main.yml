@@ -1,0 +1,10 @@
+---
+# VyOS Firewall Role Handlers
+# Purpose: Handle configuration saves for firewall changes
+
+- name: save_config
+  vyos.vyos.vyos_config:
+    save: true
+  tags:
+    - vyos_firewall
+    - save

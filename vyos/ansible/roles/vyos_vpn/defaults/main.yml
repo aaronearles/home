@@ -1,0 +1,37 @@
+---
+# VyOS VPN Role Default Variables
+# Purpose: Default values for WireGuard VPN configuration
+
+# WireGuard interface settings
+vyos_wireguard_interface: wg0
+vyos_wireguard_port: 51820
+vyos_wireguard_network: 10.100.0.0/24
+vyos_wireguard_server_ip: 10.100.0.1/24
+
+# Server configuration
+vyos_wireguard_enabled: false
+vyos_wireguard_description: "WireGuard VPN Server"
+
+# Example client configuration - should be overridden in host/group vars
+vyos_wireguard_clients: []
+#  - name: laptop
+#    public_key: "client_public_key_here"
+#    allowed_ips: "10.100.0.10/32"
+#    description: "User Laptop"
+#  - name: phone  
+#    public_key: "client_public_key_here"
+#    allowed_ips: "10.100.0.11/32"
+#    description: "User Phone"
+
+# DNS servers for VPN clients
+vyos_wireguard_dns_servers:
+  - 1.1.1.1
+  - 8.8.8.8
+
+# Whether to route all traffic through VPN (default: no, only VPN subnet)
+vyos_wireguard_route_all_traffic: false
+
+# Additional allowed networks for clients (beyond VPN subnet)
+vyos_wireguard_additional_routes:
+  - 10.0.0.0/16    # Internal networks
+  # - 192.168.1.0/24  # Home network (commented out by default)

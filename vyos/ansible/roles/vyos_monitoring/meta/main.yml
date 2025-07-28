@@ -1,0 +1,24 @@
+---
+# VyOS Monitoring Configuration Role Metadata
+galaxy_info:
+  author: VyOS Ansible Framework
+  description: Monitoring and logging configuration for VyOS routers
+  company: Homelab Infrastructure
+  license: MIT
+  min_ansible_version: 4.0
+  platforms:
+    - name: VyOS
+      versions:
+        - all
+  galaxy_tags:
+    - networking
+    - vyos
+    - monitoring
+    - logging
+    - snmp
+    - syslog
+
+dependencies: []
+
+collections:
+  - vyos.vyos

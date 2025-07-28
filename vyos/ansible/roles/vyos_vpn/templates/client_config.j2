@@ -1,0 +1,25 @@
+# WireGuard Client Configuration Template
+# Purpose: Generate client configuration files
+# Client: {{ client.name }}
+# Generated: {{ ansible_date_time.iso8601 | default('date_not_available') }}
+
+[Interface]
+PrivateKey = CLIENT_PRIVATE_KEY_HERE
+Address = {{ client.allowed_ips }}
+DNS = {{ vyos_wireguard_dns_servers | join(', ') }}
+
+[Peer]
+PublicKey = SERVER_PUBLIC_KEY_HERE
+Endpoint = {{ ansible_host }}:{{ vyos_wireguard_port }}
+{% if vyos_wireguard_route_all_traffic %}
+AllowedIPs = 0.0.0.0/0
+{% else %}
+AllowedIPs = {{ vyos_wireguard_network }}{% if vyos_wireguard_additional_routes is defined %}, {{ vyos_wireguard_additional_routes | join(', ') }}{% endif %}
+{% endif %}
+PersistentKeepalive = 25
+
+# Instructions:
+# 1. Replace CLIENT_PRIVATE_KEY_HERE with the client's private key
+# 2. Replace SERVER_PUBLIC_KEY_HERE with the server's public key
+# 3. Save this file as {{ client.name }}.conf
+# 4. Import into WireGuard client application

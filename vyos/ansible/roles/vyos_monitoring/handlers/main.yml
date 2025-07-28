@@ -1,0 +1,10 @@
+---
+# VyOS Monitoring Role Handlers
+# Purpose: Handle configuration saves for monitoring changes
+
+- name: save_config
+  vyos.vyos.vyos_config:
+    save: true
+  tags:
+    - vyos_monitoring
+    - save

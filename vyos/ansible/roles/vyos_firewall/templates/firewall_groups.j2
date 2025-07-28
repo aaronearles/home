@@ -1,0 +1,32 @@
+# VyOS Firewall Groups Configuration Template
+# Purpose: Generate firewall network and port groups
+
+{# Network Groups #}
+{% if firewall_groups.network_groups is defined %}
+{% for group_name, networks in firewall_groups.network_groups.items() %}
+{% for network in networks %}
+set firewall group network-group {{ group_name }} network {{ network }}
+{% endfor %}
+{% endfor %}
+{% endif %}
+
+{# Port Groups - TCP #}
+{% if port_groups.tcp_ports is defined %}
+{% for port in port_groups.tcp_ports %}
+set firewall group port-group TCP-PORTS port {{ port }}
+{% endfor %}
+{% endif %}
+
+{# Port Groups - UDP #}
+{% if port_groups.udp_ports is defined %}
+{% for port in port_groups.udp_ports %}
+set firewall group port-group UDP-PORTS port {{ port }}
+{% endfor %}
+{% endif %}
+
+{# Port Groups - Mixed (TCP/UDP) #}
+{% if port_groups.mixed_ports is defined %}
+{% for port in port_groups.mixed_ports %}
+set firewall group port-group MIXED-PORTS port {{ port }}
+{% endfor %}
+{% endif %}

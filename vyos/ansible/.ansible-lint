@@ -1,0 +1,26 @@
+# Ansible Lint Configuration
+# Purpose: Code quality and standards enforcement
+
+exclude_paths:
+  - .cache/
+  - .github/
+  - tests/output/
+  - molecule/
+  - .ansible/
+
+# Skip specific rules that may not apply to network modules  
+skip_list:
+  - yaml[line-length]  # Allow longer lines for network configs
+  - name[casing]       # Allow different naming conventions for network tasks
+
+# Enable additional checks
+enable_list:
+  - yaml
+  - fqcn-builtins
+
+# Warn on these rules instead of failing
+warn_list:
+  - experimental
+
+# Use default profile with network-specific adjustments
+profile: basic

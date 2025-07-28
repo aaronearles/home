@@ -1,0 +1,63 @@
+---
+# VyOS Router Group Variables
+# Purpose: Global configuration for all VyOS routers
+# Author: Ansible Framework
+
+# SSH Configuration
+ssh_port: 22
+ssh_disable_password_auth: true
+
+# DNS Configuration
+name_servers:
+  - 192.168.1.114
+  - 192.168.1.115
+
+# NTP Configuration
+ntp_servers:
+  - 0.pool.ntp.org
+  - 1.pool.ntp.org
+
+# Firewall Port Groups
+port_groups:
+  tcp_ports:
+    - 22    # SSH
+    - 80    # HTTP
+    - 443   # HTTPS
+    - 647   # DHCP Failover
+    - 8000  # Alternative HTTP
+  udp_ports:
+    - 67    # DHCP
+    - 68    # DHCP Client
+    - 123   # NTP
+    - 53    # DNS
+  mixed_ports:
+    - 53    # DNS (TCP/UDP)
+    - 123   # NTP (UDP)
+  special_ports:
+    - 51820 # WireGuard
+    - 500   # IPsec IKE
+    - 4500  # IPsec NAT-T
+
+# Global Firewall Options
+firewall_global_options:
+  state_policy:
+    established: accept
+    invalid: drop
+    related: accept
+
+# Default Firewall Groups
+firewall_groups:
+  network_groups:
+    NET-INSIDE:
+      - 10.0.0.0/16
+      - 172.16.0.0/16
+    NET-OUTSIDE:
+      - 192.168.1.0/24
+
+# User Configuration
+vyos_users:
+  - name: admin
+    full_name: "VyOS Administrator"
+    level: admin
+    ssh_keys:
+      - "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIExampleKey admin@homelab"

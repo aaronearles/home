@@ -1,0 +1,23 @@
+---
+# VyOS QoS Configuration Role Metadata
+galaxy_info:
+  author: VyOS Ansible Framework
+  description: Quality of Service traffic shaping for VyOS routers
+  company: Homelab Infrastructure
+  license: MIT
+  min_ansible_version: 4.0
+  platforms:
+    - name: VyOS
+      versions:
+        - all
+  galaxy_tags:
+    - networking
+    - vyos
+    - qos
+    - traffic_shaping
+    - bandwidth
+
+dependencies: []
+
+collections:
+  - vyos.vyos

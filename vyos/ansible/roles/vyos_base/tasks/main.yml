@@ -1,0 +1,77 @@
+---
+# VyOS Base Configuration Tasks
+# Purpose: Configure base system settings for VyOS routers
+# Author: VyOS Ansible Framework
+# Dependencies: vyos.vyos collection
+
+- name: Configure system hostname
+  vyos.vyos.vyos_config:
+    lines:
+      - "set system host-name {{ vyos_hostname }}"
+  notify: save_config
+  tags:
+    - vyos_base
+    - hostname
+
+- name: Configure domain name
+  vyos.vyos.vyos_config:
+    lines:
+      - "set system domain-name {{ vyos_domain_name }}"
+  notify: save_config
+  tags:
+    - vyos_base
+    - domain
+
+- name: Configure time zone
+  vyos.vyos.vyos_config:
+    lines:
+      - "set system time-zone {{ vyos_time_zone }}"
+  notify: save_config
+  tags:
+    - vyos_base
+    - timezone
+
+- name: Configure login banner
+  vyos.vyos.vyos_config:
+    lines:
+      - "set system login banner post-login '{{ vyos_login_banner }}'"
+  notify: save_config
+  tags:
+    - vyos_base
+    - banner
+
+- name: Configure name servers
+  vyos.vyos.vyos_config:
+    lines: "{{ item }}"
+  loop: "{{ vyos_name_servers | map('regex_replace', '^(.*)$', 'set system name-server \\1') | list }}"
+  notify: save_config
+  tags:
+    - vyos_base
+    - dns
+
+- name: Configure NTP servers
+  vyos.vyos.vyos_config:
+    lines: "{{ item }}"
+  loop: "{{ vyos_ntp_servers | map('regex_replace', '^(.*)$', 'set system ntp server \\1') | list }}"
+  notify: save_config
+  tags:
+    - vyos_base
+    - ntp
+
+- name: Configure SSH service
+  vyos.vyos.vyos_config:
+    lines:
+      - "set service ssh port {{ vyos_ssh_port }}"
+      - "set service ssh disable-password-authentication"
+  when: vyos_ssh_disable_password_auth | bool
+  notify: save_config
+  tags:
+    - vyos_base
+    - ssh
+
+- name: Gather VyOS facts after configuration
+  vyos.vyos.vyos_facts:
+    gather_subset: all
+  tags:
+    - vyos_base
+    - facts

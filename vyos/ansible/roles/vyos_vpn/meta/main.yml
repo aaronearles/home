@@ -1,0 +1,23 @@
+---
+# VyOS VPN Configuration Role Metadata  
+galaxy_info:
+  author: VyOS Ansible Framework
+  description: WireGuard VPN configuration for VyOS routers
+  company: Homelab Infrastructure
+  license: MIT
+  min_ansible_version: 4.0
+  platforms:
+    - name: VyOS
+      versions:
+        - all
+  galaxy_tags:
+    - networking
+    - vyos
+    - vpn
+    - wireguard
+    - security
+
+dependencies: []
+
+collections:
+  - vyos.vyos

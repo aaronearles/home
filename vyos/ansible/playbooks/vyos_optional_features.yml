@@ -1,0 +1,69 @@
+---
+# VyOS Optional Features Playbook
+# Purpose: Deploy advanced VyOS features (VPN, QoS, Monitoring)
+# Author: VyOS Ansible Framework
+# Usage: ansible-playbook -i inventories/hosts.yml playbooks/vyos_optional_features.yml
+# Dependencies: vyos.vyos collection
+
+- name: Deploy VyOS Optional Features
+  hosts: vyos_routers
+  gather_facts: false
+  connection: network_cli
+  
+  vars:
+    ansible_python_interpreter: "{{ ansible_playbook_python }}"
+  
+  pre_tasks:
+    - name: Test VyOS connectivity
+      vyos.vyos.vyos_command:
+        commands:
+          - show version
+      register: vyos_version
+      tags:
+        - always
+        - connectivity
+    
+    - name: Display connection status
+      debug:
+        msg: "Connected to {{ inventory_hostname }} for optional features deployment"
+      tags:
+        - always
+        - connectivity
+
+  roles:
+    - role: vyos_vpn
+      when: vyos_wireguard_enabled | default(false) | bool
+      tags:
+        - vpn
+        - wireguard
+        
+    - role: vyos_qos
+      when: vyos_qos_enabled | default(false) | bool
+      tags:
+        - qos
+        - traffic_shaping
+        
+    - role: vyos_monitoring
+      when: vyos_monitoring_enabled | default(false) | bool
+      tags:
+        - monitoring
+        - logging
+        - snmp
+
+  post_tasks:
+    - name: Final configuration save
+      vyos.vyos.vyos_config:
+        save: true
+      tags:
+        - always
+        - save
+        
+    - name: Show optional features status
+      debug:
+        msg:
+          - "VPN (WireGuard) Enabled: {{ vyos_wireguard_enabled | default(false) }}"
+          - "QoS Enabled: {{ vyos_qos_enabled | default(false) }}"
+          - "Monitoring Enabled: {{ vyos_monitoring_enabled | default(false) }}"
+      tags:
+        - always
+        - status

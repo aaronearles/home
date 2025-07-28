@@ -1,0 +1,45 @@
+---
+# VyOS Users Configuration Tasks
+# Purpose: Configure user accounts and SSH keys
+# Author: VyOS Ansible Framework
+# Dependencies: vyos.vyos collection
+
+- name: Configure VyOS users
+  vyos.vyos.vyos_config:
+    lines:
+      - "set system login user {{ item.name }} full-name '{{ item.full_name }}'"
+      - "set system login user {{ item.name }} level {{ item.level }}"
+  loop: "{{ vyos_users }}"
+  when: vyos_users is defined
+  notify: save_config
+  tags:
+    - vyos_users
+    - accounts
+
+- name: Configure SSH keys for users
+  vyos.vyos.vyos_config:
+    lines:
+      - "set system login user {{ item.0.name }} authentication public-keys {{ item.0.name }}-key-{{ item.1 | hash('md5') | truncate(8, True, '') }} key '{{ item.1 }}'"
+      - "set system login user {{ item.0.name }} authentication public-keys {{ item.0.name }}-key-{{ item.1 | hash('md5') | truncate(8, True, '') }} type '{{ item.1.split()[0] }}'"
+  with_subelements:
+    - "{{ vyos_users }}"
+    - ssh_keys
+    - skip_missing: true
+  when: vyos_users is defined
+  notify: save_config
+  tags:
+    - vyos_users
+    - ssh_keys
+
+- name: Display configured users
+  debug:
+    msg:
+      - "User: {{ item.name }}"
+      - "Full Name: {{ item.full_name }}"
+      - "Level: {{ item.level }}"
+      - "SSH Keys: {{ item.ssh_keys | length if item.ssh_keys is defined else 0 }}"
+  loop: "{{ vyos_users }}"
+  when: vyos_users is defined
+  tags:
+    - vyos_users
+    - debug

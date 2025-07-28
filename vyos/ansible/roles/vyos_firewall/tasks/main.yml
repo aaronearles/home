@@ -1,0 +1,64 @@
+---
+# VyOS Firewall Configuration Tasks
+# Purpose: Configure firewall rules, groups, and policies
+# Author: VyOS Ansible Framework
+# Dependencies: vyos.vyos collection
+
+- name: Generate firewall groups configuration
+  template:
+    src: firewall_groups.j2
+    dest: /tmp/firewall_groups.conf
+  delegate_to: localhost
+  run_once: true
+  tags:
+    - vyos_firewall
+    - groups
+
+- name: Apply firewall groups configuration
+  vyos.vyos.vyos_config:
+    src: /tmp/firewall_groups.conf
+  notify: save_config
+  tags:
+    - vyos_firewall
+    - groups
+
+- name: Generate firewall rules configuration
+  template:
+    src: firewall_rules.j2
+    dest: /tmp/firewall_rules.conf
+  delegate_to: localhost
+  run_once: true
+  tags:
+    - vyos_firewall
+    - rules
+
+- name: Apply firewall rules configuration
+  vyos.vyos.vyos_config:
+    src: /tmp/firewall_rules.conf
+  notify: save_config
+  tags:
+    - vyos_firewall
+    - rules
+
+- name: Clean up temporary configuration files
+  file:
+    path: "{{ item }}"
+    state: absent
+  loop:
+    - /tmp/firewall_groups.conf
+    - /tmp/firewall_rules.conf
+  delegate_to: localhost
+  run_once: true
+  tags:
+    - vyos_firewall
+    - cleanup
+
+- name: Display firewall configuration summary
+  debug:
+    msg:
+      - "Firewall groups configured: {{ firewall_groups.network_groups.keys() | list if firewall_groups.network_groups is defined else [] }}"
+      - "TCP ports configured: {{ port_groups.tcp_ports | length if port_groups.tcp_ports is defined else 0 }}"
+      - "UDP ports configured: {{ port_groups.udp_ports | length if port_groups.udp_ports is defined else 0 }}"
+  tags:
+    - vyos_firewall
+    - debug
