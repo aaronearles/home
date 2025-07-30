@@ -155,10 +155,86 @@ networks:
 ## Environment and Secret Management
 
 ### Environment Files
+
+#### Environment File Structure
+```yaml
+# In docker-compose.yml - prefer env_file over inline environment
+services:
+  app:
+    image: app/image:latest
+    container_name: app-name
+    restart: unless-stopped
+    env_file:
+      - .env
+    # Avoid inline environment for sensitive data
+    # environment:
+    #   - SENSITIVE_VAR=value
+```
+
+#### Environment File Patterns
 - **Use `.env` files** for environment-specific configurations
-- **Create `.env.sample`** files as templates
-- **Never commit** actual secrets to repository
+- **Create `.env.sample`** files as templates for new deployments
+- **Never commit** actual secrets to repository (add `.env` to `.gitignore`)
 - **Use HashiCorp Vault** for production secrets
+
+#### .env File Template
+```bash
+# Service Configuration
+SERVICE_NAME=myapp
+SERVICE_VERSION=latest
+SERVICE_PORT=3000
+
+# Database Configuration
+DB_HOST=database
+DB_PORT=5432
+DB_NAME=appdb
+DB_USER=dbuser
+DB_PASSWORD=secure_password_here
+
+# Authentication
+ADMIN_USER=admin
+ADMIN_PASSWORD=change_me_please
+ADMIN_EMAIL=admin@yourdomain.com
+
+# External Services
+API_KEY=your_api_key_here
+SECRET_KEY=your_secret_key_here
+```
+
+#### .env.sample File Template
+```bash
+# Service Configuration Template
+# Copy this file to .env and update with your actual values
+
+# Service Configuration
+SERVICE_NAME=myapp
+SERVICE_VERSION=latest
+SERVICE_PORT=3000
+
+# Database Configuration
+DB_HOST=database
+DB_PORT=5432
+DB_NAME=appdb
+DB_USER=dbuser
+DB_PASSWORD=your_secure_password_here
+
+# Authentication
+ADMIN_USER=admin
+ADMIN_PASSWORD=your_secure_admin_password
+ADMIN_EMAIL=admin@yourdomain.com
+
+# External Services
+API_KEY=your_api_key_here
+SECRET_KEY=your_secret_key_here
+```
+
+#### Environment File Best Practices
+1. **Always prefer `env_file` over inline `environment`** for sensitive data
+2. **Use descriptive variable names** that indicate their purpose
+3. **Group related variables** with comments for organization
+4. **Include default values** in `.env.sample` where appropriate
+5. **Document required vs optional** variables in comments
+6. **Use consistent naming conventions** (UPPER_CASE with underscores)
 
 ### Bcrypt Hash Escaping
 For authentication services using bcrypt hashes in `.env` files:
