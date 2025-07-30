@@ -1,0 +1,34 @@
+services:
+  semaphore:
+    image: semaphoreui/semaphore:v2.15.0
+    container_name: semaphore
+    restart: unless-stopped
+    environment:
+      - SEMAPHORE_DB_DIALECT=bolt
+      - SEMAPHORE_ADMIN=admin
+      - SEMAPHORE_ADMIN_PASSWORD=changeme
+      - SEMAPHORE_ADMIN_NAME=Admin
+      - SEMAPHORE_ADMIN_EMAIL=admin@localhost
+    volumes:
+      - ./data:/tmp/semaphore
+    # ports:
+    #   - 3000:3000
+    networks:
+      - traefik
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:3000/api/ping"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+    labels:
+      - traefik.enable=true
+      - traefik.docker.network=traefik
+      - traefik.http.routers.semaphore.rule=Host(`semaphore.internal.earles.io`)
+      - traefik.http.routers.semaphore.entrypoints=websecure
+      - traefik.http.routers.semaphore.tls.certresolver=production
+      - traefik.http.services.semaphore.loadbalancer.server.port=3000
+
+networks:
+  traefik:
+    external: true
