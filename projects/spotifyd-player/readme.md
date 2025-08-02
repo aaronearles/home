@@ -1,9 +1,14 @@
 # Raspberry Pi - Headless Spotifyd Client with Bluetooth
+
+## Status 
+This is currently working as-is, it boots and automatically presents in the official spotify app and automatically pairs to the bluetooth speaker successfully, but after some time it stops working or becomes inconsistent. I think the best solution is to eliminate the bluetooth complexity with a wired (amplified) speaker(s).
+
+## Installation Notes
+
 * Raspberry Pi 3B+
 * Ubuntu 24.04 LTS
 * https://docs.spotifyd.rs/installation/index.html
 
-## Installation Notes
 This is incomplete but covers most of the commands used in inital config.
 
 ```
