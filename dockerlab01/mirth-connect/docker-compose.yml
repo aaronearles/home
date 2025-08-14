@@ -1,0 +1,45 @@
+services:
+  mirth-connect:
+    image: nextgenhealthcare/connect:latest
+    container_name: mirth-connect
+    restart: unless-stopped
+    env_file:
+      - .env
+    volumes:
+      - ./data:/opt/connect/appdata
+      - ./extensions:/opt/connect/custom-extensions
+    # ports:
+    #   - '8443:8443'
+    networks:
+      - traefik
+      - backend
+    depends_on:
+      - database
+    labels:
+      - traefik.enable=true
+      - traefik.docker.network=traefik
+      - traefik.http.routers.mirth-connect.rule=Host(`mirth.lab.earles.io`)
+      - traefik.http.routers.mirth-connect.entrypoints=websecure
+      - traefik.http.routers.mirth-connect.tls.certresolver=production
+      - traefik.http.services.mirth-connect.loadbalancer.server.port=8443
+      - traefik.http.services.mirth-connect.loadbalancer.server.scheme=https
+
+  database:
+    image: postgres:15
+    container_name: mirth-db
+    restart: unless-stopped
+    env_file:
+      - .env
+    volumes:
+      - db_data:/var/lib/postgresql/data
+    networks:
+      - backend
+
+volumes:
+  db_data:
+
+networks:
+  traefik:
+    external: true
+  backend:
+    external: false

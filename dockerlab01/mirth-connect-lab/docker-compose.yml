@@ -1,0 +1,104 @@
+services:
+  mirth-connect-a:
+    image: nextgenhealthcare/connect:latest
+    container_name: mirth-connect-a
+    restart: unless-stopped
+    environment:
+      - DATABASE=postgres
+      - DATABASE_URL=jdbc:postgresql://database-a:5432/mirthdb
+      - DATABASE_USERNAME=${DB_USER}
+      - DATABASE_PASSWORD=${DB_PASS}
+      - DATABASE_MAX_CONNECTIONS=20
+      - KEYSTORE_STOREPASS=${KEYSTORE_PASS}
+      - KEYSTORE_KEYPASS=${KEYSTORE_PASS}
+      - VMOPTIONS=${VMOPTIONS}
+    volumes:
+      - mirth_data_a:/opt/connect/appdata
+      - mirth_extensions_a:/opt/connect/custom-extensions
+    # ports:
+    #   - '8443:8443'
+    networks:
+      - traefik
+      - backend
+    depends_on:
+      - database-a
+    labels:
+      - traefik.enable=true
+      - traefik.docker.network=traefik
+      - traefik.http.routers.mirth-connect-a.rule=Host(`mirth-a.lab.earles.io`)
+      - traefik.http.routers.mirth-connect-a.entrypoints=websecure
+      - traefik.http.routers.mirth-connect-a.tls.certresolver=production
+      - traefik.http.services.mirth-connect-a.loadbalancer.server.port=8443
+      - traefik.http.services.mirth-connect-a.loadbalancer.server.scheme=https
+
+  mirth-connect-b:
+    image: nextgenhealthcare/connect:latest
+    container_name: mirth-connect-b
+    restart: unless-stopped
+    environment:
+      - DATABASE=postgres
+      - DATABASE_URL=jdbc:postgresql://database-b:5432/mirthdb
+      - DATABASE_USERNAME=${DB_USER}
+      - DATABASE_PASSWORD=${DB_PASS}
+      - DATABASE_MAX_CONNECTIONS=20
+      - KEYSTORE_STOREPASS=${KEYSTORE_PASS}
+      - KEYSTORE_KEYPASS=${KEYSTORE_PASS}
+      - VMOPTIONS=${VMOPTIONS}
+    volumes:
+      - mirth_data_b:/opt/connect/appdata
+      - mirth_extensions_b:/opt/connect/custom-extensions
+    # ports:
+    #   - '8444:8443'
+    networks:
+      - traefik
+      - backend
+    depends_on:
+      - database-b
+    labels:
+      - traefik.enable=true
+      - traefik.docker.network=traefik
+      - traefik.http.routers.mirth-connect-b.rule=Host(`mirth-b.lab.earles.io`)
+      - traefik.http.routers.mirth-connect-b.entrypoints=websecure
+      - traefik.http.routers.mirth-connect-b.tls.certresolver=production
+      - traefik.http.services.mirth-connect-b.loadbalancer.server.port=8443
+      - traefik.http.services.mirth-connect-b.loadbalancer.server.scheme=https
+
+  database-a:
+    image: postgres:15
+    container_name: mirth-db-a
+    restart: unless-stopped
+    environment:
+      - POSTGRES_DB=mirthdb
+      - POSTGRES_USER=${DB_USER}
+      - POSTGRES_PASSWORD=${DB_PASS}
+    volumes:
+      - db_data_a:/var/lib/postgresql/data
+    networks:
+      - backend
+
+  database-b:
+    image: postgres:15
+    container_name: mirth-db-b
+    restart: unless-stopped
+    environment:
+      - POSTGRES_DB=mirthdb
+      - POSTGRES_USER=${DB_USER}
+      - POSTGRES_PASSWORD=${DB_PASS}
+    volumes:
+      - db_data_b:/var/lib/postgresql/data
+    networks:
+      - backend
+
+volumes:
+  db_data_a:
+  db_data_b:
+  mirth_data_a:
+  mirth_extensions_a:
+  mirth_data_b:
+  mirth_extensions_b:
+
+networks:
+  traefik:
+    external: true
+  backend:
+    external: false
