@@ -1,0 +1,104 @@
+services:
+  openintegration-engine-a:
+    image: openintegrationengine/engine:latest
+    container_name: openintegration-engine-a
+    restart: unless-stopped
+    environment:
+      - DATABASE=postgres
+      - DATABASE_URL=jdbc:postgresql://database-a:5432/mirthdb
+      - DATABASE_USERNAME=${DB_USER}
+      - DATABASE_PASSWORD=${DB_PASS}
+      - DATABASE_MAX_CONNECTIONS=20
+      - KEYSTORE_STOREPASS=${KEYSTORE_PASS}
+      - KEYSTORE_KEYPASS=${KEYSTORE_PASS}
+      - VMOPTIONS=${VMOPTIONS}
+    volumes:
+      - openintegration_data_a:/opt/connect/appdata
+      - openintegration_extensions_a:/opt/connect/custom-extensions
+    # ports:
+    #   - '8443:8443'
+    networks:
+      - traefik
+      - backend
+    depends_on:
+      - database-a
+    labels:
+      - traefik.enable=true
+      - traefik.docker.network=traefik
+      - traefik.http.routers.openintegration-engine-a.rule=Host(`openintegration-a.lab.earles.io`)
+      - traefik.http.routers.openintegration-engine-a.entrypoints=websecure
+      - traefik.http.routers.openintegration-engine-a.tls.certresolver=production
+      - traefik.http.services.openintegration-engine-a.loadbalancer.server.port=8443
+      - traefik.http.services.openintegration-engine-a.loadbalancer.server.scheme=https
+
+  openintegration-engine-b:
+    image: openintegrationengine/engine:latest
+    container_name: openintegration-engine-b
+    restart: unless-stopped
+    environment:
+      - DATABASE=postgres
+      - DATABASE_URL=jdbc:postgresql://database-b:5432/mirthdb
+      - DATABASE_USERNAME=${DB_USER}
+      - DATABASE_PASSWORD=${DB_PASS}
+      - DATABASE_MAX_CONNECTIONS=20
+      - KEYSTORE_STOREPASS=${KEYSTORE_PASS}
+      - KEYSTORE_KEYPASS=${KEYSTORE_PASS}
+      - VMOPTIONS=${VMOPTIONS}
+    volumes:
+      - openintegration_data_b:/opt/connect/appdata
+      - openintegration_extensions_b:/opt/connect/custom-extensions
+    # ports:
+    #   - '8444:8443'
+    networks:
+      - traefik
+      - backend
+    depends_on:
+      - database-b
+    labels:
+      - traefik.enable=true
+      - traefik.docker.network=traefik
+      - traefik.http.routers.openintegration-engine-b.rule=Host(`openintegration-b.lab.earles.io`)
+      - traefik.http.routers.openintegration-engine-b.entrypoints=websecure
+      - traefik.http.routers.openintegration-engine-b.tls.certresolver=production
+      - traefik.http.services.openintegration-engine-b.loadbalancer.server.port=8443
+      - traefik.http.services.openintegration-engine-b.loadbalancer.server.scheme=https
+
+  database-a:
+    image: postgres:15
+    container_name: openintegration-db-a
+    restart: unless-stopped
+    environment:
+      - POSTGRES_DB=mirthdb
+      - POSTGRES_USER=${DB_USER}
+      - POSTGRES_PASSWORD=${DB_PASS}
+    volumes:
+      - db_data_a:/var/lib/postgresql/data
+    networks:
+      - backend
+
+  database-b:
+    image: postgres:15
+    container_name: openintegration-db-b
+    restart: unless-stopped
+    environment:
+      - POSTGRES_DB=mirthdb
+      - POSTGRES_USER=${DB_USER}
+      - POSTGRES_PASSWORD=${DB_PASS}
+    volumes:
+      - db_data_b:/var/lib/postgresql/data
+    networks:
+      - backend
+
+volumes:
+  db_data_a:
+  db_data_b:
+  openintegration_data_a:
+  openintegration_extensions_a:
+  openintegration_data_b:
+  openintegration_extensions_b:
+
+networks:
+  traefik:
+    external: true
+  backend:
+    external: false

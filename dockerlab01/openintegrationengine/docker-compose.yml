@@ -1,0 +1,45 @@
+services:
+  openintegration-engine:
+    image: openintegrationengine/engine:latest
+    container_name: openintegration-engine
+    restart: unless-stopped
+    env_file:
+      - .env
+    volumes:
+      - ./data:/opt/connect/appdata
+      - ./extensions:/opt/connect/custom-extensions
+    # ports:
+    #   - '8443:8443'
+    networks:
+      - traefik
+      - backend
+    depends_on:
+      - database
+    labels:
+      - traefik.enable=true
+      - traefik.docker.network=traefik
+      - traefik.http.routers.openintegration-engine.rule=Host(`openintegration.lab.earles.io`)
+      - traefik.http.routers.openintegration-engine.entrypoints=websecure
+      - traefik.http.routers.openintegration-engine.tls.certresolver=production
+      - traefik.http.services.openintegration-engine.loadbalancer.server.port=8443
+      - traefik.http.services.openintegration-engine.loadbalancer.server.scheme=https
+
+  database:
+    image: postgres:15
+    container_name: openintegration-db
+    restart: unless-stopped
+    env_file:
+      - .env
+    volumes:
+      - db_data:/var/lib/postgresql/data
+    networks:
+      - backend
+
+volumes:
+  db_data:
+
+networks:
+  traefik:
+    external: true
+  backend:
+    external: false
