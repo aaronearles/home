@@ -1,0 +1,444 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Spin the Wheel</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            padding: 20px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            margin: 0;
+        }
+
+        .container {
+            text-align: center;
+            max-width: 800px;
+            width: 100%;
+        }
+
+        h1 {
+            color: white;
+            margin-bottom: 30px;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.3);
+        }
+
+        .inputs-section {
+            background: rgba(255, 255, 255, 0.9);
+            padding: 20px;
+            border-radius: 15px;
+            margin-bottom: 30px;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+        }
+
+        .input-group {
+            margin: 10px 0;
+        }
+
+        .input-group label {
+            display: inline-block;
+            width: 80px;
+            text-align: left;
+            font-weight: bold;
+            color: #333;
+        }
+
+        .input-group input {
+            padding: 8px 12px;
+            border: 2px solid #ddd;
+            border-radius: 5px;
+            width: 200px;
+            font-size: 14px;
+        }
+
+        .wheel-container {
+            position: relative;
+            display: inline-block;
+            margin: 20px 0;
+        }
+
+        .wheel {
+            width: 300px;
+            height: 300px;
+            border: 8px solid #333;
+            border-radius: 50%;
+            position: relative;
+            transition: transform 4s cubic-bezier(0.23, 1, 0.32, 1);
+            cursor: pointer;
+            background: white;
+        }
+
+        .wheel svg {
+            width: 100%;
+            height: 100%;
+            border-radius: 50%;
+        }
+
+        .wheel-pointer {
+            position: absolute;
+            top: -10px;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 0;
+            height: 0;
+            border-left: 15px solid transparent;
+            border-right: 15px solid transparent;
+            border-top: 30px solid #333;
+            z-index: 10;
+        }
+
+        .spin-button {
+            position: relative;
+            background: linear-gradient(45deg, #ff6b6b, #ee5a5a);
+            color: white;
+            border: none;
+            padding: 15px 30px;
+            font-size: 18px;
+            border-radius: 25px;
+            cursor: pointer;
+            margin-top: 20px;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.2);
+            transition: all 0.3s ease;
+            overflow: hidden;
+            user-select: none;
+        }
+
+        .spin-button:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 20px rgba(0,0,0,0.3);
+        }
+
+        .spin-button:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+            transform: none;
+        }
+
+        .button-fill {
+            position: absolute;
+            top: 0;
+            left: 0;
+            height: 100%;
+            width: 0%;
+            background: linear-gradient(45deg, #ff9999, #ff7777);
+            border-radius: 25px;
+            transition: width 0.1s linear;
+            z-index: 1;
+        }
+
+        .button-text {
+            position: relative;
+            z-index: 2;
+        }
+
+        .intensity-indicator {
+            position: absolute;
+            bottom: -30px;
+            left: 50%;
+            transform: translateX(-50%);
+            font-size: 12px;
+            color: white;
+            opacity: 0;
+            transition: opacity 0.3s ease;
+        }
+
+        .spin-button.holding .intensity-indicator {
+            opacity: 1;
+        }
+
+        .winner-popup {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.8);
+            z-index: 1000;
+            justify-content: center;
+            align-items: center;
+        }
+
+        .winner-content {
+            background: white;
+            padding: 40px;
+            border-radius: 20px;
+            text-align: center;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.3);
+            animation: popIn 0.5s ease-out;
+        }
+
+        @keyframes popIn {
+            0% {
+                transform: scale(0.5);
+                opacity: 0;
+            }
+            100% {
+                transform: scale(1);
+                opacity: 1;
+            }
+        }
+
+        .winner-text {
+            font-size: 48px;
+            font-weight: bold;
+            color: #333;
+            margin: 20px 0;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.1);
+        }
+
+        .close-button {
+            background: #ff6b6b;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 10px;
+            cursor: pointer;
+            font-size: 16px;
+            margin-top: 20px;
+        }
+
+        .wheel-text {
+            font-family: Arial, sans-serif;
+            font-size: 14px;
+            font-weight: bold;
+            fill: white;
+            text-anchor: middle;
+            dominant-baseline: middle;
+            filter: drop-shadow(1px 1px 2px rgba(0,0,0,0.8));
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🎯 Spin the Wheel!</h1>
+        
+        <div class="inputs-section">
+            <h3>Enter Your Options</h3>
+            <div class="input-group">
+                <label>Option 1:</label>
+                <input type="text" id="option1" placeholder="Enter first option" value="Prize 1">
+            </div>
+            <div class="input-group">
+                <label>Option 2:</label>
+                <input type="text" id="option2" placeholder="Enter second option" value="Prize 2">
+            </div>
+            <div class="input-group">
+                <label>Option 3:</label>
+                <input type="text" id="option3" placeholder="Enter third option" value="Prize 3">
+            </div>
+        </div>
+
+        <div class="wheel-container">
+            <div class="wheel-pointer"></div>
+            <div class="wheel" id="wheel">
+                <svg viewBox="0 0 300 300">
+                    <path id="slice1" d="M 150,150 L 150,0 A 150,150 0 0,1 279.9,75 Z" fill="#ff6b6b"/>
+                    <path id="slice2" d="M 150,150 L 279.9,75 A 150,150 0 0,1 279.9,225 Z" fill="#4ecdc4"/>
+                    <path id="slice3" d="M 150,150 L 279.9,225 A 150,150 0 0,1 150,300 Z" fill="#45b7d1"/>
+                    <path id="slice4" d="M 150,150 L 150,300 A 150,150 0 0,1 20.1,225 Z" fill="#96ceb4"/>
+                    <path id="slice5" d="M 150,150 L 20.1,225 A 150,150 0 0,1 20.1,75 Z" fill="#feca57"/>
+                    <path id="slice6" d="M 150,150 L 20.1,75 A 150,150 0 0,1 150,0 Z" fill="#ff9ff3"/>
+                    
+                    <text class="wheel-text" id="text1" x="215" y="75">Prize 1</text>
+                    <text class="wheel-text" id="text2" x="235" y="150">Prize 2</text>
+                    <text class="wheel-text" id="text3" x="215" y="225">Prize 3</text>
+                    <text class="wheel-text" id="text4" x="85" y="225">Prize 1</text>
+                    <text class="wheel-text" id="text5" x="65" y="150">Prize 2</text>
+                    <text class="wheel-text" id="text6" x="85" y="75">Prize 3</text>
+                </svg>
+            </div>
+        </div>
+
+        <button class="spin-button" id="spinButton">
+            <div class="button-fill" id="buttonFill"></div>
+            <span class="button-text" id="buttonText">HOLD TO SPIN!</span>
+            <div class="intensity-indicator" id="intensityIndicator">Power: 0%</div>
+        </button>
+    </div>
+
+    <div class="winner-popup" id="winnerPopup">
+        <div class="winner-content">
+            <h2>🎉 Winner! 🎉</h2>
+            <div class="winner-text" id="winnerText">Prize 1</div>
+            <button class="close-button" onclick="closePopup()">Close</button>
+        </div>
+    </div>
+
+    <script>
+        let isSpinning = false;
+        let currentRotation = 0;
+        let isHolding = false;
+        let holdStartTime = 0;
+        let holdTimer = null;
+        let fillTimer = null;
+
+        function updateWheelText() {
+            const option1 = document.getElementById('option1').value || 'Prize 1';
+            const option2 = document.getElementById('option2').value || 'Prize 2';
+            const option3 = document.getElementById('option3').value || 'Prize 3';
+
+            document.getElementById('text1').textContent = option1;
+            document.getElementById('text2').textContent = option2;
+            document.getElementById('text3').textContent = option3;
+            document.getElementById('text4').textContent = option1;
+            document.getElementById('text5').textContent = option2;
+            document.getElementById('text6').textContent = option3;
+        }
+
+        function startHold() {
+            if (isSpinning || isHolding) return;
+            
+            isHolding = true;
+            holdStartTime = Date.now();
+            
+            const button = document.getElementById('spinButton');
+            const buttonFill = document.getElementById('buttonFill');
+            const buttonText = document.getElementById('buttonText');
+            const intensityIndicator = document.getElementById('intensityIndicator');
+            
+            button.classList.add('holding');
+            buttonText.textContent = 'RELEASE TO SPIN!';
+            
+            fillTimer = setInterval(() => {
+                const elapsed = Date.now() - holdStartTime;
+                const progress = Math.min(elapsed / 8700, 1); // 8.7 seconds to reach max
+                const percentage = Math.floor(progress * 100);
+                
+                buttonFill.style.width = `${percentage}%`;
+                intensityIndicator.textContent = `Power: ${percentage}%`;
+                
+                if (progress >= 1) {
+                    clearInterval(fillTimer);
+                }
+            }, 50);
+        }
+        
+        function endHold() {
+            if (!isHolding) return;
+            
+            const holdDuration = Math.min(Date.now() - holdStartTime, 10000);
+            const intensity = Math.min((holdDuration / 10000) * 1.15, 1); // 0 to 1, increased by 15%
+            
+            isHolding = false;
+            clearInterval(fillTimer);
+            
+            const button = document.getElementById('spinButton');
+            const buttonFill = document.getElementById('buttonFill');
+            const buttonText = document.getElementById('buttonText');
+            
+            button.classList.remove('holding');
+            buttonFill.style.width = '0%';
+            buttonText.textContent = 'HOLD TO SPIN!';
+            
+            if (holdDuration > 100) { // Minimum hold time
+                spinWheel(intensity);
+            }
+        }
+
+        function spinWheel(intensity = 0.5) {
+            if (isSpinning) return;
+            
+            isSpinning = true;
+            document.getElementById('spinButton').disabled = true;
+            
+            updateWheelText();
+            
+            const wheel = document.getElementById('wheel');
+            
+            // Intensity affects number of spins and duration
+            const minSpins = 2 + Math.floor(intensity * 4); // 2-6 spins
+            const maxSpins = 4 + Math.floor(intensity * 8); // 4-12 spins
+            const spins = Math.floor(Math.random() * (maxSpins - minSpins + 1)) + minSpins;
+            
+            const randomDegree = Math.floor(Math.random() * 360);
+            const totalRotation = (spins * 360) + randomDegree;
+            
+            // Duration increases with intensity (3-7 seconds)
+            const duration = 3000 + (intensity * 4000);
+            
+            currentRotation += totalRotation;
+            wheel.style.transition = `transform ${duration}ms cubic-bezier(0.23, 1, 0.32, 1)`;
+            wheel.style.transform = `rotate(${currentRotation}deg)`;
+            
+            setTimeout(() => {
+                const normalizedRotation = ((360 - (currentRotation % 360)) + 360) % 360;
+                const sectionAngle = 60;
+                let winningSectionIndex = Math.floor(normalizedRotation / sectionAngle);
+                
+                const sectionToOption = {
+                    0: 0, // Option 1
+                    1: 1, // Option 2  
+                    2: 2, // Option 3
+                    3: 0, // Option 1
+                    4: 1, // Option 2
+                    5: 2  // Option 3
+                };
+                
+                const options = [
+                    document.getElementById('option1').value || 'Prize 1',
+                    document.getElementById('option2').value || 'Prize 2',
+                    document.getElementById('option3').value || 'Prize 3'
+                ];
+                
+                const winnerText = options[sectionToOption[winningSectionIndex]];
+                
+                document.getElementById('winnerText').textContent = winnerText;
+                document.getElementById('winnerPopup').style.display = 'flex';
+                
+                isSpinning = false;
+                document.getElementById('spinButton').disabled = false;
+                
+                // Reset wheel transition for future spins
+                setTimeout(() => {
+                    wheel.style.transition = 'transform 4s cubic-bezier(0.23, 1, 0.32, 1)';
+                }, 100);
+            }, duration);
+        }
+
+        function closePopup() {
+            document.getElementById('winnerPopup').style.display = 'none';
+        }
+
+        document.getElementById('option1').addEventListener('input', updateWheelText);
+        document.getElementById('option2').addEventListener('input', updateWheelText);
+        document.getElementById('option3').addEventListener('input', updateWheelText);
+
+        // Button event listeners for hold-to-spin
+        const spinButton = document.getElementById('spinButton');
+        
+        // Mouse events
+        spinButton.addEventListener('mousedown', startHold);
+        spinButton.addEventListener('mouseup', endHold);
+        spinButton.addEventListener('mouseleave', endHold);
+        
+        // Touch events for mobile
+        spinButton.addEventListener('touchstart', (e) => {
+            e.preventDefault();
+            startHold();
+        });
+        spinButton.addEventListener('touchend', (e) => {
+            e.preventDefault();
+            endHold();
+        });
+        spinButton.addEventListener('touchcancel', endHold);
+        
+        // Prevent context menu on long press
+        spinButton.addEventListener('contextmenu', (e) => {
+            e.preventDefault();
+        });
+        
+        // Click wheel for quick spin (legacy)
+        document.getElementById('wheel').addEventListener('click', () => {
+            if (!isSpinning && !isHolding) {
+                spinWheel(0.3); // Low intensity quick spin
+            }
+        });
+    </script>
+</body>
+</html>

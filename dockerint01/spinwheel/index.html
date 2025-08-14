@@ -1,0 +1,507 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Spin the Wheel</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            padding: 20px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            margin: 0;
+        }
+
+        .container {
+            text-align: center;
+            max-width: 800px;
+            width: 100%;
+        }
+
+        h1 {
+            color: white;
+            margin-bottom: 30px;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.3);
+        }
+
+        .inputs-section {
+            background: rgba(255, 255, 255, 0.9);
+            padding: 20px;
+            border-radius: 15px;
+            margin-bottom: 30px;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+        }
+
+        .input-group {
+            margin: 10px 0;
+        }
+
+        .input-group label {
+            display: inline-block;
+            width: 80px;
+            text-align: left;
+            font-weight: bold;
+            color: #333;
+        }
+
+        .input-group input[type="text"] {
+            padding: 8px 12px;
+            border: 2px solid #ddd;
+            border-radius: 5px;
+            width: 200px;
+            font-size: 14px;
+        }
+        
+        .input-group input[type="range"] {
+            width: 150px;
+            margin-right: 10px;
+        }
+        
+        #sliceCountDisplay {
+            font-weight: bold;
+            color: #333;
+            min-width: 20px;
+            display: inline-block;
+        }
+
+        .wheel-container {
+            position: relative;
+            display: inline-block;
+            margin: 20px 0;
+        }
+
+        .wheel {
+            width: 300px;
+            height: 300px;
+            border: 8px solid #333;
+            border-radius: 50%;
+            position: relative;
+            transition: transform 4s cubic-bezier(0.23, 1, 0.32, 1);
+            cursor: pointer;
+            background: white;
+        }
+
+        .wheel svg {
+            width: 100%;
+            height: 100%;
+            border-radius: 50%;
+        }
+
+        .wheel-pointer {
+            position: absolute;
+            top: -10px;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 0;
+            height: 0;
+            border-left: 15px solid transparent;
+            border-right: 15px solid transparent;
+            border-top: 30px solid #333;
+            z-index: 10;
+        }
+
+        .spin-button {
+            position: relative;
+            background: linear-gradient(45deg, #ff6b6b, #ee5a5a);
+            color: white;
+            border: none;
+            padding: 15px 30px;
+            font-size: 18px;
+            border-radius: 25px;
+            cursor: pointer;
+            margin-top: 20px;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.2);
+            transition: all 0.3s ease;
+            overflow: hidden;
+            user-select: none;
+        }
+
+        .spin-button:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 20px rgba(0,0,0,0.3);
+        }
+
+        .spin-button:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+            transform: none;
+        }
+
+        .button-fill {
+            position: absolute;
+            top: 0;
+            left: 0;
+            height: 100%;
+            width: 0%;
+            background: linear-gradient(45deg, #ff9999, #ff7777);
+            border-radius: 25px;
+            transition: width 0.1s linear;
+            z-index: 1;
+        }
+
+        .button-text {
+            position: relative;
+            z-index: 2;
+        }
+
+        .intensity-indicator {
+            position: absolute;
+            bottom: -30px;
+            left: 50%;
+            transform: translateX(-50%);
+            font-size: 12px;
+            color: white;
+            opacity: 0;
+            transition: opacity 0.3s ease;
+        }
+
+        .spin-button.holding .intensity-indicator {
+            opacity: 1;
+        }
+
+        .winner-popup {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.8);
+            z-index: 1000;
+            justify-content: center;
+            align-items: center;
+        }
+
+        .winner-content {
+            background: white;
+            padding: 40px;
+            border-radius: 20px;
+            text-align: center;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.3);
+            animation: popIn 0.5s ease-out;
+        }
+
+        @keyframes popIn {
+            0% {
+                transform: scale(0.5);
+                opacity: 0;
+            }
+            100% {
+                transform: scale(1);
+                opacity: 1;
+            }
+        }
+
+        .winner-text {
+            font-size: 48px;
+            font-weight: bold;
+            color: #333;
+            margin: 20px 0;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.1);
+        }
+
+        .close-button {
+            background: #ff6b6b;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 10px;
+            cursor: pointer;
+            font-size: 16px;
+            margin-top: 20px;
+        }
+
+        .wheel-text {
+            font-family: Arial, sans-serif;
+            font-size: 14px;
+            font-weight: bold;
+            fill: white;
+            text-anchor: middle;
+            dominant-baseline: middle;
+            filter: drop-shadow(1px 1px 2px rgba(0,0,0,0.8));
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🎯 Spin the Wheel!</h1>
+        
+        <div class="inputs-section">
+            <h3>Wheel Configuration</h3>
+            <div class="input-group">
+                <label>Slices:</label>
+                <input type="range" id="sliceCount" min="2" max="12" value="6" onchange="updateSliceCount()">
+                <span id="sliceCountDisplay">6</span>
+            </div>
+            <div id="optionsContainer">
+                <!-- Dynamic options will be generated here -->
+            </div>
+        </div>
+
+        <div class="wheel-container">
+            <div class="wheel-pointer"></div>
+            <div class="wheel" id="wheel">
+                <svg viewBox="0 0 300 300" id="wheelSvg">
+                    <!-- Dynamic slices will be generated here -->
+                </svg>
+            </div>
+        </div>
+
+        <button class="spin-button" id="spinButton">
+            <div class="button-fill" id="buttonFill"></div>
+            <span class="button-text" id="buttonText">HOLD TO SPIN!</span>
+            <div class="intensity-indicator" id="intensityIndicator">Power: 0%</div>
+        </button>
+    </div>
+
+    <div class="winner-popup" id="winnerPopup">
+        <div class="winner-content">
+            <h2>🎉 Winner! 🎉</h2>
+            <div class="winner-text" id="winnerText">Prize 1</div>
+            <button class="close-button" onclick="closePopup()">Close</button>
+        </div>
+    </div>
+
+    <script>
+        let isSpinning = false;
+        let currentRotation = 0;
+        let isHolding = false;
+        let holdStartTime = 0;
+        let holdTimer = null;
+        let fillTimer = null;
+        let currentSliceCount = 6;
+        
+        const colors = ['#ff6b6b', '#4ecdc4', '#45b7d1', '#96ceb4', '#feca57', '#ff9ff3', 
+                       '#a8e6cf', '#ffd93d', '#ff6b9d', '#c7ceea', '#f38ba8', '#74c0fc'];
+
+        function updateSliceCount() {
+            const sliceCount = parseInt(document.getElementById('sliceCount').value);
+            document.getElementById('sliceCountDisplay').textContent = sliceCount;
+            currentSliceCount = sliceCount;
+            
+            generateOptions();
+            generateWheel();
+            updateWheelText();
+        }
+        
+        function generateOptions() {
+            const container = document.getElementById('optionsContainer');
+            container.innerHTML = '';
+            
+            for (let i = 0; i < currentSliceCount; i++) {
+                const div = document.createElement('div');
+                div.className = 'input-group';
+                div.innerHTML = `
+                    <label>Option ${i + 1}:</label>
+                    <input type="text" id="option${i + 1}" placeholder="Enter option ${i + 1}" value="Prize ${i + 1}" oninput="updateWheelText()">
+                `;
+                container.appendChild(div);
+            }
+        }
+        
+        function generateWheel() {
+            const svg = document.getElementById('wheelSvg');
+            svg.innerHTML = '';
+            
+            const anglePerSlice = 360 / currentSliceCount;
+            const radius = 150;
+            const centerX = 150;
+            const centerY = 150;
+            
+            for (let i = 0; i < currentSliceCount; i++) {
+                const startAngle = (i * anglePerSlice - 90) * (Math.PI / 180);
+                const endAngle = ((i + 1) * anglePerSlice - 90) * (Math.PI / 180);
+                
+                const x1 = centerX + radius * Math.cos(startAngle);
+                const y1 = centerY + radius * Math.sin(startAngle);
+                const x2 = centerX + radius * Math.cos(endAngle);
+                const y2 = centerY + radius * Math.sin(endAngle);
+                
+                const largeArcFlag = anglePerSlice > 180 ? 1 : 0;
+                
+                const pathData = [
+                    `M ${centerX},${centerY}`,
+                    `L ${x1},${y1}`,
+                    `A ${radius},${radius} 0 ${largeArcFlag},1 ${x2},${y2}`,
+                    'Z'
+                ].join(' ');
+                
+                const path = document.createElementNS('http://www.w3.org/2000/svg', 'path');
+                path.setAttribute('d', pathData);
+                path.setAttribute('fill', colors[i % colors.length]);
+                path.setAttribute('id', `slice${i + 1}`);
+                svg.appendChild(path);
+                
+                // Add text
+                const textAngle = (startAngle + endAngle) / 2;
+                const textRadius = radius * 0.7;
+                const textX = centerX + textRadius * Math.cos(textAngle);
+                const textY = centerY + textRadius * Math.sin(textAngle);
+                
+                const text = document.createElementNS('http://www.w3.org/2000/svg', 'text');
+                text.setAttribute('class', 'wheel-text');
+                text.setAttribute('id', `text${i + 1}`);
+                text.setAttribute('x', textX);
+                text.setAttribute('y', textY);
+                text.textContent = `Prize ${i + 1}`;
+                svg.appendChild(text);
+            }
+        }
+
+        function updateWheelText() {
+            for (let i = 0; i < currentSliceCount; i++) {
+                const optionInput = document.getElementById(`option${i + 1}`);
+                const textElement = document.getElementById(`text${i + 1}`);
+                if (optionInput && textElement) {
+                    textElement.textContent = optionInput.value || `Prize ${i + 1}`;
+                }
+            }
+        }
+
+        function startHold() {
+            if (isSpinning || isHolding) return;
+            
+            isHolding = true;
+            holdStartTime = Date.now();
+            
+            const button = document.getElementById('spinButton');
+            const buttonFill = document.getElementById('buttonFill');
+            const buttonText = document.getElementById('buttonText');
+            const intensityIndicator = document.getElementById('intensityIndicator');
+            
+            button.classList.add('holding');
+            buttonText.textContent = 'RELEASE TO SPIN!';
+            
+            fillTimer = setInterval(() => {
+                const elapsed = Date.now() - holdStartTime;
+                const progress = Math.min(elapsed / 8700, 1); // 8.7 seconds to reach max
+                const percentage = Math.floor(progress * 100);
+                
+                buttonFill.style.width = `${percentage}%`;
+                intensityIndicator.textContent = `Power: ${percentage}%`;
+                
+                if (progress >= 1) {
+                    clearInterval(fillTimer);
+                }
+            }, 50);
+        }
+        
+        function endHold() {
+            if (!isHolding) return;
+            
+            const holdDuration = Math.min(Date.now() - holdStartTime, 10000);
+            const intensity = Math.min((holdDuration / 10000) * 1.15, 1); // 0 to 1, increased by 15%
+            
+            isHolding = false;
+            clearInterval(fillTimer);
+            
+            const button = document.getElementById('spinButton');
+            const buttonFill = document.getElementById('buttonFill');
+            const buttonText = document.getElementById('buttonText');
+            
+            button.classList.remove('holding');
+            buttonFill.style.width = '0%';
+            buttonText.textContent = 'HOLD TO SPIN!';
+            
+            if (holdDuration > 100) { // Minimum hold time
+                spinWheel(intensity);
+            }
+        }
+
+        function spinWheel(intensity = 0.5) {
+            if (isSpinning) return;
+            
+            isSpinning = true;
+            document.getElementById('spinButton').disabled = true;
+            
+            updateWheelText();
+            
+            const wheel = document.getElementById('wheel');
+            
+            // Intensity affects number of spins and duration
+            const minSpins = 2 + Math.floor(intensity * 4); // 2-6 spins
+            const maxSpins = 4 + Math.floor(intensity * 8); // 4-12 spins
+            const spins = Math.floor(Math.random() * (maxSpins - minSpins + 1)) + minSpins;
+            
+            const randomDegree = Math.floor(Math.random() * 360);
+            const totalRotation = (spins * 360) + randomDegree;
+            
+            // Duration increases with intensity (3-7 seconds)
+            const duration = 3000 + (intensity * 4000);
+            
+            currentRotation += totalRotation;
+            wheel.style.transition = `transform ${duration}ms cubic-bezier(0.23, 1, 0.32, 1)`;
+            wheel.style.transform = `rotate(${currentRotation}deg)`;
+            
+            setTimeout(() => {
+                const normalizedRotation = ((360 - (currentRotation % 360)) + 360) % 360;
+                const sectionAngle = 360 / currentSliceCount;
+                let winningSectionIndex = Math.floor(normalizedRotation / sectionAngle);
+                
+                const options = [];
+                for (let i = 0; i < currentSliceCount; i++) {
+                    const optionInput = document.getElementById(`option${i + 1}`);
+                    options.push(optionInput ? optionInput.value || `Prize ${i + 1}` : `Prize ${i + 1}`);
+                }
+                
+                const winnerText = options[winningSectionIndex];
+                
+                document.getElementById('winnerText').textContent = winnerText;
+                document.getElementById('winnerPopup').style.display = 'flex';
+                
+                isSpinning = false;
+                document.getElementById('spinButton').disabled = false;
+                
+                // Reset wheel transition for future spins
+                setTimeout(() => {
+                    wheel.style.transition = 'transform 4s cubic-bezier(0.23, 1, 0.32, 1)';
+                }, 100);
+            }, duration);
+        }
+
+        function closePopup() {
+            document.getElementById('winnerPopup').style.display = 'none';
+        }
+
+        // Initialize the wheel on page load
+        document.addEventListener('DOMContentLoaded', function() {
+            updateSliceCount();
+        });
+
+        // Button event listeners for hold-to-spin
+        const spinButton = document.getElementById('spinButton');
+        
+        // Mouse events
+        spinButton.addEventListener('mousedown', startHold);
+        spinButton.addEventListener('mouseup', endHold);
+        spinButton.addEventListener('mouseleave', endHold);
+        
+        // Touch events for mobile
+        spinButton.addEventListener('touchstart', (e) => {
+            e.preventDefault();
+            startHold();
+        });
+        spinButton.addEventListener('touchend', (e) => {
+            e.preventDefault();
+            endHold();
+        });
+        spinButton.addEventListener('touchcancel', endHold);
+        
+        // Prevent context menu on long press
+        spinButton.addEventListener('contextmenu', (e) => {
+            e.preventDefault();
+        });
+        
+        // Click wheel for quick spin (legacy)
+        document.getElementById('wheel').addEventListener('click', () => {
+            if (!isSpinning && !isHolding) {
+                spinWheel(0.3); // Low intensity quick spin
+            }
+        });
+    </script>
+</body>
+</html>

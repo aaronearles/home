@@ -1,0 +1,23 @@
+services:
+  spinwheel:
+    build: .
+    container_name: spinwheel
+    restart: unless-stopped
+    env_file:
+      - .env
+    volumes:
+      - ./index.html:/usr/share/nginx/html/index.html:ro
+    # ports:
+    #   - "8080:80"
+    networks:
+      - traefik
+    labels:
+      - traefik.enable=true
+      - traefik.docker.network=traefik
+      - traefik.http.routers.spinwheel.rule=Host(`spinwheel.internal.earles.io`)
+      - traefik.http.routers.spinwheel.entrypoints=websecure
+      - traefik.http.routers.spinwheel.tls.certresolver=production
+
+networks:
+  traefik:
+    external: true
