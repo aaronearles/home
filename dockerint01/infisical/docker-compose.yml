@@ -1,0 +1,61 @@
+services:
+  infisical:
+    image: infisical/infisical:latest-postgres
+    container_name: infisical
+    restart: unless-stopped
+    env_file:
+      - .env
+    volumes:
+      - ./data:/app/data
+    # ports:
+    #   - "8080:8080"
+    networks:
+      - traefik
+      - backend
+    depends_on:
+      - redis
+      - postgres
+    labels:
+      - traefik.enable=true
+      - traefik.docker.network=traefik
+      - traefik.http.routers.infisical.rule=Host(`infisical.internal.earles.io`)
+      - traefik.http.routers.infisical.entrypoints=websecure
+      - traefik.http.routers.infisical.tls.certresolver=production
+      - traefik.http.services.infisical.loadbalancer.server.port=8080
+
+  redis:
+    image: redis:7-alpine
+    container_name: infisical-redis
+    restart: unless-stopped
+    volumes:
+      - redis_data:/data
+    networks:
+      - backend
+
+  postgres:
+    image: postgres:14-alpine
+    container_name: infisical-postgres
+    restart: unless-stopped
+    environment:
+      - POSTGRES_DB=${DB_CONNECTION_NAME}
+      - POSTGRES_USER=${DB_CONNECTION_USERNAME}
+      - POSTGRES_PASSWORD=${DB_CONNECTION_PASSWORD}
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    networks:
+      - backend
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -d $${POSTGRES_DB} -U $${POSTGRES_USER}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+volumes:
+  redis_data:
+  postgres_data:
+
+networks:
+  traefik:
+    external: true
+  backend:
+    external: false
