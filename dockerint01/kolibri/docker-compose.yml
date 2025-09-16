@@ -6,7 +6,10 @@ services:
     env_file:
       - .env
     volumes:
-      - ./data:/root/.kolibri
+      # Fast local storage for databases and config
+      - ./data/kolibri:/root/.kolibri
+      # NAS storage for bulk content
+      - /mnt/media/kolibri/content:/root/.kolibri/content/storage
     # ports:
     #   - "8080:8080"  # Using Traefik instead
     networks:
