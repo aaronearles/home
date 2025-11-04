@@ -1,0 +1,37 @@
+services:
+  ssltrack:
+    image: zimbres/ssltrack:latest
+    container_name: ssltrack
+    restart: unless-stopped
+    env_file:
+      - .env
+    volumes:
+      - ssltrack_data:/app/data
+    # ports:
+    #   - "80:80"
+    networks:
+      - traefik
+      - backend
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost/api/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+    labels:
+      - traefik.enable=true
+      - traefik.docker.network=traefik
+      - traefik.http.routers.ssltrack.rule=Host(`ssltrack.lab.earles.io`)
+      - traefik.http.routers.ssltrack.entrypoints=websecure
+      - traefik.http.routers.ssltrack.tls.certresolver=production
+      - traefik.http.services.ssltrack.loadbalancer.server.port=80
+
+volumes:
+  ssltrack_data:
+    driver: local
+
+networks:
+  traefik:
+    external: true
+  backend:
+    external: false
