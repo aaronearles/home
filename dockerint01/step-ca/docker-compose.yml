@@ -1,0 +1,44 @@
+services:
+  step-ca:
+    image: smallstep/step-ca:latest
+    container_name: step-ca
+    restart: unless-stopped
+    environment:
+      - DOCKER_STEPCA_INIT_NAME=MyCompany CA
+      - DOCKER_STEPCA_INIT_DNS_NAMES=step-ca,localhost,ca.mycompany.local
+      - DOCKER_STEPCA_INIT_REMOTE_MANAGEMENT=true
+      - DOCKER_STEPCA_INIT_ACME=true
+    volumes:
+      - ./config:/home/step
+    # ports:
+    #   - "9000:9000"  # CA server - using Traefik instead
+    networks:
+      - traefik
+    healthcheck:
+      test: ["CMD", "step", "ca", "health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 10s
+    labels:
+      - traefik.enable=true
+      - traefik.docker.network=traefik
+      - traefik.http.routers.step-ca.rule=Host(`step-ca.internal.earles.io`)
+      - traefik.http.routers.step-ca.entrypoints=websecure
+      - traefik.http.routers.step-ca.tls.certresolver=production
+      - traefik.http.services.step-ca.loadbalancer.server.port=9000
+
+  step-cli:
+    image: smallstep/step-cli:latest
+    container_name: step-cli
+    restart: unless-stopped
+    volumes:
+      - ./config:/home/step
+    depends_on:
+      - step-ca
+    command: tail -f /dev/null
+    network_mode: service:step-ca
+
+networks:
+  traefik:
+    external: true
