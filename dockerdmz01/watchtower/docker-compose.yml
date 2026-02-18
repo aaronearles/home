@@ -1,9 +1,11 @@
-# Watchtower configuration
-# https://containrrr.dev/watchtower/arguments/
 services:
   watchtower:
-    image: containrrr/watchtower
+#    image: containrrr/watchtower #no longer maintained, deprecated API errors
+    image: nickfedor/watchtower #switch to nickfedor fork 02/18/2026
     container_name: watchtower
     restart: unless-stopped
     volumes:
       - /var/run/docker.sock:/var/run/docker.sock
+
+# https://containrrr.dev/watchtower/arguments/
+#https://watchtower.nickfedor.com/v1.14.2/configuration/arguments/
