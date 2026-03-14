@@ -7,34 +7,52 @@ services:
       - .env
     volumes:
       - ./data:/data
-    networks:
-      - traefik
     labels:
       - traefik.enable=true
       - traefik.http.routers.vaultwarden.rule=Host(`vaultwarden.internal.earles.io`)
       - traefik.http.routers.vaultwarden.entrypoints=websecure
       - traefik.http.routers.vaultwarden.tls.certresolver=production
+    networks:
+      - traefik
 
   vaultwarden-backup:
     image: bruceforce/vaultwarden-backup
     container_name: vaultwarden-backup
     restart: unless-stopped
     init: true
+    depends_on:
+      - vaultwarden
+    volumes:
+      - ./data:/data/
+      - vw_backup:/backup/
+      # - /mnt/documents/vw_backup:/backup/ ##Disabled while NAS is down for PSU 03-14-2026
+      # - /etc/timezone:/etc/timezone:ro
+      # - /etc/localtime:/etc/localtime:ro
     environment:
+      # - DB_FILE=/data/db.sqlite3
       - BACKUP_DIR=/backup/
       - CRON_TIME=0 5 * * * # EVERY DAY 5am
       - TIMESTAMP=true
       - DELETE_AFTER=30
       - UID=1000
       - GID=1000
-      # - DB_FILE=/data/db.sqlite3
-    volumes:
-      - ./data:/data/
-      - ./backup:/backup/
-      # - /etc/timezone:/etc/timezone:ro
-      # - /etc/localtime:/etc/localtime:ro
+
+  vaultwarden-rclone:
+    image: rclone/rclone:latest
+    container_name: vaultwarden-rclone
+    restart: unless-stopped
     depends_on:
-      - vaultwarden
+      - vaultwarden-backup
+    volumes:
+      - vw_backup:/backup:ro
+      - ./rclone.conf:/config/rclone/rclone.conf:ro  # B2 earles-vw-backup
+    entrypoint: /bin/sh
+    command:
+      - -c
+      - "echo '15 5 * * * rclone sync /backup b2:earles-vw-backup/vw-backup/' > /etc/crontabs/root && crond -f -l 8"
+
+volumes:
+  vw_backup:
 
 networks:
   traefik:

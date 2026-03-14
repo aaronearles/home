@@ -1,0 +1,4 @@
+[b2]
+type = b2
+account = YOUR_B2_KEY_ID
+key = YOUR_B2_APPLICATION_KEY
