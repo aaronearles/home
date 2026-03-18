@@ -1,5 +1,12 @@
 # Docker Standards
 
+## File Naming Standards
+
+### Compose File Naming
+- **Always** use `docker-compose.yml` (not `compose.yaml`, `compose.yml`, or other variants)
+- This maintains consistency across all services and follows Docker Compose conventions
+- The `docker compose` CLI auto-detects this filename by default
+
 ## Docker Compose Structure Standards
 
 ### Property Order Standard
