@@ -24,8 +24,8 @@ services:
       - vaultwarden
     volumes:
       - ./data:/data/
-      - vw_backup:/backup/
-      # - /mnt/documents/vw_backup:/backup/ ##Disabled while NAS is down for PSU 03-14-2026
+      # - vw_backup:/backup/ # Used temporarily while NAS was down for PSU 03-14-2026 thru 03-18-2026
+      - /mnt/documents/vw_backup:/backup/ # Was disabled while NAS was down for PSU 03-14-2026 thru 03-18-2026
       # - /etc/timezone:/etc/timezone:ro
       # - /etc/localtime:/etc/localtime:ro
     environment:
@@ -44,15 +44,16 @@ services:
     depends_on:
       - vaultwarden-backup
     volumes:
-      - vw_backup:/backup:ro
+      # - vw_backup:/backup:ro # Used temporarily while NAS was down for PSU 03-14 thru 03-18
+      - /mnt/documents/vw_backup:/backup:ro
       - ./rclone.conf:/config/rclone/rclone.conf:ro  # B2 earles-vw-backup
     entrypoint: /bin/sh
     command:
       - -c
       - "echo '15 5 * * * rclone sync /backup b2:earles-vw-backup/vw-backup/' > /etc/crontabs/root && crond -f -l 8"
 
-volumes:
-  vw_backup:
+# volumes:
+#   vw_backup:
 
 networks:
   traefik:
