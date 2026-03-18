@@ -1,6 +1,6 @@
 #!/bin/bash
-# run.sh — execute on the Docker LXC host after pulling this repo.
-# Prerequisites: Docker Engine, Docker Compose plugin, git, curl
+# run.sh — deploy Coder on Docker host with Traefik
+# Prerequisites: Docker Engine, Docker Compose plugin, Traefik running
 set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
@@ -10,14 +10,16 @@ echo "==> [1/6] Checking prerequisites..."
 docker info --format '{{.ServerVersion}}' || { echo "ERROR: Docker not running"; exit 1; }
 docker compose version || { echo "ERROR: Docker Compose plugin not found"; exit 1; }
 
+# Check if Traefik network exists
+if ! docker network inspect traefik &>/dev/null; then
+  echo "ERROR: Traefik network not found. Deploy Traefik first:"
+  echo "  cd ../traefik && docker compose up -d"
+  exit 1
+fi
+
 # ── Detect docker socket GID ──────────────────────────────────────────────────
-# Proxmox privileged LXC: no UID/GID remapping — value is the real GID.
 DOCKER_GID=$(stat -c '%g' /var/run/docker.sock)
 echo "    Docker socket GID: $DOCKER_GID"
-
-# Patch DOCKER_GID placeholder in compose.yaml (sed in-place, backup as .bak)
-sed -i.bak "s/\${DOCKER_GID}/${DOCKER_GID}/g" compose.yaml
-echo "    compose.yaml patched with GID $DOCKER_GID"
 
 # ── Create .env if it doesn't exist ──────────────────────────────────────────
 echo ""
@@ -25,21 +27,22 @@ echo "==> [2/6] Setting up .env..."
 if [ ! -f .env ]; then
   cp .env.example .env
 
-  # Auto-detect LAN IP for CODER_ACCESS_URL
-  HOST_IP=$(ip route get 1.1.1.1 2>/dev/null | awk '{print $7; exit}')
-  sed -i "s|CODER_ACCESS_URL=.*|CODER_ACCESS_URL=http://${HOST_IP}:7080|" .env
-
   # Generate a random Postgres password
   PG_PASS="coder_$(openssl rand -hex 12)"
-  sed -i "s|POSTGRES_PASSWORD=.*|POSTGRES_PASSWORD=${PG_PASS}|" .env
+  sed -i "s|POSTGRES_PASSWORD=changeme|POSTGRES_PASSWORD=${PG_PASS}|" .env
 
-  echo "    .env created with auto-detected values."
+  # Update DOCKER_GID
+  sed -i "s|DOCKER_GID=.*|DOCKER_GID=${DOCKER_GID}|" .env
+
+  echo "    .env created with auto-generated values."
   echo ""
-  echo "    !! Review .env now and set your API key before continuing."
-  echo "    Edit .env, then re-run this script."
+  echo "    Review the configuration and update if needed:"
+  echo "    - CODER_ACCESS_URL: https://coder.internal.earles.io"
+  echo "    - Add OIDC settings if using SSO"
   echo ""
   cat .env
-  exit 0
+  echo ""
+  read -p "Press Enter to continue or Ctrl+C to abort and edit .env..."
 fi
 
 echo "    .env already exists — using existing values."
@@ -69,12 +72,11 @@ fi
 
 # ── Login ─────────────────────────────────────────────────────────────────────
 echo ""
-echo "==> [5/6] Logging into Coder at $CODER_ACCESS_URL..."
+echo "==> [5/6] Logging into Coder at ${CODER_ACCESS_URL}..."
 echo "    If this is the first run, complete the admin account setup in your"
-echo "    browser first, then re-run this script from this step:"
-echo "    SKIP_START=1 bash run.sh"
+echo "    browser first, then re-run this script."
 echo ""
-coder login "$CODER_ACCESS_URL"
+coder login "${CODER_ACCESS_URL}"
 
 # ── Push template ─────────────────────────────────────────────────────────────
 echo ""
@@ -86,9 +88,10 @@ coder template push claude-workspace \
   --yes
 
 echo ""
-echo "==> Done. Visit $CODER_ACCESS_URL to create your first workspace."
+echo "==> Done! Access Coder at ${CODER_ACCESS_URL}"
 echo ""
 echo "Post-setup hardening checklist:"
-echo "  [ ] Build a custom image with Claude Code pre-baked, then lock down egress"
-echo "  [ ] Enable OIDC SSO in compose.yaml (CODER_OIDC_* vars)"
+echo "  [ ] Build custom image with Claude Code pre-baked, then lock down egress"
+echo "  [ ] Enable OIDC SSO in .env (CODER_OIDC_* variables)"
 echo "  [ ] Pin ghcr.io/coder/coder:latest to a specific version tag"
+echo "  [ ] Add Coder to Gatus monitoring"

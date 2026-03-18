@@ -17,7 +17,7 @@ are not available on this machine. Generate files only.
 ├── AGENTS.md               # this file
 ├── .env.example            # template for secrets — never commit .env itself
 ├── .gitignore
-├── compose.yaml            # Coder control plane + Postgres
+├── docker-compose.yml            # Coder control plane + Postgres
 ├── template/
 │   └── main.tf             # Coder workspace Terraform template
 └── run.sh                  # deployment script executed on the Docker LXC host
@@ -78,13 +78,13 @@ EOF
 
 ---
 
-## Step 4 — Write compose.yaml
+## Step 4 — Write docker-compose.yml
 
 Note: DOCKER_GID is written as a shell variable reference. run.sh will
 substitute the real value at deploy time by detecting it on the LXC host.
 
 ```bash
-cat > compose.yaml <<'EOF'
+cat > docker-compose.yml <<'EOF'
 # Coder control plane — Docker Compose
 #
 # DOCKER_GID is substituted at deploy time by run.sh.
@@ -406,9 +406,9 @@ docker compose version || { echo "ERROR: Docker Compose plugin not found"; exit 
 DOCKER_GID=$(stat -c '%g' /var/run/docker.sock)
 echo "    Docker socket GID: $DOCKER_GID"
 
-# Patch DOCKER_GID placeholder in compose.yaml (sed in-place, backup as .bak)
-sed -i.bak "s/\${DOCKER_GID}/${DOCKER_GID}/g" compose.yaml
-echo "    compose.yaml patched with GID $DOCKER_GID"
+# Patch DOCKER_GID placeholder in docker-compose.yml (sed in-place, backup as .bak)
+sed -i.bak "s/\${DOCKER_GID}/${DOCKER_GID}/g" docker-compose.yml
+echo "    docker-compose.yml patched with GID $DOCKER_GID"
 
 # ── Create .env if it doesn't exist ──────────────────────────────────────────
 echo ""
@@ -481,7 +481,7 @@ echo "==> Done. Visit $CODER_ACCESS_URL to create your first workspace."
 echo ""
 echo "Post-setup hardening checklist:"
 echo "  [ ] Build a custom image with Claude Code pre-baked, then lock down egress"
-echo "  [ ] Enable OIDC SSO in compose.yaml (CODER_OIDC_* vars)"
+echo "  [ ] Enable OIDC SSO in docker-compose.yml (CODER_OIDC_* vars)"
 echo "  [ ] Pin ghcr.io/coder/coder:latest to a specific version tag"
 EOF
 
@@ -496,7 +496,7 @@ echo "run.sh written and marked executable"
 ```bash
 # Verify expected file tree
 echo "==> Checking generated files..."
-for f in .gitignore .env.example compose.yaml template/main.tf run.sh; do
+for f in .gitignore .env.example docker-compose.yml template/main.tf run.sh; do
   if [ -f "$f" ]; then
     echo "  OK  $f"
   else
@@ -514,7 +514,7 @@ if [ ! -d ".git" ]; then
   git init
 fi
 
-git add .gitignore .env.example compose.yaml template/main.tf run.sh AGENTS.md
+git add .gitignore .env.example docker-compose.yml template/main.tf run.sh AGENTS.md
 git status
 
 echo ""
