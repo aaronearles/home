@@ -15,7 +15,7 @@ are not available on this machine. Generate files only.
 ```
 .
 ├── AGENTS.md               # this file
-├── .env.example            # template for secrets — never commit .env itself
+├── .env.sample            # template for secrets — never commit .env itself
 ├── .gitignore
 ├── docker-compose.yml            # Coder control plane + Postgres
 ├── template/
@@ -52,10 +52,10 @@ EOF
 
 ---
 
-## Step 3 — Write .env.example
+## Step 3 — Write .env.sample
 
 ```bash
-cat > .env.example <<'EOF'
+cat > .env.sample <<'EOF'
 # Copy this to .env on the Docker LXC host and fill in values.
 # Never commit .env — it is gitignored.
 
@@ -414,7 +414,7 @@ echo "    docker-compose.yml patched with GID $DOCKER_GID"
 echo ""
 echo "==> [2/6] Setting up .env..."
 if [ ! -f .env ]; then
-  cp .env.example .env
+  cp .env.sample .env
 
   # Auto-detect LAN IP for CODER_ACCESS_URL
   HOST_IP=$(ip route get 1.1.1.1 2>/dev/null | awk '{print $7; exit}')
@@ -496,7 +496,7 @@ echo "run.sh written and marked executable"
 ```bash
 # Verify expected file tree
 echo "==> Checking generated files..."
-for f in .gitignore .env.example docker-compose.yml template/main.tf run.sh; do
+for f in .gitignore .env.sample docker-compose.yml template/main.tf run.sh; do
   if [ -f "$f" ]; then
     echo "  OK  $f"
   else
@@ -514,7 +514,7 @@ if [ ! -d ".git" ]; then
   git init
 fi
 
-git add .gitignore .env.example docker-compose.yml template/main.tf run.sh AGENTS.md
+git add .gitignore .env.sample docker-compose.yml template/main.tf run.sh AGENTS.md
 git status
 
 echo ""

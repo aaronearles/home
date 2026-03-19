@@ -25,7 +25,7 @@ echo "    Docker socket GID: $DOCKER_GID"
 echo ""
 echo "==> [2/6] Setting up .env..."
 if [ ! -f .env ]; then
-  cp .env.example .env
+  cp .env.sample .env
 
   # Generate a random Postgres password
   PG_PASS="coder_$(openssl rand -hex 12)"

@@ -22,7 +22,9 @@ Self-hosted development environment with secure Claude Code workspaces behind Tr
 ```bash
 # 1. Create environment file
 cp .env.sample .env
-# Edit .env and set POSTGRES_PASSWORD
+# Edit .env and set:
+#   - POSTGRES_PASSWORD
+#   - TF_VAR_anthropic_foundry_base_url (your Foundry endpoint)
 
 # 2. Deploy Coder
 ./run.sh
@@ -31,6 +33,14 @@ cp .env.sample .env
 # Complete admin setup in browser
 
 # 4. Create workspace from "Claude Code (Docker)" template
+
+# 5. In workspace terminal, authenticate with Azure
+az login
+# Or use device code flow for headless auth:
+az login --use-device-code
+
+# 6. Start Claude Code
+claude
 ```
 
 ## Architecture
@@ -52,6 +62,46 @@ docker-compose.yml
 ### Volumes
 
 - **coder_db_data**: PostgreSQL database storage
+
+## Azure AI Foundry Authentication
+
+Claude Code uses Azure CLI authentication instead of static API keys for better security.
+
+### First-Time Setup
+
+1. **In your workspace terminal**, authenticate with Azure:
+   ```bash
+   az login
+   ```
+
+2. **For headless/SSH access**, use device code flow:
+   ```bash
+   az login --use-device-code
+   ```
+
+3. **Verify authentication**:
+   ```bash
+   az account show
+   ```
+
+4. **Start Claude Code**:
+   ```bash
+   claude
+   ```
+
+### How It Works
+
+- Azure CLI stores auth tokens in `~/.azure/`
+- Claude Code detects `CLAUDE_CODE_USE_FOUNDRY=1` and uses the az token
+- No API keys stored in environment variables
+- Tokens refresh automatically via Azure CLI
+- Each user authenticates with their own Azure identity
+
+### Token Persistence
+
+- Azure tokens persist in the workspace home volume (`~/.azure/`)
+- Tokens remain valid across workspace restarts
+- Re-run `az login` only when tokens expire (typically 90 days)
 
 ## Configuration
 
@@ -83,22 +133,36 @@ The included Terraform template (`template/main.tf`) creates workspaces with:
    - Blocks sensitive file access (.env, .key, .pem, etc.)
    - Disables external network tools (curl, wget, ssh)
    - Requires approval for destructive operations
+   - Cannot be modified by users (read-only, no sudo access)
 
-2. **Egress Firewall** (iptables)
+2. **No Sudo Access**
+   - Sudo is removed after workspace initialization
+   - Prevents users from bypassing security controls
+   - Prevents modification of managed settings
+   - All necessary tools pre-installed during startup
+
+3. **Egress Firewall** (iptables)
    - Allows: Coder control plane, Anthropic API, DNS
    - Blocks: All other outbound traffic
    - TODO: Remove npm/https once Claude Code is pre-baked
 
-3. **Network Isolation**
+4. **Network Isolation**
    - Workspaces run in bridge network
    - No direct host network access
    - Controlled egress via iptables
 
 ### Included Tools
 
-- **Claude Code**: Installed via npm (TODO: pre-bake in image)
-- **code-server**: VS Code in browser on port 13337
+- **Node.js LTS**: Installed via NodeSource (required for Claude Code)
+- **Azure CLI**: Installed for Foundry authentication (no API keys needed)
+- **Claude Code**: Installed via npm with VS Code integration
+- **code-server**: VS Code in browser on port 13337 (symlinked as `code` for Claude CLI)
+- **VS Code Extensions**: GitHub PR/Issues, GitLens, Claude Code (auto-installed)
+- **Editors**: nano, vim, less
+- **Utilities**: jq, wget, ca-certificates, gnupg
 - **Standard dev tools**: git, curl, etc.
+
+**Note**: First workspace startup takes 3-5 minutes to install Node.js, Azure CLI, and Claude Code. Subsequent starts are instant as the home volume persists installations.
 
 ## Deployment
 
@@ -154,13 +218,59 @@ Check workspace logs in Coder UI or:
 docker logs coder-<username>-<workspace>
 ```
 
+### Claude Code CLI Integration
+
+The workspace automatically configures VS Code integration for Claude Code:
+
+1. **`code-server` symlinked to `code`**: Claude Code CLI can detect and use VS Code
+2. **PATH configured**: `~/.local/bin` added to PATH for `code` command
+3. **Extensions pre-installed**: Claude Code extension attempts auto-install on first run
+
+**Expected `/status` output:**
+```
+✔ IDE: VS Code (code-server)
+⚠ No write permissions for auto-updates (requires sudo) ← This is expected/secure
+```
+
+### Need to Install Additional Tools?
+
+Since sudo is disabled for security, tools must be installed during workspace creation.
+
+**Option 1**: Add to startup_script in `template/main.tf` (before sudo removal step)
+**Option 2**: Build a custom image with tools pre-installed
+**Option 3**: Install to user space without sudo:
+```bash
+# Example: install a Go binary to ~/.local/bin
+mkdir -p ~/.local/bin
+curl -L https://github.com/owner/repo/releases/download/v1.0/tool -o ~/.local/bin/tool
+chmod +x ~/.local/bin/tool
+# PATH already includes ~/.local/bin
+```
+
 ## Security Hardening
 
 ### Production Checklist
 
-- [ ] Build custom image with Claude Code pre-installed
-- [ ] Remove npm/https egress rules (lines 304-305 in main.tf)
-- [ ] Uncomment `iptables -P OUTPUT DROP` (line 308 in main.tf)
+- [ ] Build custom image with all tools pre-installed
+  ```dockerfile
+  FROM codercom/enterprise-base:ubuntu
+  USER root
+  RUN apt-get update \
+      && apt-get install -y nano vim less jq wget ca-certificates gnupg \
+      && curl -fsSL https://deb.nodesource.com/setup_lts.x | bash - \
+      && apt-get install -y nodejs \
+      && curl -fsSL https://aka.ms/InstallAzureCLIDeb | bash \
+      && npm install -g @anthropic-ai/claude-code \
+      && chmod u-s /usr/bin/sudo /bin/su /usr/bin/su \
+      && rm -rf /var/lib/apt/lists/*
+  USER coder
+  RUN curl -fsSL https://code-server.dev/install.sh | sh -s -- --method standalone \
+      && ln -s ~/.local/bin/code-server ~/.local/bin/code \
+      && echo 'export PATH="$HOME/.local/bin:$PATH"' >> ~/.bashrc
+  ```
+- [ ] Update `workspace_image` variable in main.tf to use custom image
+- [ ] Remove npm/https egress rules (lines 138-139 in main.tf)
+- [ ] Uncomment `iptables -P OUTPUT DROP` (line 142 in main.tf)
 - [ ] Enable OIDC SSO in .env
 - [ ] Pin Coder image to specific version (not `latest`)
 - [ ] Add monitoring to Gatus
