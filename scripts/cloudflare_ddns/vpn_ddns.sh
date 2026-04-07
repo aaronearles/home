@@ -1,9 +1,12 @@
+➜  ~ cat /usr/local/bin/ddns
 #!/bin/bash
 ##### SETUP VARIABLES #####
 ZONEID="3df85645994c6bd1399d9a2221ef6213" #EARLES.IO ZONE
-RECORDID="983597cbb894f749892aa5163152b03c" #VPN.EARLES.IO RECORD
+RECORDID="feed141277baac2b1c7dd2d72eae6801" #MASTER.EARLES.IO RECORD
+#RECORDID="983597cbb894f749892aa5163152b03c" #VPN.EARLES.IO RECORD
 TOKEN="" #cloudflare-pve-earlesio-ddns
-NAME="vpn.earles.io"
+NAME="master.earles.io"
+#NAME="vpn.earles.io"
 NTFYTOPIC="aearles_alerts"
 LOGPATH="/var/log/ddns.log"
 #####  END VARIABLES  #####
@@ -12,7 +15,17 @@ LOGPATH="/var/log/ddns.log"
 now=$(date)
 
 # Check for current external IP
-IP=`dig +short txt ch whoami.cloudflare @1.0.0.1| tr -d '"'`
+#IP=`dig +short txt ch whoami.cloudflare @1.0.0.1| tr -d '"'` #This stopped working due to DNS inspection with Unifi Network 9.3 update
+#IP=`curl -s https://ifconfig.io`
+IP=$(curl -s --max-time 10 https://ifconfig.io)
+
+# Validate IP before doing anything
+if [[ ! "$IP" =~ ^[0-9]+\.[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
+    err="ERROR: $NAME could not get external IP (got: '$IP') at $now. Skipping."
+    echo $err >> $LOGPATH && curl -d "$err" "ntfy.sh/$NTFYTOPIC"
+    exit 1
+fi
+
 
 # Set Cloudflare API
 URL="https://api.cloudflare.com/client/v4/zones/$ZONEID/dns_records/$RECORDID"
@@ -31,7 +44,8 @@ IP_CF=$(jq -r '.result.content' <<< ${RESULT})
 
 # Compare IPs
 if [ "$IP" = "$IP_CF" ]; then
-    echo "No change to $IP at $now."
+#    echo "No change to $IP at $now."
+echo "No change to $IP at $now." >> $LOGPATH
 else
     RESULT=$(cf PUT --data "{\"type\":\"A\",\"name\":\"${NAME}\",\"content\":\"${IP}\"}")
     SUCCESS=$(echo $RESULT | jq '.success')

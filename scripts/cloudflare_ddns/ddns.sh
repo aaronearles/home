@@ -13,8 +13,15 @@ LOGPATH="/var/log/ddns.log" #file path to log events
 now=$(date)
 
 # Check for current external IP
-# IP=`dig +short txt ch whoami.cloudflare @1.0.0.1| tr -d '"'` # Stopped working due to DNS inspection with Unifi Network 9.3 update
-IP=`curl -s https://ifconfig.io`
+IP=$(curl -s --max-time 10 https://ifconfig.io)
+
+# Validate IP before doing anything
+if [[ ! "$IP" =~ ^[0-9]+\.[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
+    err="ERROR: $NAME could not get external IP (got: '$IP') at $now. Skipping."
+    echo $err >> $LOGPATH && curl -d "$err" "ntfy.sh/$NTFYTOPIC"
+    exit 1
+fi
+
 
 # Set Cloudflare API
 URL="https://api.cloudflare.com/client/v4/zones/$ZONEID/dns_records/$RECORDID"
