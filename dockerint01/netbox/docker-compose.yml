@@ -1,0 +1,128 @@
+services:
+  netbox:
+    image: netboxcommunity/netbox:latest
+    container_name: netbox
+    restart: unless-stopped
+    env_file: .env
+    volumes:
+      - ./media:/opt/netbox/netbox/media
+      - ./reports:/opt/netbox/netbox/reports
+      - ./scripts:/opt/netbox/netbox/scripts
+    # ports:
+    #   - "8080:8080"
+    networks:
+      - traefik
+      - backend
+    depends_on:
+      postgres:
+        condition: service_healthy
+        restart: true
+      redis:
+        condition: service_healthy
+        restart: true
+      redis-cache:
+        condition: service_healthy
+        restart: true
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8080/api/"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 90s
+    labels:
+      - traefik.enable=true
+      - traefik.docker.network=traefik
+      - traefik.http.routers.netbox.rule=Host(`netbox.internal.earles.io`)
+      - traefik.http.routers.netbox.entrypoints=websecure
+      - traefik.http.routers.netbox.tls.certresolver=production
+      - traefik.http.services.netbox.loadbalancer.server.port=8080
+
+  netbox-worker:
+    image: netboxcommunity/netbox:latest
+    container_name: netbox-worker
+    restart: unless-stopped
+    env_file: .env
+    volumes:
+      - ./media:/opt/netbox/netbox/media
+      - ./reports:/opt/netbox/netbox/reports
+      - ./scripts:/opt/netbox/netbox/scripts
+    networks:
+      - backend
+    depends_on:
+      netbox:
+        condition: service_healthy
+        restart: true
+    command: /opt/netbox/venv/bin/python /opt/netbox/netbox/manage.py rqworker
+
+  netbox-housekeeping:
+    image: netboxcommunity/netbox:latest
+    container_name: netbox-housekeeping
+    restart: unless-stopped
+    env_file: .env
+    volumes:
+      - ./media:/opt/netbox/netbox/media
+      - ./reports:/opt/netbox/netbox/reports
+      - ./scripts:/opt/netbox/netbox/scripts
+    networks:
+      - backend
+    depends_on:
+      netbox:
+        condition: service_healthy
+        restart: true
+    command: /opt/netbox/housekeeping.sh
+
+  postgres:
+    image: postgres:16-alpine
+    container_name: netbox-postgres
+    restart: unless-stopped
+    env_file: .db.env
+    volumes:
+      - ./db:/var/lib/postgresql/data
+    networks:
+      - backend
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U $$POSTGRES_USER -d $$POSTGRES_DB"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
+
+  redis:
+    image: redis:7-alpine
+    container_name: netbox-redis
+    restart: unless-stopped
+    volumes:
+      - redis_data:/data
+    networks:
+      - backend
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
+
+  redis-cache:
+    image: redis:7-alpine
+    container_name: netbox-redis-cache
+    restart: unless-stopped
+    volumes:
+      - redis_cache_data:/data
+    networks:
+      - backend
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
+
+volumes:
+  redis_data:
+  redis_cache_data:
+
+networks:
+  traefik:
+    external: true
+  backend:
+    external: false
