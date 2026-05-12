@@ -1,0 +1,110 @@
+send-command give aearles netherite_sword netherite_pickaxe
+ender_dragon_spawn_egg,wither_spawn_egg
+
+netherite_shovel
+netherite_sword
+netherite_pickaxe
+
+time set midnight
+effect aearles instant_damage 1 1
+effect aearles instant_health 9999 100
+
+give aearles barrier 64
+
+oak_log
+cobblestone
+
+
+time set noon / midnight
+
+ weather thunder / clear
+
+
+items=("netherite_shovel" "netherite_sword" "netherite_pickaxe")
+
+foreach item in "${items[@]}"; do
+  docker compose exec minecraft send-command give aearles $item
+done
+
+gamemode 
+
+
+
+
+docker compose exec minecraft send-command
+
+fill x1 y1 z1 (x1+20) (y1+100) (z+20) netherite_block [] hollow
+
+fill x1 (y1+6) z1 (x1+20) (y1+6) (z+20) netherite_block []
+
+
+
+
+docker compose exec minecraft send-command fill -50 71 -75 -30 121 -55 netherite_block [] hollow
+
+fill x1 (y1+6) z1 (x1+20) (y1+6) (z+20) netherite_block []
+
+docker compose exec minecraft send-command execute at hcearles run fill ~-3 ~-1 ~-3 ~3 ~5 ~3 diamond_block [] hollow
+
+execute at @a run fill ~20 ~9 ~20 ~-20 ~-9 ~-20 stone 0 replace dirt
+
+testing:
+docker compose exec minecraft send-command execute at @a run fill ~-2 ~-1 ~-2 ~2 ~3 ~2 glass [] replace air
+docker compose exec minecraft send-command execute at @a run fill ~-1 ~ ~-1 ~1 ~2 ~1 air [] replace glass
+
+
+x=-2
+y=-1
+z=-2
+docker compose exec minecraft send-command execute at @a run fill ~$x ~$y ~$z ~$(($x+4)) ~$(($y+4)) ~$(($z+4)) glass [] hollow
+
+offset=4
+docker compose exec minecraft send-command execute at @a run fill ~$x ~$y ~$z ~$(($x+$offset)) ~$(($y+$offset)) ~$(($z+$offset)) glass [] hollow
+docker compose exec minecraft send-command execute at @a run fill ~$x ~$y ~$z ~$(($x+$offset)) ~$(($y+$offset)) ~$(($z+$offset)) air [] replace glass
+
+block=glass
+
+docker compose exec minecraft send-command execute at @a run fill ~$x ~$y ~$z ~$(($x+$offset)) ~$(($y+$offset)) ~$(($z+$offset)) $block [] hollow
+docker compose exec minecraft send-command execute at @a run fill ~$x ~$y ~$z ~$(($x+$offset*2)) ~$(($y+$offset*2)) ~$(($z+$offset*2)) air [] replace $block
+
+
+house:
+x=-4
+y=-1
+z=-4
+offset=8
+block=netherite_block
+docker compose exec minecraft send-command execute at @a run fill ~$x ~$y ~$z ~$(($x+$offset)) ~$(($y+4)) ~$(($z+$offset)) $block [] hollow
+docker compose exec minecraft send-command give @a torch
+docker compose exec minecraft send-command give @a wooden_door
+crafting_table
+furnace
+oak_log
+cobblestone
+white_wool
+coal
+
+
+
+
+alias mc="docker compose -f ~/mc-bedrock/docker-compose.yml exec minecraft send-command"
+
+x=-4
+y=-1
+z=-4
+offset=8
+block=netherite_block
+
+mc execute at @a run fill ~$x ~$y ~$z ~$(($x+$offset)) ~$(($y+4)) ~$(($z+$offset)) $block [] hollow
+
+mc give @a torch 64
+mc give @a wooden_door
+mc give @a crafting_table
+mc give @a chest 2
+mc give @a furnace
+mc give @a oak_stairs
+mc give @a oak_log 128
+mc give @a cobblestone 128
+mc give @a netherite_block 64
+mc give @a white_wool 6
+mc give @a coal

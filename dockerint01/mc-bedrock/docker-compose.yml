@@ -1,13 +1,14 @@
 services:
   minecraft:
     image: itzg/minecraft-bedrock-server
-    container_name: minecraft
+    container_name: minecraft_itzg
     restart: unless-stopped
     ports:
+      - 19132:19132/tcp
       - 19132:19132/udp
     environment:
-      # - UID=1000
-      # - GID=1000
+      - UID=0
+      - GID=0
       - TZ=US/Denver
       - EULA=true
       - SERVER_NAME=EARLES
@@ -15,7 +16,7 @@ services:
       - FORCE_GAMEMODE=false
       - DIFFICULTY=easy
       - ALLOW_CHEATS=true
-      - MAX_PLAYERS=5
+      - MAX_PLAYERS=10
       - ONLINE_MODE=true
       # - WHITE_LIST
       # - ALLOW_LIST
@@ -26,24 +27,34 @@ services:
       # - TICK_DISTANCE
       - PLAYER_IDLE_TIMEOUT=0
       - MAX_THREADS=4
-      - LEVEL_NAME=WORLD
-      # - LEVEL_SEED
+      # - LEVEL_NAME=DroneWorld
+      - LEVEL_NAME=PaleGarden
+      - LEVEL_SEED=3515201313347228787
       # - LEVEL_TYPE
       - DEFAULT_PLAYER_PERMISSION_LEVEL=member
-      - OPS="2533275026015377"
+      # - OPS=2533275026015377,2535456288371262
+      - OPS=2533275026015377,2535421067961767,2535407829863530,2535456288371262 #aearles, hcearles, ttearles, hairlesspete846
     volumes:
       - ./data:/data
     networks:
       - backend
 
   mcxboxbroadcast:
-    image: ghcr.io/rtm516/mcxboxbroadcast:latest
+    image: eclipse-temurin:21-jre-jammy
     container_name: mcxboxbroadcast
     restart: unless-stopped
+    working_dir: /opt/app
+    command: java -jar MCXboxBroadcastStandalone.jar
+    environment:
+      - TZ=US/Denver
     volumes:
-      - ./mcxboxbroadcast_config:/opt/app/config
+      - ./MCXboxBroadcastStandalone.jar:/opt/app/MCXboxBroadcastStandalone.jar
+      - ./config/config.yml:/opt/app/config.yml
+      - ./config/cache:/opt/app/cache
+      - ./config/logs:/opt/app/logs
     networks:
       - backend
+
 
 networks:
   backend:
