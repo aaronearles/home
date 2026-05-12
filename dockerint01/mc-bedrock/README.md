@@ -146,6 +146,36 @@ If the file isn't mounted correctly, the jar silently runs with hardcoded defaul
 
 Clients (Xbox, iOS) on the LAN use the internal address. The `ip` in the MCXboxBroadcast config is the address sent in the transfer packet to connecting clients.
 
+## Pinging the server (ping.py)
+
+`ping.py` sends a raw RakNet unconnected ping to query the server's MOTD without any external dependencies. Useful for verifying what Bedrock clients actually see, or confirming public vs LAN reachability.
+
+```bash
+# Ping both defaults (LAN + public IP)
+python3 ping.py
+
+# Ping a specific host
+python3 ping.py mc.earles.io
+
+# Custom host:port
+python3 ping.py 172.20.100.202:19132
+```
+
+Example output:
+```
+=== 172.20.100.202:19132 ===
+Host:        172.20.100.202:19132
+Edition:     PE
+Server name: EARLES
+Version:     1.26.20
+Players:     0/10
+Level name:  PaleGarden
+Game mode:   Survival
+Raw MOTD:    PE;EARLES;975;1.26.20;0;10;...
+```
+
+Requires only Python 3 stdlib — no pip installs needed.
+
 ## Networking
 
 - Minecraft Bedrock listens on `19132/tcp` and `19132/udp`
