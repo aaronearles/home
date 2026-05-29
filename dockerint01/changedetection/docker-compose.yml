@@ -6,6 +6,7 @@ services:
     restart: unless-stopped
     environment:
       - PLAYWRIGHT_DRIVER_URL=ws://playwright-chrome:3000
+      - ALLOW_IANA_RESTRICTED_ADDRESSES=true
     volumes:
       - ./data:/datastore
     networks:
