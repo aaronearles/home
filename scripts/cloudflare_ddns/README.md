@@ -44,8 +44,8 @@ sudo chmod 755 /usr/local/bin/ddns
 ### 3. Add cron entries
 
 ```cron
-*/5 * * * * /usr/local/bin/ddns /etc/ddns/vpn.env
-*/5 * * * * /usr/local/bin/ddns /etc/ddns/watchman.env
+*/15 * * * * /usr/local/bin/ddns /etc/ddns/master.env
+*/15 * * * * /usr/local/bin/ddns /etc/ddns/watchman.env
 ```
 
 ## Finding your Record ID
@@ -72,7 +72,7 @@ curl -s "https://api.cloudflare.com/client/v4/zones/$ZONEID/dns_records" \
 cloudflare_ddns/
 ├── ddns.sh          # Main script
 ├── env.sample       # Template for new records
-├── vpn.env          # Config for vpn.earles.io
+├── master.env       # Config for master.earles.io
 ├── watchman.env     # Config for watchman.earles.io
 ├── archive/         # Previous per-record scripts
 └── README.md

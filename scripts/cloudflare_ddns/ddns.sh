@@ -79,11 +79,12 @@ main() {
   done
 
   readonly CF_URL="https://api.cloudflare.com/client/v4/zones/$ZONEID/dns_records/$RECORDID"
-  local now
-  now=$(date)
 
   # Random delay to avoid thundering herd on round-minute cron
   sleep $(( RANDOM % MAX_JITTER ))
+
+  local now
+  now=$(date)
 
   local ip
   if ! ip=$(get_external_ip); then
