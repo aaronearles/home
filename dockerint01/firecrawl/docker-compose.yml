@@ -23,6 +23,8 @@ services:
         condition: service_started
       firecrawl-rabbitmq:
         condition: service_healthy
+      firecrawl-postgres:
+        condition: service_healthy
     cpus: 4.0
     mem_limit: 8G
     memswap_limit: 8G
@@ -112,6 +114,12 @@ services:
       - postgres_data:/var/lib/postgresql/data
     networks:
       - backend
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-firecrawl} -d ${POSTGRES_DB:-firecrawl}"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+      start_period: 10s
     logging:
       driver: json-file
       options:
