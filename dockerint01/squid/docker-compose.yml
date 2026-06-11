@@ -15,9 +15,16 @@ services:
     labels:
       - traefik.enable=true
       - traefik.docker.network=traefik
+      # Plain TCP proxy on port 3128
       - traefik.tcp.routers.squid.entrypoints=squid
       - traefik.tcp.routers.squid.rule=ClientIP(`172.16.0.0/12`)
       # - traefik.tcp.services.squid.loadbalancer.server.port=3128 # Caused errors "unable to find the IP address for the container"
+      # TLS-wrapped proxy on port 443 via hostname routing (https_proxy=https://squid.internal.earles.io:443)
+      - traefik.tcp.routers.squid-https.entrypoints=websecure
+      - traefik.tcp.routers.squid-https.rule=HostSNI(`squid.internal.earles.io`)
+      - traefik.tcp.routers.squid-https.tls=true
+      - traefik.tcp.routers.squid-https.tls.certresolver=production
+      - traefik.tcp.services.squid-https.loadbalancer.server.port=3128
 networks:
   traefik:
     external: true
