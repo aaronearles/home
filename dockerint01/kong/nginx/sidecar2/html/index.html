@@ -1,0 +1,29 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Sidecar 2 - Basic Auth</title>
+  <style>
+    body { font-family: monospace; background: #0d1117; color: #c9d1d9; padding: 2rem; }
+    h1 { color: #58a6ff; }
+    .badge { display: inline-block; padding: .25rem .6rem; border-radius: 4px;
+             background: #9933cc; color: #fff; font-size: .85rem; margin-left: .5rem; }
+    .flow { background: #161b22; border: 1px solid #30363d; border-radius: 6px;
+            padding: 1rem 1.5rem; margin-top: 1.5rem; }
+    code { color: #79c0ff; }
+  </style>
+</head>
+<body>
+  <h1>Sidecar 2 <span class="badge">Basic Auth</span></h1>
+  <p>You reached this service via Kong's credential-brokering gateway.</p>
+  <div class="flow">
+    <p><strong>Request flow:</strong></p>
+    <p><code>curl -H "apikey: &lt;MASTER_KEY&gt;" https://kong.internal.earles.io/sidecar2</code></p>
+    <p>↓ Kong validated your master API key</p>
+    <p>↓ Kong stripped the <code>apikey</code> header</p>
+    <p>↓ Kong injected <code>Authorization: Basic &lt;base64(user:pass)&gt;</code></p>
+    <p>↓ This nginx validated the Basic auth credentials</p>
+    <p>✅ <strong>200 OK</strong></p>
+  </div>
+</body>
+</html>

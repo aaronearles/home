@@ -1,0 +1,138 @@
+services:
+
+  kong-db:
+    image: postgres:16-alpine
+    container_name: kong-db
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB}
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+    volumes:
+      - kong_db_data:/var/lib/postgresql/data
+    networks:
+      - backend
+    healthcheck:
+      test: ["CMD", "pg_isready", "-d", "kong", "-U", "kong"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 20s
+
+  kong-bootstrap:
+    image: kong/kong-gateway:3.14.0.6
+    container_name: kong-bootstrap
+    restart: on-failure
+    env_file:
+      - .env
+    environment:
+      KONG_DATABASE: postgres
+      KONG_PG_HOST: kong-db
+      KONG_PG_DATABASE: ${POSTGRES_DB}
+      KONG_PG_USER: ${POSTGRES_USER}
+      KONG_PG_PASSWORD: ${POSTGRES_PASSWORD}
+    networks:
+      - backend
+    depends_on:
+      kong-db:
+        condition: service_healthy
+    command: kong migrations bootstrap
+
+  kong:
+    image: kong/kong-gateway:3.14.0.6
+    container_name: kong
+    restart: unless-stopped
+    env_file:
+      - .env
+    environment:
+      KONG_DATABASE: postgres
+      KONG_PG_HOST: kong-db
+      KONG_PG_DATABASE: ${POSTGRES_DB}
+      KONG_PG_USER: ${POSTGRES_USER}
+      KONG_PG_PASSWORD: ${POSTGRES_PASSWORD}
+      KONG_ADMIN_LISTEN: 0.0.0.0:8001
+      KONG_ADMIN_GUI_LISTEN: 0.0.0.0:8002
+      KONG_ADMIN_GUI_URL: https://kong-admin.internal.earles.io
+    # ports:
+    #   - "8000:8000"  # Proxy HTTP
+    #   - "8443:8443"  # Proxy HTTPS
+    #   - "8001:8001"  # Admin API
+    #   - "8002:8002"  # Kong Manager GUI
+    networks:
+      - traefik
+      - backend
+    depends_on:
+      kong-bootstrap:
+        condition: service_completed_successfully
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8001/status"]
+      interval: 10s
+      timeout: 10s
+      retries: 10
+      start_period: 30s
+    labels:
+      - traefik.enable=true
+      - traefik.docker.network=traefik
+      # Proxy endpoint — consumer traffic
+      - traefik.http.routers.kong.rule=Host(`kong.internal.earles.io`)
+      - traefik.http.routers.kong.entrypoints=websecure
+      - traefik.http.routers.kong.tls.certresolver=production
+      - traefik.http.routers.kong.service=kong-proxy
+      - traefik.http.services.kong-proxy.loadbalancer.server.port=8000
+      # Admin / Manager GUI
+      - traefik.http.routers.kong-admin.rule=Host(`kong-admin.internal.earles.io`)
+      - traefik.http.routers.kong-admin.entrypoints=websecure
+      - traefik.http.routers.kong-admin.tls.certresolver=production
+      - traefik.http.routers.kong-admin.service=kong-manager
+      - traefik.http.services.kong-manager.loadbalancer.server.port=8002
+
+  kong-setup:
+    image: kong/kong-gateway:3.14.0.6
+    container_name: kong-setup
+    restart: "no"
+    env_file:
+      - .env
+    volumes:
+      - ./setup/configure-kong.sh:/configure-kong.sh:ro
+    networks:
+      - backend
+    depends_on:
+      kong:
+        condition: service_healthy
+    command: ["/bin/bash", "/configure-kong.sh"]
+
+  kong-sidecar1:
+    image: nginx:alpine
+    container_name: kong-sidecar1
+    restart: unless-stopped
+    environment:
+      SIDECAR_API_KEY: ${SIDECAR1_API_KEY}
+    volumes:
+      - ./nginx/sidecar1/templates:/etc/nginx/templates:ro
+      - ./nginx/sidecar1/html:/usr/share/nginx/html:ro
+    networks:
+      - backend
+
+  kong-sidecar2:
+    image: nginx:alpine
+    container_name: kong-sidecar2
+    restart: unless-stopped
+    environment:
+      SIDECAR_USER: ${SIDECAR2_USER}
+      SIDECAR_PASSWORD: ${SIDECAR2_PASSWORD}
+    volumes:
+      - ./nginx/sidecar2/templates:/etc/nginx/templates:ro
+      - ./nginx/sidecar2/html:/usr/share/nginx/html:ro
+      - ./nginx/sidecar2/entrypoint.sh:/entrypoint.sh:ro
+    networks:
+      - backend
+    entrypoint: ["/bin/sh", "/entrypoint.sh"]
+
+volumes:
+  kong_db_data:
+
+networks:
+  traefik:
+    external: true
+  backend:
+    external: false

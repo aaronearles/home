@@ -1,0 +1,12 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(python3 *)",
+      "Bash(openssl rand *)",
+      "Bash(echo \"MASTER=$\\(openssl rand -hex 24\\)\")",
+      "Bash(echo \"SIDECAR1=$\\(openssl rand -hex 24\\)\")",
+      "Bash(echo \"PGPASS=$\\(openssl rand -hex 16\\)\")",
+      "Bash(echo \"KONGPASS=$\\(openssl rand -hex 16\\)\")"
+    ]
+  }
+}

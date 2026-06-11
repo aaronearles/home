@@ -1,0 +1,18 @@
+server {
+    listen 80;
+    server_name _;
+    root /usr/share/nginx/html;
+    index index.html;
+
+    location / {
+        if ($http_authorization != "Bearer ${SIDECAR_API_KEY}") {
+            return 401 '{"error":"Unauthorized - valid Bearer token required"}';
+        }
+        try_files $uri $uri/ /index.html;
+    }
+
+    location = /health {
+        return 200 'ok';
+        add_header Content-Type text/plain;
+    }
+}
