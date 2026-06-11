@@ -1,0 +1,6 @@
+tls:
+  options:
+    proxy:
+      minVersion: VersionTLS12
+      alpnProtocols:
+        - http/1.1

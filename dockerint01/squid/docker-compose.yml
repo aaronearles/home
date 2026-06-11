@@ -24,6 +24,7 @@ services:
       - traefik.tcp.routers.squid-https.rule=HostSNI(`squid.internal.earles.io`)
       - traefik.tcp.routers.squid-https.tls=true
       - traefik.tcp.routers.squid-https.tls.certresolver=production
+      - traefik.tcp.routers.squid-https.tls.options=proxy@file
       - traefik.tcp.services.squid-https.loadbalancer.server.port=3128
 networks:
   traefik:
