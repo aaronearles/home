@@ -51,6 +51,7 @@ services:
       KONG_PG_USER: ${POSTGRES_USER}
       KONG_PG_PASSWORD: ${POSTGRES_PASSWORD}
       KONG_ADMIN_LISTEN: 0.0.0.0:8001
+      KONG_NGINX_WORKER_PROCESSES: 1
     # ports:
     #   - "8000:8000"  # Proxy HTTP
     #   - "8443:8443"  # Proxy HTTPS
@@ -62,7 +63,7 @@ services:
       kong-bootstrap:
         condition: service_completed_successfully
     healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:8001/status"]
+      test: ["CMD", "kong", "health"]
       interval: 10s
       timeout: 10s
       retries: 10
