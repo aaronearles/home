@@ -1,15 +1,10 @@
-#!/bin/bash
+#!/bin/sh
 # One-shot Kong Admin API configuration script.
 # Provisions services, routes, plugins, and a consumer for the credential-brokering demo.
 # Uses PUT for idempotency on services/routes/consumers; checks existence before POST on plugins/credentials.
+# Runs in alpine:3.21 — curl is installed by the compose command before this script executes.
 
-set -euo pipefail
-
-# curl is not included in the kong:3 Ubuntu base image; install it if absent.
-command -v curl > /dev/null 2>&1 || {
-  apt-get update -qq > /dev/null 2>&1
-  apt-get install -y -qq curl > /dev/null 2>&1
-}
+set -eu
 
 ADMIN=http://kong:8001
 

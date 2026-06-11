@@ -85,7 +85,7 @@ services:
       - traefik.http.services.kong-admin-api.loadbalancer.server.port=8001
 
   kong-setup:
-    image: kong:3
+    image: alpine:3.21
     container_name: kong-setup
     restart: "no"
     env_file:
@@ -97,7 +97,7 @@ services:
     depends_on:
       kong:
         condition: service_healthy
-    command: ["/bin/bash", "/configure-kong.sh"]
+    command: ["/bin/sh", "-c", "apk add --no-cache curl > /dev/null 2>&1 && sh /configure-kong.sh"]
 
   kong-sidecar1:
     image: nginx:alpine
