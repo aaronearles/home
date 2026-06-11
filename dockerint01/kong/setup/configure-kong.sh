@@ -5,6 +5,12 @@
 
 set -euo pipefail
 
+# curl is not included in the kong:3 Ubuntu base image; install it if absent.
+command -v curl > /dev/null 2>&1 || {
+  apt-get update -qq > /dev/null 2>&1
+  apt-get install -y -qq curl > /dev/null 2>&1
+}
+
 ADMIN=http://kong:8001
 
 # ---------------------------------------------------------------------------
