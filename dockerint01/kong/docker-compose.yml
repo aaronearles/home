@@ -20,7 +20,7 @@ services:
       start_period: 20s
 
   kong-bootstrap:
-    image: kong/kong-gateway:3.14.0.6
+    image: kong:3
     container_name: kong-bootstrap
     restart: on-failure
     env_file:
@@ -39,7 +39,7 @@ services:
     command: kong migrations bootstrap
 
   kong:
-    image: kong/kong-gateway:3.14.0.6
+    image: kong:3
     container_name: kong
     restart: unless-stopped
     env_file:
@@ -51,13 +51,10 @@ services:
       KONG_PG_USER: ${POSTGRES_USER}
       KONG_PG_PASSWORD: ${POSTGRES_PASSWORD}
       KONG_ADMIN_LISTEN: 0.0.0.0:8001
-      KONG_ADMIN_GUI_LISTEN: 0.0.0.0:8002
-      KONG_ADMIN_GUI_URL: https://kong-admin.internal.earles.io
     # ports:
     #   - "8000:8000"  # Proxy HTTP
     #   - "8443:8443"  # Proxy HTTPS
     #   - "8001:8001"  # Admin API
-    #   - "8002:8002"  # Kong Manager GUI
     networks:
       - traefik
       - backend
@@ -79,15 +76,15 @@ services:
       - traefik.http.routers.kong.tls.certresolver=production
       - traefik.http.routers.kong.service=kong-proxy
       - traefik.http.services.kong-proxy.loadbalancer.server.port=8000
-      # Admin / Manager GUI
+      # Admin API (REST only — no GUI in OSS)
       - traefik.http.routers.kong-admin.rule=Host(`kong-admin.internal.earles.io`)
       - traefik.http.routers.kong-admin.entrypoints=websecure
       - traefik.http.routers.kong-admin.tls.certresolver=production
-      - traefik.http.routers.kong-admin.service=kong-manager
-      - traefik.http.services.kong-manager.loadbalancer.server.port=8002
+      - traefik.http.routers.kong-admin.service=kong-admin-api
+      - traefik.http.services.kong-admin-api.loadbalancer.server.port=8001
 
   kong-setup:
-    image: kong/kong-gateway:3.14.0.6
+    image: kong:3
     container_name: kong-setup
     restart: "no"
     env_file:
