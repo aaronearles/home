@@ -1,0 +1,55 @@
+services:
+  romm:
+    image: rommapp/romm:latest
+    container_name: romm
+    restart: unless-stopped
+    env_file: .env
+    volumes:
+      - romm_resources:/romm/resources   # Metadata covers/screenshots
+      - romm_redis_data:/redis-data       # Cached data for background tasks
+      - ${ROMM_LIBRARY_PATH}:/romm/library
+      - ${ROMM_ASSETS_PATH}:/romm/assets  # Saves, states, cheats, uploads
+      - ./config:/romm/config
+    # ports:
+    #   - "8080:8080"
+    networks:
+      - traefik
+      - backend
+    depends_on:
+      romm-db:
+        condition: service_healthy
+        restart: true
+    labels:
+      - traefik.enable=true
+      - traefik.docker.network=traefik
+      - traefik.http.routers.romm.rule=Host(`romm.internal.earles.io`)
+      - traefik.http.routers.romm.entrypoints=websecure
+      - traefik.http.routers.romm.tls.certresolver=production
+      - traefik.http.services.romm.loadbalancer.server.port=8080
+
+  romm-db:
+    image: mariadb:lts
+    container_name: romm-db
+    restart: unless-stopped
+    env_file: .db.env
+    volumes:
+      - ./db:/var/lib/mysql
+    networks:
+      - backend
+    healthcheck:
+      test: ["CMD", "healthcheck.sh", "--connect", "--innodb_initialized"]
+      start_period: 30s
+      start_interval: 10s
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+volumes:
+  romm_resources:
+  romm_redis_data:
+
+networks:
+  traefik:
+    external: true
+  backend:
+    external: false
