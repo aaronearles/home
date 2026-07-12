@@ -10,22 +10,35 @@ services:
       - ${ROMM_LIBRARY_PATH}:/romm/library
       - ${ROMM_ASSETS_PATH}:/romm/assets  # Saves, states, cheats, uploads
       - ./config:/romm/config
-    # ports:
-    #   - "8080:8080"
+    # Moved off traefik network — proxy sits in front now
     networks:
-      - traefik
       - backend
     depends_on:
       romm-db:
         condition: service_healthy
         restart: true
+
+  romm-proxy:
+    build:
+      context: ./romm-compat-proxy
+    container_name: romm-proxy
+    restart: unless-stopped
+    environment:
+      ROMM_UPSTREAM: http://romm:8080
+      LISTEN_PORT: "8888"
+      LOG_LEVEL: DEBUG
+    networks:
+      - traefik
+      - backend
+    depends_on:
+      - romm
     labels:
       - traefik.enable=true
       - traefik.docker.network=traefik
       - traefik.http.routers.romm.rule=Host(`romm.internal.earles.io`)
       - traefik.http.routers.romm.entrypoints=websecure
       - traefik.http.routers.romm.tls.certresolver=production
-      - traefik.http.services.romm.loadbalancer.server.port=8080
+      - traefik.http.services.romm.loadbalancer.server.port=8888
 
   romm-db:
     image: mariadb:lts
