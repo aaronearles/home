@@ -111,3 +111,52 @@ Add to `~/.gitconfig`:
     lg = log --oneline
     last = log -1 HEAD
 ```
+
+
+## Additional Notes
+To perform a git pull operation that overwrites local changes, including deleting untracked files, the following steps can be taken:  
+`git fetch origin` 
+
+This command downloads the latest changes from the remote repository (aliased as origin by default) but does not merge them into your local branch.  
+
+Reset your local branch to match the remote branch, discarding local changes:  
+`git reset --hard origin/<branch_name>`
+
+`git clean -fdx`  
+The -f (force) option is necessary to remove files, and -d (directories) ensures that untracked directories are also removed. This command will delete any files or directories that are not tracked by Git in your local repository.
+The -x option means "Don’t use the standard ignore rules (see gitignore(5)), but still use the ignore rules given with -e
+options from the command line. This allows removing all untracked files, including build products. This
+can be used (possibly in conjunction with git restore or git reset) to create a pristine working directory
+to test a clean build."
+
+
+# Clone the repo without checking out files
+  git clone --no-checkout <repo-url> <local-dir>
+  cd <local-dir>
+
+  # Initialize sparse checkout
+  git sparse-checkout init --cone
+
+  # Set the directory you want
+  git sparse-checkout set dockerphx01
+
+  # Check out the files
+  git checkout
+
+  Option 2: Partial Clone with Filter
+
+  # Clone with path-based filtering (Git 2.19+)
+  git clone --filter=blob:none --sparse <repo-url> <local-dir>
+  cd <local-dir>
+  git sparse-checkout set dockerphx01
+
+  Managing Updates
+
+  Once set up, normal git operations work:
+  git pull  # Only updates your sparse checkout directory
+  git status
+  git add dockerphx01/
+  git commit -m "updates"
+  git push
+
+  The sparse checkout approach gives you a full git repository but only checks out the dockerphx01/ directory to your working tree, keeping the repo size minimal while maintaining full git functionality.
