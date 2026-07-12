@@ -1,0 +1,26 @@
+services:
+  apple-health-ingester:
+    image: irvinlim/apple-health-ingester:latest
+    container_name: apple-health-ingester
+    restart: unless-stopped
+    volumes:
+      - ./data:/data
+    # ports:
+    #   - 8080:8080
+    networks:
+      - traefik
+    command:
+      - --backend.localfile
+      - --localfile.metricsPath=/data
+      - --http.authToken=${AUTH_TOKEN}
+    labels:
+      - traefik.enable=true
+      - traefik.docker.network=traefik
+      - traefik.http.routers.apple-health-ingester.rule=Host(`apple-health-ingester.internal.earles.io`)
+      - traefik.http.routers.apple-health-ingester.entrypoints=websecure
+      - traefik.http.routers.apple-health-ingester.tls.certresolver=production
+      - traefik.http.services.apple-health-ingester.loadbalancer.server.port=8080
+
+networks:
+  traefik:
+    external: true

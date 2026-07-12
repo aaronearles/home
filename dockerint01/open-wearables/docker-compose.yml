@@ -1,0 +1,189 @@
+services:
+  db:
+    image: postgres:18
+    container_name: open-wearables-db
+    restart: unless-stopped
+    environment:
+      - POSTGRES_DB=open-wearables
+      - POSTGRES_USER=${DB_USER:-open-wearables}
+      - POSTGRES_PASSWORD=${DB_PASSWORD:-open-wearables}
+    volumes:
+      - ./db:/var/lib/postgresql
+    # ports:
+    #   - "5432:5432"
+    networks:
+      - backend
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${DB_USER:-open-wearables} -d open-wearables"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  redis:
+    image: redis:8
+    container_name: open-wearables-redis
+    restart: unless-stopped
+    volumes:
+      - ./redis:/data
+    # ports:
+    #   - "6379:6379"
+    networks:
+      - backend
+
+  app:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    image: open-wearables-platform:latest
+    container_name: open-wearables-app
+    restart: unless-stopped
+    env_file:
+      - ./backend/config/.env
+    environment:
+      - DB_HOST=db
+      - REDIS_HOST=redis
+    # ports:
+    #   - "8000:8000"
+    networks:
+      - traefik
+      - backend
+    depends_on:
+      db:
+        condition: service_healthy
+      redis:
+        condition: service_started
+    labels:
+      - traefik.enable=true
+      - traefik.docker.network=traefik
+      - traefik.http.routers.open-wearables-api.rule=Host(`open-wearables-api.internal.earles.io`)
+      - traefik.http.routers.open-wearables-api.entrypoints=websecure
+      - traefik.http.routers.open-wearables-api.tls.certresolver=production
+      - traefik.http.services.open-wearables-api.loadbalancer.server.port=8000
+
+  celery-worker:
+    image: open-wearables-platform:latest
+    container_name: open-wearables-celery-worker
+    restart: unless-stopped
+    env_file:
+      - ./backend/config/.env
+    environment:
+      - DB_HOST=db
+      - REDIS_HOST=redis
+    networks:
+      - backend
+    depends_on:
+      - db
+      - redis
+      - app
+    command: scripts/start/worker.sh
+
+  celery-beat:
+    image: open-wearables-platform:latest
+    container_name: open-wearables-celery-beat
+    restart: unless-stopped
+    env_file:
+      - ./backend/config/.env
+    environment:
+      - DB_HOST=db
+      - REDIS_HOST=redis
+    networks:
+      - backend
+    depends_on:
+      - db
+      - redis
+      - app
+    command: scripts/start/beat.sh
+
+  flower:
+    image: open-wearables-platform:latest
+    container_name: open-wearables-flower
+    restart: unless-stopped
+    env_file:
+      - ./backend/config/.env
+    environment:
+      - DB_HOST=db
+      - REDIS_HOST=redis
+    # ports:
+    #   - "5555:5555"
+    networks:
+      - traefik
+      - backend
+    depends_on:
+      - db
+      - redis
+      - app
+    command: scripts/start/flower.sh
+    labels:
+      - traefik.enable=true
+      - traefik.docker.network=traefik
+      - traefik.http.routers.open-wearables-flower.rule=Host(`open-wearables-flower.internal.earles.io`)
+      - traefik.http.routers.open-wearables-flower.entrypoints=websecure
+      - traefik.http.routers.open-wearables-flower.tls.certresolver=production
+      - traefik.http.services.open-wearables-flower.loadbalancer.server.port=5555
+
+  svix-server:
+    image: svix/svix-server:v1
+    container_name: open-wearables-svix
+    restart: unless-stopped
+    env_file:
+      - ./backend/config/.env
+    environment:
+      SVIX_DB_DSN: "postgresql://${DB_USER:-open-wearables}:${DB_PASSWORD:-open-wearables}@db:5432/svix"
+      SVIX_QUEUE_TYPE: "redis"
+      SVIX_REDIS_DSN: "redis://redis:6379/1"
+      SVIX_CACHE_TYPE: "redis"
+    # ports:
+    #   - "8071:8071"
+    networks:
+      - backend
+    depends_on:
+      db:
+        condition: service_healthy
+      redis:
+        condition: service_started
+      app:
+        condition: service_started
+    entrypoint:
+      - sh
+      - -c
+      - |
+        : "$${SVIX_JWT_SECRET:=$$SECRET_KEY}"
+        export SVIX_JWT_SECRET
+        exec svix-server "$$@"
+      - --
+    command: ["--run-migrations"]
+    healthcheck:
+      test: ["CMD", "svix-server", "healthcheck", "http://localhost:8071"]
+      interval: 5s
+      timeout: 3s
+      retries: 20
+      start_period: 10s
+
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+      args:
+        VITE_API_URL: ${VITE_API_URL:?Set VITE_API_URL in your .env file}
+    image: open-wearables-frontend:latest
+    container_name: open-wearables-frontend
+    restart: unless-stopped
+    # ports:
+    #   - "3000:3000"
+    networks:
+      - traefik
+    depends_on:
+      - app
+    labels:
+      - traefik.enable=true
+      - traefik.docker.network=traefik
+      - traefik.http.routers.open-wearables.rule=Host(`open-wearables.internal.earles.io`)
+      - traefik.http.routers.open-wearables.entrypoints=websecure
+      - traefik.http.routers.open-wearables.tls.certresolver=production
+      - traefik.http.services.open-wearables.loadbalancer.server.port=3000
+
+networks:
+  traefik:
+    external: true
+  backend:
+    external: false
