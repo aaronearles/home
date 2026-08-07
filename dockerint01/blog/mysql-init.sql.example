@@ -1,0 +1,5 @@
+-- Copy to mysql-init.sql (gitignored) and set a real password before deploying.
+-- Mounted read-only into blog-db at /tmp/mysql-init.sql; run manually inside
+-- the container if the root password ever needs to be (re)set, e.g.:
+--   docker exec -i blog-db mysql -u root -p < mysql-init.sql
+ALTER USER 'root'@'localhost' IDENTIFIED BY 'change_me_please';
