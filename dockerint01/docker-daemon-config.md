@@ -89,6 +89,9 @@ example) so the cap applies even before/without a daemon-wide restart.
 
 - Apply the same `log-driver`/`log-opts` default to dockerlab01 and
   dockerdmz01 — the unbounded-log risk isn't specific to dockerint01.
+  dockerdmz01 is covered in
+  [dockerdmz01/docker-daemon-config.md](../dockerdmz01/docker-daemon-config.md)
+  (PCT 201 → `10.201.0.0/16`).
 - Recreate the `traefik` network (and any other pre-existing network still on
   a `172.x` subnet) next time it's convenient, so it picks up the
   `10.202.x.0/24` pool.
