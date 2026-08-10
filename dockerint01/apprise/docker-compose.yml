@@ -1,0 +1,31 @@
+services:
+
+  apprise:
+    image: 'caronc/apprise:latest'
+    container_name: apprise
+    restart: unless-stopped
+    environment:
+      # Default is cpu_count*2+1 (25 workers on this host). This is a
+      # low-traffic relay, not a web app under load, so a couple of
+      # gevent workers is plenty.
+      - APPRISE_WORKER_COUNT=2
+    ports:
+      - '8000:8000'
+    networks:
+      - backend
+    volumes:
+      - ./apprise/config:/config
+
+  mailrise:
+    image: 'yoryan/mailrise:latest'
+    container_name: mailrise
+    restart: unless-stopped
+    ports:
+      - '8025:8025'
+    networks:
+      - backend
+    volumes:
+      - ./mailrise/config/mailrise.conf:/etc/mailrise.conf
+
+networks:
+  backend:
