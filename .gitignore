@@ -49,6 +49,8 @@ terraform.rc
 mysql-init.sql
 
 *.conf
+# mailrise.conf has no secrets and is needed to reproduce the stack
+!dockerint01/apprise/mailrise/config/mailrise.conf
 
 .venv
 **/__pycache__
