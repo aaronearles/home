@@ -1,0 +1,219 @@
+#!/usr/bin/env python3
+"""
+Builds html/index.html: a landing page linking out to every archived Packt
+title under MATERIAL_DIR, each served by the packt.internal.earles.io nginx
+container via a read-only bind mount at /library/.
+
+Titles come from packt-archive.py's own manifest.csv (isbn, title, video,
+code status), matched back to their on-disk directory by the trailing
+_<isbn> suffix every title dir gets. Re-run this after archive-run.py picks
+up new titles, then `docker compose restart packt` is NOT even required --
+nginx reads html/index.html fresh on every request, only the container
+itself needs to already be up with the bind mounts in place.
+
+Usage:
+    ./generate-index.py
+    ./generate-index.py --material-dir /mnt/media/Packt/Material --out html/index.html
+"""
+import argparse
+import csv
+import html
+import re
+from pathlib import Path
+
+DIR_RE = re.compile(r"^(?P<slug>.+)_(?P<isbn>\d{13})$")
+
+
+def load_manifest(material_dir: Path) -> dict[str, dict[str, str]]:
+    manifest_path = material_dir / "manifest.csv"
+    rows: dict[str, dict[str, str]] = {}
+    if not manifest_path.exists():
+        return rows
+    with manifest_path.open(newline="", encoding="utf-8") as f:
+        for row in csv.DictReader(f):
+            rows[row["isbn"]] = row
+    return rows
+
+
+def discover_titles(material_dir: Path) -> list[dict]:
+    manifest = load_manifest(material_dir)
+    titles = []
+    for entry in sorted(material_dir.iterdir()):
+        if not entry.is_dir():
+            continue
+        m = DIR_RE.match(entry.name)
+        if not m:
+            continue
+        isbn = m.group("isbn")
+        row = manifest.get(isbn, {})
+        title = row.get("title") or m.group("slug").replace("_", " ")
+
+        player = entry / "video" / "package" / "index.html"
+        code_dir = entry / "code"
+        has_video = player.exists()
+        has_code = code_dir.is_dir() and any(code_dir.iterdir())
+
+        titles.append(
+            {
+                "isbn": isbn,
+                "title": title,
+                "dir": entry.name,
+                "has_video": has_video,
+                "has_code": has_code,
+            }
+        )
+    titles.sort(key=lambda t: t["title"].lower())
+    return titles
+
+
+def render(titles: list[dict]) -> str:
+    cards = []
+    for t in titles:
+        name = html.escape(t["title"])
+        dir_ = html.escape(t["dir"])
+        links = []
+        if t["has_video"]:
+            links.append(f'<a class="btn watch" href="library/{dir_}/video/package/index.html">▶ Watch</a>')
+        if t["has_code"]:
+            links.append(f'<a class="btn code" href="library/{dir_}/code/">Code</a>')
+        links.append(f'<a class="btn files" href="library/{dir_}/">Files</a>')
+        cards.append(
+            f"""
+      <div class="card">
+        <h2>{name}</h2>
+        <div class="isbn">ISBN {html.escape(t["isbn"])}</div>
+        <div class="links">{"".join(links)}</div>
+      </div>"""
+        )
+
+    return f"""<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Packt Library</title>
+<style>
+  :root {{
+    --bg: #0f1115;
+    --card: #1a1d24;
+    --text: #e6e8eb;
+    --muted: #9aa0aa;
+    --accent: #f37021; /* Packt orange */
+    --border: #2a2e37;
+  }}
+  * {{ box-sizing: border-box; }}
+  body {{
+    margin: 0;
+    padding: 2.5rem 1.5rem 4rem;
+    background: var(--bg);
+    color: var(--text);
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+  }}
+  header {{
+    max-width: 1100px;
+    margin: 0 auto 2rem;
+  }}
+  header h1 {{
+    margin: 0 0 0.25rem;
+    font-size: 1.75rem;
+  }}
+  header p {{
+    margin: 0;
+    color: var(--muted);
+  }}
+  .grid {{
+    max-width: 1100px;
+    margin: 0 auto;
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+    gap: 1rem;
+  }}
+  .card {{
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 1.1rem 1.2rem;
+    display: flex;
+    flex-direction: column;
+    gap: 0.6rem;
+  }}
+  .card h2 {{
+    margin: 0;
+    font-size: 1.05rem;
+    line-height: 1.35;
+  }}
+  .isbn {{
+    color: var(--muted);
+    font-size: 0.8rem;
+    font-variant-numeric: tabular-nums;
+  }}
+  .links {{
+    margin-top: auto;
+    display: flex;
+    gap: 0.5rem;
+    flex-wrap: wrap;
+  }}
+  .btn {{
+    display: inline-block;
+    padding: 0.4rem 0.75rem;
+    border-radius: 6px;
+    text-decoration: none;
+    font-size: 0.85rem;
+    border: 1px solid var(--border);
+    color: var(--text);
+  }}
+  .btn.watch {{
+    background: var(--accent);
+    border-color: var(--accent);
+    color: #1a1200;
+    font-weight: 600;
+  }}
+  .btn:hover {{ filter: brightness(1.15); }}
+  footer {{
+    max-width: 1100px;
+    margin: 2.5rem auto 0;
+    color: var(--muted);
+    font-size: 0.8rem;
+  }}
+</style>
+</head>
+<body>
+  <header>
+    <h1>Packt Library</h1>
+    <p>{len(titles)} archived titles &mdash; generated by generate-index.py</p>
+  </header>
+  <div class="grid">{"".join(cards)}
+  </div>
+  <footer>Archived locally via packt-archive.py. Video packages are Packt's own self-contained player &mdash; nothing here talks to packtpub.com.</footer>
+</body>
+</html>
+"""
+
+
+def main() -> None:
+    parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument(
+        "--material-dir",
+        type=Path,
+        default=Path("/mnt/media/Packt/Material"),
+        help="Root directory archived titles live in (default: /mnt/media/Packt/Material)",
+    )
+    parser.add_argument(
+        "--out",
+        type=Path,
+        default=Path(__file__).parent / "html" / "index.html",
+        help="Output path for the generated landing page (default: ./html/index.html)",
+    )
+    args = parser.parse_args()
+
+    titles = discover_titles(args.material_dir)
+    if not titles:
+        raise SystemExit(f"No title directories found under {args.material_dir}")
+
+    args.out.parent.mkdir(parents=True, exist_ok=True)
+    args.out.write_text(render(titles), encoding="utf-8")
+    print(f"Wrote {args.out} ({len(titles)} titles)")
+
+
+if __name__ == "__main__":
+    main()

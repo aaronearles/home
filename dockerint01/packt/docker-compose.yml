@@ -1,0 +1,26 @@
+services:
+  packt:
+    image: nginx:alpine
+    container_name: packt
+    restart: unless-stopped
+    volumes:
+      - ./nginx.conf:/etc/nginx/conf.d/default.conf:ro
+      - ./html:/usr/share/nginx/html:ro
+      # Archived library from ~/code/Packt/Archiver (packt-archive.py), read-only.
+      # Re-run generate-index.py after new titles land here to refresh the
+      # landing page.
+      - /mnt/media/Packt/Material:/usr/share/nginx/html/library:ro
+    # ports:
+    #   - "8080:80"
+    networks:
+      - traefik
+    labels:
+      - traefik.enable=true
+      - traefik.docker.network=traefik
+      - traefik.http.routers.packt.rule=Host(`packt.internal.earles.io`)
+      - traefik.http.routers.packt.entrypoints=websecure
+      - traefik.http.routers.packt.tls.certresolver=production
+
+networks:
+  traefik:
+    external: true
