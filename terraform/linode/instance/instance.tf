@@ -38,6 +38,9 @@ resource "linode_instance" "instance01" {
   # private_ip = true
 
   lifecycle {
+    # Keys only apply at creation; changing them would force replacement
+    ignore_changes = [authorized_keys]
+
     precondition {
       condition     = length(local.authorized_keys) > 0
       error_message = "No SSH keys found. Set authorized_keys and/or github_user (with keys at https://github.com/<user>.keys)."
