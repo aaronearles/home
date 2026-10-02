@@ -5,9 +5,9 @@ resource "random_password" "root_pass" {
   override_special = "!#$%&*()-_=+[]{}<>:?"
 }
 
-# Fetch public SSH keys from GitHub (skipped if github_user is unset)
+# Fetch public SSH keys from GitHub (skipped if github_user is blank)
 data "http" "github_keys" {
-  count = var.github_user != null ? 1 : 0
+  count = trimspace(var.github_user) != "" ? 1 : 0
   url   = "https://github.com/${var.github_user}.keys"
 
   lifecycle {

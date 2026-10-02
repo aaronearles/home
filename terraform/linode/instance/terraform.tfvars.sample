@@ -1,7 +1,7 @@
 linode_token    = "123abc" // https://cloud.linode.com/profile/tokens
 instance_label  = "rocky-demo"
 image           = "linode/rocky10"       // https://api.linode.com/v4/images
-github_user     = "github-username"      // SSH keys pulled from https://github.com/<user>.keys
+github_user     = "github-username"      // SSH keys pulled from https://github.com/<user>.keys ("" to skip)
 authorized_keys = ["ssh-ed25519 AAAA..."] // and/or list keys directly (at least one source required)
 # stackscript_id  = ""
 tags = ["demo"]

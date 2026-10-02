@@ -14,7 +14,7 @@ Edit `terraform.tfvars`:
 | ---------------- | -------- | --------------------------------------------------------------------------- |
 | `linode_token`   | Yes      | API token from https://cloud.linode.com/profile/tokens (Linodes read/write) |
 | `instance_label` | Yes      | Name of the instance in Linode                                              |
-| `github_user`    | One of*  | Keys from `https://github.com/<user>.keys` are added to root's `authorized_keys` |
+| `github_user`    | One of*  | Keys from `https://github.com/<user>.keys` are added to root's `authorized_keys`. Prompted if unset; set `""` (or leave the prompt blank) to skip |
 | `authorized_keys`| One of*  | List of SSH public keys, merged with any GitHub keys                        |
 | `image`          | No       | Defaults to `linode/rocky10` ([image list](https://api.linode.com/v4/images)) |
 | `tags`           | No       | Defaults to none                                                            |

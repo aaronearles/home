@@ -24,8 +24,8 @@ variable "stackscript_id" {
 
 variable "github_user" {
   type        = string
-  description = "Optional: GitHub user whose public SSH keys (https://github.com/<user>.keys) are added to authorized_keys"
-  default     = null
+  description = "GitHub user whose public SSH keys (https://github.com/<user>.keys) are added to authorized_keys. Leave blank to skip and use only authorized_keys"
+  nullable    = false
 }
 
 variable "authorized_keys" {
