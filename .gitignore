@@ -44,6 +44,10 @@ terraform.rc
 # Ignore .env files which contain docker secrets
 *.env
 
+# Ignore mysql-init.sql files - these contain a plaintext root password
+# per compose stack; commit a mysql-init.sql.example instead
+mysql-init.sql
+
 *.conf
 
 .venv

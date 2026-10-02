@@ -1,4 +1,5 @@
 services:
+
   wordpress:
     image: wordpress
     container_name: blog-wordpress
@@ -13,13 +14,18 @@ services:
       - WORDPRESS_DB_USER=${WORDPRESS_DB_USER}
       - WORDPRESS_DB_PASSWORD=${WORDPRESS_DB_PASSWORD}
       - WORDPRESS_DB_NAME=${WORDPRESS_DB_NAME}
+    depends_on:
+      - db
     volumes:
       - /mnt/data/blog/var/www/html:/var/www/html
     networks:
       - traefik
       - backend
-    depends_on:
-      - db
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "5"
     labels:
       - traefik.enable=true
       - traefik.docker.network=traefik
@@ -35,14 +41,20 @@ services:
       - MYSQL_DATABASE=${WORDPRESS_DB_NAME}
       - MYSQL_USER=${WORDPRESS_DB_USER}
       - MYSQL_PASSWORD=${WORDPRESS_DB_PASSWORD}
-      - MYSQL_RANDOM_ROOT_PASSWORD=1
+      - MYSQL_RANDOM_ROOT_PASSWORD=0
+      - MYSQL_ROOT_PASSWORD=${MYSQL_ROOT_PASSWORD}
     volumes:
-      - ./data/blog/var/lib/mysql:/var/lib/mysql
+      - ./data/mysql:/var/lib/mysql
+      - ./mysql-init.sql:/tmp/mysql-init.sql
     networks:
       - backend
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "5"
 
 networks:
   traefik:
     external: true
   backend:
-    external: false
