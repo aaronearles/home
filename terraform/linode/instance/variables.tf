@@ -1,6 +1,7 @@
 variable "linode_token" {
   type        = string
   description = "Linode API Token used in provider.tf"
+  sensitive   = true
 }
 
 variable "instance_label" {
@@ -11,7 +12,8 @@ variable "instance_label" {
 variable "image" {
   type        = string
   description = "Image for OS"
-  default     = "linode/ubuntu22.04"
+  # default     = "linode/ubuntu22.04"
+  default = "linode/rocky10"
 }
 
 variable "stackscript_id" {
@@ -20,16 +22,22 @@ variable "stackscript_id" {
   default     = "" //Empty triggers conditional expression to nullify
 }
 
+variable "github_user" {
+  type        = string
+  description = "Optional: GitHub user whose public SSH keys (https://github.com/<user>.keys) are added to authorized_keys"
+  default     = null
+}
+
 variable "authorized_keys" {
   type        = list(string)
-  description = "Authorized SSH Keys"
-  default     = [""]
+  description = "Optional: SSH public keys to add, merged with any GitHub keys"
+  default     = []
 }
 
 variable "tags" {
   type        = list(string)
-  description = "List of tags to apply"
-  default     = [""]
+  description = "Optional: List of tags to apply"
+  default     = []
 }
 
 # variable "root_pass" { //Replaced with random_password.root_pass
