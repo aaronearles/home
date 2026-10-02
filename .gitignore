@@ -18,8 +18,11 @@ secrets.auto.tfvars
 secret.tfvars
 secrets.tfvars
 *.tfvars
+*.tfvars.*
 *.tfvars.json
 !sample.tfvars
+!*.tfvars.sample
+
 
 # Ignore override files as they are usually used to override resources locally and so
 # are not checked in
