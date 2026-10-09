@@ -1,0 +1,33 @@
+services:
+  mc-coords:
+    build: .
+    image: mc-coords:local
+    container_name: mc-coords
+    restart: unless-stopped
+    environment:
+      - INVITE_TTL_HOURS=24
+    volumes:
+      - mc_coords_data:/data
+    # ports:
+    #   - "3000:3000"
+    networks:
+      - traefik
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://127.0.0.1:3000/healthz"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+    labels:
+      - traefik.enable=true
+      - traefik.docker.network=traefik
+      - traefik.http.routers.mc-coords.rule=Host(`mc-coords.internal.earles.io`)
+      - traefik.http.routers.mc-coords.entrypoints=websecure
+      - traefik.http.routers.mc-coords.tls.certresolver=production
+      - traefik.http.services.mc-coords.loadbalancer.server.port=3000
+
+volumes:
+  mc_coords_data:
+
+networks:
+  traefik:
+    external: true
