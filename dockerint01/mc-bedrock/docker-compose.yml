@@ -14,7 +14,8 @@ services:
       # Put players in the world's game mode on join, so modes don't leak between worlds
       - FORCE_GAMEMODE=true
       - DIFFICULTY=easy
-      - ALLOW_CHEATS=true
+      # Per world (from .env): enabling cheats permanently disables achievements for that world
+      - ALLOW_CHEATS=${MC_ALLOW_CHEATS:-true}
       - MAX_PLAYERS=10
       - ONLINE_MODE=true
       # - WHITE_LIST

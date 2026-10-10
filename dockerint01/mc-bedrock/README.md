@@ -105,18 +105,18 @@ The Skyblock world is a FLAT world whose `FlatWorldLayers` in `level.dat` is a s
 
 ## World rotation
 
-| Mode | World | Type | Game mode |
-|---|---|---|---|
-| `skyblock` | `Skyblock` | void FLAT | survival |
-| `survival` | `Earles2026` | normal | survival |
-| `creative` | `Creative` | normal | creative |
+| Mode | World | Type | Game mode | Cheats |
+|---|---|---|---|---|
+| `skyblock` | `Skyblock` | void FLAT | survival | on |
+| `survival` | `Earles2026` | normal | survival | off (keeps achievements) |
+| `creative` | `Creative` | normal | creative | on |
 
 ```bash
 ./switch-world.sh               # show active mode
 ./switch-world.sh creative      # switch (~80s; players are warned, then disconnected)
 ```
 
-`docker-compose.yml` reads `LEVEL_NAME`, `LEVEL_TYPE` and `GAMEMODE` from `.env` (`MC_LEVEL_NAME`, `MC_LEVEL_TYPE`, `MC_GAMEMODE`). Without a `.env` it defaults to Skyblock. `switch-world.sh`:
+`docker-compose.yml` reads `LEVEL_NAME`, `LEVEL_TYPE`, `GAMEMODE` and `ALLOW_CHEATS` from `.env` (`MC_LEVEL_NAME`, `MC_LEVEL_TYPE`, `MC_GAMEMODE`, `MC_ALLOW_CHEATS`). Without a `.env` it defaults to Skyblock. `switch-world.sh`:
 - rewrites `.env` and recreates the container
 - enables coordinates
 - updates the world name and game mode the Xbox broadcast advertises

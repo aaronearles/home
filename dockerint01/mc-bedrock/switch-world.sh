@@ -5,11 +5,11 @@
 #   -y skips the confirmation prompt
 #
 # Modes:
-#   skyblock  Skyblock    void FLAT world, survival (built by reset-skyblock.sh if missing)
-#   survival  Earles2026  normal world, survival
-#   creative  Creative    normal world, creative (generated on first switch)
+#   skyblock  Skyblock    void FLAT world, survival, cheats on (built by reset-skyblock.sh if missing)
+#   survival  Earles2026  normal world, survival, cheats OFF (keeps achievements)
+#   creative  Creative    normal world, creative, cheats on (generated on first switch)
 #
-# How it works: docker-compose.yml takes LEVEL_NAME / LEVEL_TYPE / GAMEMODE from .env.
+# How it works: docker-compose.yml takes LEVEL_NAME / LEVEL_TYPE / GAMEMODE / ALLOW_CHEATS from .env.
 # This rewrites .env, recreates the minecraft container (~80s, incl. the TIME_WAIT
 # wait), turns on coordinates, and updates the world name the Xbox broadcast shows.
 # Worlds are never deleted; switching back resumes where you left off.
@@ -19,6 +19,8 @@ cd "$(dirname "$0")"
 declare -A LEVEL=([skyblock]=Skyblock [survival]=Earles2026 [creative]=Creative)
 declare -A TYPE=([skyblock]=FLAT [survival]=DEFAULT [creative]=DEFAULT)
 declare -A GAMEMODE=([skyblock]=survival [survival]=survival [creative]=creative)
+# Cheats permanently disable achievements in a world, so keep them off for survival
+declare -A CHEATS=([skyblock]=true [survival]=false [creative]=true)
 
 MC="docker compose exec -T minecraft send-command"
 mc() { $MC "$1" </dev/null >/dev/null; }
@@ -66,6 +68,7 @@ MC_MODE=$MODE
 MC_LEVEL_NAME=${LEVEL[$MODE]}
 MC_LEVEL_TYPE=${TYPE[$MODE]}
 MC_GAMEMODE=${GAMEMODE[$MODE]}
+MC_ALLOW_CHEATS=${CHEATS[$MODE]}
 EOF
 
 echo "Recreating server (waits ~65s for the port to clear)..."

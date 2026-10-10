@@ -14,7 +14,7 @@ Operating guide for the family Minecraft Bedrock server. It's written so an AI a
 | Server address | `mc.earles.io` (port 19132), or `172.20.100.202` |
 | Xbox broadcast account | `mcearlesio`: players friend it and join from the Friends tab |
 | Active world | One of three rotation modes: `./switch-world.sh` with no argument prints it (stored in `.env`) |
-| Game settings | Easy, **cheats ON**, coordinates shown, force-gamemode ON, **no operators**. Skyblock also has keep inventory ON. |
+| Game settings | Easy, coordinates shown, force-gamemode ON, **no operators**. Cheats per mode: ON for skyblock/creative, **OFF for survival** (keeps achievements). Skyblock also has keep inventory ON. |
 | Bedrock version | 1.26.52 (NetherNet transport) |
 
 ### Players
@@ -164,11 +164,11 @@ docker compose restart minecraft
 ### Switch worlds / modes (ask the owner first if people are playing)
 The server rotates between three worlds:
 
-| Mode | World | Type | Game mode |
-|---|---|---|---|
-| `skyblock` | `Skyblock` | void FLAT | survival (keep inventory ON) |
-| `survival` | `Earles2026` | normal | survival |
-| `creative` | `Creative` | normal | creative |
+| Mode | World | Type | Game mode | Cheats |
+|---|---|---|---|---|
+| `skyblock` | `Skyblock` | void FLAT | survival (keep inventory ON) | on |
+| `survival` | `Earles2026` | normal | survival | **off** (achievements) |
+| `creative` | `Creative` | normal | creative | on |
 
 ```bash
 ./switch-world.sh                 # show the active mode
@@ -178,7 +178,8 @@ The server rotates between three worlds:
 - Worlds are **never deleted or reset** by switching. Each resumes where it was left.
 - A missing world is generated on first switch. A missing Skyblock world is fully built via `reset-skyblock.sh`.
 - `FORCE_GAMEMODE=true` puts every player in the world's mode on join, so creative doesn't leak into survival.
-- **Don't edit `LEVEL_NAME` / `LEVEL_TYPE` / `GAMEMODE` in `docker-compose.yml`.** They come from `.env` (`MC_LEVEL_NAME`, `MC_LEVEL_TYPE`, `MC_GAMEMODE`), and the compose defaults are Skyblock. To add a mode, extend the three arrays at the top of `switch-world.sh`.
+- **Don't edit `LEVEL_NAME` / `LEVEL_TYPE` / `GAMEMODE` / `ALLOW_CHEATS` in `docker-compose.yml`.** They come from `.env` (`MC_LEVEL_NAME`, `MC_LEVEL_TYPE`, `MC_GAMEMODE`, `MC_ALLOW_CHEATS`), and the compose defaults are Skyblock. To add a mode, extend the arrays at the top of `switch-world.sh`.
+- **Cheats are per mode on purpose.** Loading a world with cheats on permanently costs it achievements, so never load `Earles2026` with `MC_ALLOW_CHEATS=true`. Console commands (`give`, `gamerule`, ...) work without cheats anyway.
 - `Earles2026` may still remember `aearles` as an operator from before. After switching to `survival`, if aearles can change game mode, run `...send-command "deop aearles"` while they're online.
 - Older worlds outside the rotation (`PaleGarden`, `DroneWorld`, ...) stay in `data/worlds/`.
 
@@ -213,7 +214,7 @@ The server rotates between three worlds:
   - Make someone an operator (ask first; they can then switch to creative): `...send-command "op aearles"`, or add them to `OPS` and recreate.
   - Remove: `...send-command "deop aearles"`. Also check `permissions.json`.
   - Old worlds (e.g. `Earles2026`) may still remember `aearles` as an operator from earlier play. Run `deop aearles` after switching to one.
-- **Cheats:** `ALLOW_CHEATS=true` in compose, which shows as `commandsEnabled = 1` in `level.dat`. Turning cheats on for a world **permanently disables achievements** for it. Changing it needs a restart.
+- **Cheats:** set per mode by `switch-world.sh` (`MC_ALLOW_CHEATS` in `.env`), and shows as `commandsEnabled` in `level.dat`. Turning cheats on for a world **permanently disables achievements** for it. Changing it needs a restart.
 - **Game mode:** without operator status, players can't change their own game mode. The console can: `...send-command "gamemode survival hcearles"`.
 
 ## Health checklist (run this when "I can't join")
