@@ -23,6 +23,7 @@ services:
       - "443:443"   # WEBSECURE ENTRYPOINT | HTTPS/443
       - "3128:3128" # SQUID CACHING PROXY | TCP/3128
       - "8080:8080" # TRAEFIK ENTRYPOINT | API Dashboard (enabled by --api.insecure=true)
+      - "19132:19132/tcp" # MINECRAFT ENTRYPOINT | Bedrock NetherNet signaling -> mc-bedrock BDS :19133
     networks:
       - traefik
 
