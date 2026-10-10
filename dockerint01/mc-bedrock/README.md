@@ -136,7 +136,7 @@ It archives all of `data/worlds/` to `backups/nightly/worlds-<timestamp>.tar.gz`
 
 ### Snapshot on join
 
-`join-snapshot.sh` follows the server log. Whenever a player joins, it snapshots the **active world** to `backups/snapshots/<World>-<timestamp>-join-<player>.tar.gz` (~1 MB, kept 7 days), so a world can be rolled back to how it was before any session. A 2-minute cooldown merges group joins. Cron keeps exactly one copy running:
+`join-snapshot.sh` follows the server log. Whenever a player joins, it snapshots the **active world** to `backups/snapshots/<World>-<timestamp>-join-<player>.tar.gz` (~1 MB, kept 7 days), so a world can be rolled back to how it was before any session. A 1-hour cooldown limits it to one snapshot per hour, since the snapshot's brief save can make a join feel slow. Cron keeps exactly one copy running:
 
 ```
 * * * * * flock -n /home/aearles/mc-bedrock/backups/.join-snapshot.lock /home/aearles/mc-bedrock/join-snapshot.sh >> /home/aearles/mc-bedrock/backups/snapshots/snapshot.log 2>&1

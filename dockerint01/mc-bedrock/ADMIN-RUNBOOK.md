@@ -195,10 +195,11 @@ The server rotates between three worlds:
   - If the script dies mid-way, its trap still sends `save resume`. If the world ever seems frozen (nothing saves), run `...send-command "save resume"`.
 - **On every join (snapshot of the active world only):** `join-snapshot.sh` follows the server log, and on `Player connected: <name>` runs `./backup-worlds.sh --snapshot join-<name>`.
   - Output: `backups/snapshots/<World>-<timestamp>-join-<name>.tar.gz`. These are ~1 MB, kept 7 days.
-  - 2-minute cooldown, so a group joining together produces one snapshot.
+  - **1-hour cooldown** (`COOLDOWN` in `join-snapshot.sh`): at most one snapshot per hour, however many people join or rejoin. It's kept long because the snapshot's 2-3s save can make a join feel slow.
   - Log: `backups/snapshots/snapshot.log`.
   - Cron starts the watcher every minute under `flock -n`, so exactly one copy runs and it restarts itself after a reboot or crash. Check with `pgrep -af join-snapshot` (expect `flock`, two `bash join-snapshot.sh` and a `docker logs -f`).
   - Take one by hand with `./backup-worlds.sh --snapshot <reason>`.
+  - **Restart the watcher** (e.g. after editing `join-snapshot.sh`): find the PIDs with `ps -eo pid,args | grep -E '[j]oin-snapshot.sh|[d]ocker logs -f'`, `kill` the `bash join-snapshot.sh` and `docker logs -f` PIDs, and cron starts a fresh one within a minute. **Don't use `pkill -f join-snapshot`.** It also matches (and kills) the shell running the command.
 - Nightly backups and snapshots share a lock (`backups/.backup.lock`), so they never pause saves at the same time.
 - **Full Skyblock resets** also leave `backups/Skyblock-<timestamp>.tar.gz`.
 - **Roll a world back to before a session:** pick the `backups/snapshots/` file from before the join you want to undo. Restore it like a nightly backup (below); the archive holds just that one world.

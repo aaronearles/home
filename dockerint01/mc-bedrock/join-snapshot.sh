@@ -7,13 +7,13 @@
 # runs and it comes back after reboots or crashes:
 #   * * * * * flock -n ~/mc-bedrock/backups/.join-snapshot.lock ~/mc-bedrock/join-snapshot.sh >> ~/mc-bedrock/backups/snapshots/snapshot.log 2>&1
 #
-# COOLDOWN (seconds, default 120) skips a snapshot if one was taken recently, so
-# several people joining together produce one snapshot.
+# COOLDOWN (seconds, default 3600 = 1 hour) skips a snapshot if one was taken recently, so
+# several people joining together (or rejoining) produce one snapshot per hour.
 set -uo pipefail
 export PATH=/usr/local/bin:/usr/bin:/bin
 cd "$(dirname "$0")"
 
-COOLDOWN="${COOLDOWN:-120}"
+COOLDOWN="${COOLDOWN:-3600}"
 STATE=backups/snapshots/.last-snapshot
 CONTAINER=minecraft_itzg
 log() { echo "$(date '+%F %T') $*"; }
