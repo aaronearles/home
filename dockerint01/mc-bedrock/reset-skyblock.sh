@@ -103,8 +103,9 @@ setblock -60 65 0 cactus
 # Spawn on the island
 setworldspawn 1 65 1
 gamerule spawnradius 0
-# Keep inventory on death
+# Keep inventory on death, no friendly fire
 gamerule keepinventory true
+gamerule pvp false
 EOF
 
     # Verify a few key blocks before releasing the ticking area

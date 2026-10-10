@@ -14,7 +14,7 @@ Operating guide for the family Minecraft Bedrock server. It's written so an AI a
 | Server address | `mc.earles.io` (port 19132), or `172.20.100.202` |
 | Xbox broadcast account | `mcearlesio`: players friend it and join from the Friends tab |
 | Active world | One of three rotation modes: `./switch-world.sh` with no argument prints it (stored in `.env`) |
-| Game settings | Easy, coordinates shown, force-gamemode ON, **no operators**. Cheats per mode: ON for skyblock/creative, **OFF for survival** (keeps achievements). Skyblock also has keep inventory ON. |
+| Game settings | Easy, coordinates shown, **PvP / friendly fire OFF** (all worlds), force-gamemode ON, **no operators**. Cheats per mode: ON for skyblock/creative, **OFF for survival** (keeps achievements). Skyblock also has keep inventory ON. |
 | Bedrock version | 1.26.52 (NetherNet transport) |
 
 ### Players
@@ -111,7 +111,7 @@ This **replaces** whatever armor they were wearing; the old armor isn't returned
 ...send-command "gamerule dodaylightcycle false"   # freeze time ("pause" the day)
 ...send-command "gamerule domobspawning false"
 ```
-Game rules live in the world, so they survive restarts. A full Skyblock reset re-applies `spawnradius 0` and `keepinventory true`. Other game rules go back to their defaults.
+Game rules live in the world, so they survive restarts. A full Skyblock reset re-applies `spawnradius 0`, `keepinventory true` and `pvp false`. Other game rules go back to their defaults.
 
 ### Chat message to players
 ```bash
@@ -174,7 +174,7 @@ The server rotates between three worlds:
 ./switch-world.sh                 # show the active mode
 ./switch-world.sh creative -y     # switch (-y skips the prompt)
 ```
-- Takes ~80s: it warns players, rewrites `.env`, recreates the container, turns on coordinates, and updates the world name the Xbox Friends tab shows (`config/config.yml`).
+- Takes ~80s: it warns players, rewrites `.env`, recreates the container, turns on coordinates and `gamerule pvp false`, and updates the world name the Xbox Friends tab shows (`config/config.yml`).
 - Worlds are **never deleted or reset** by switching. Each resumes where it was left.
 - A missing world is generated on first switch. A missing Skyblock world is fully built via `reset-skyblock.sh`.
 - `FORCE_GAMEMODE=true` puts every player in the world's mode on join, so creative doesn't leak into survival.

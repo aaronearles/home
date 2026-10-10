@@ -11,7 +11,7 @@
 #
 # How it works: docker-compose.yml takes LEVEL_NAME / LEVEL_TYPE / GAMEMODE / ALLOW_CHEATS from .env.
 # This rewrites .env, recreates the minecraft container (~80s, incl. the TIME_WAIT
-# wait), turns on coordinates, and updates the world name the Xbox broadcast shows.
+# wait), turns on coordinates, turns off PvP, and updates the world name the Xbox broadcast shows.
 # Worlds are never deleted; switching back resumes where you left off.
 set -euo pipefail
 cd "$(dirname "$0")"
@@ -84,6 +84,7 @@ if [[ "$MODE" == "skyblock" && $NEW_WORLD -eq 1 ]]; then
 fi
 
 mc "gamerule showcoordinates true"
+mc "gamerule pvp false"   # no friendly fire in any world
 
 # What the Xbox friends list shows for the session
 sed -i -E "s/^(    world-name: ).*/\1${LEVEL[$MODE]}/; s/^(    game-mode: ).*/\1${GAMEMODE[$MODE]^}/" config/config.yml
