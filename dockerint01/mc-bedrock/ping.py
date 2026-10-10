@@ -1,52 +1,76 @@
 #!/usr/bin/env python3
-"""Ping a Minecraft Bedrock server and display its MOTD info."""
+"""Ping a Minecraft Bedrock (NetherNet) server and display its status.
 
-import socket
-import struct
+Since Bedrock 1.26.5x the server uses the NetherNet transport: clients do an HTTP
+handshake on TCP server-port before negotiating UDP. `GET /v1/join` returns the
+server's status as JSON, so that's what this queries - the same request the game makes.
+(The old RakNet UDP ping no longer gets an answer.)
+
+Clients try HTTPS first. For a hostname they require a publicly trusted certificate;
+for a bare IP they fall back to plain HTTP. This script reports which of those works.
+
+Usage:
+    python3 ping.py                     # mc.earles.io and 172.20.100.202
+    python3 ping.py mc.earles.io        # one host, port 19132
+    python3 ping.py 172.20.100.202:19133  # straight to BDS, bypassing Traefik
+
+Requires only the Python 3 standard library.
+"""
+
+import ipaddress
+import json
+import ssl
 import sys
-import time
+import urllib.request
+
+DEFAULT_TARGETS = ["mc.earles.io:19132", "172.20.100.202:19132"]
 
 
-def ping_bedrock(host, port=19132, timeout=5):
-    UNCONNECTED_PING = b'\x01'
-    TIME_STAMP = struct.pack('>Q', int(time.time() * 1000))
-    MAGIC = b'\x00\xff\xff\x00\xfe\xfe\xfe\xfe\xfd\xfd\xfd\xfd\x12\x34\x56\x78'
-    CLIENT_GUID = struct.pack('>Q', 12345)
-    packet = UNCONNECTED_PING + TIME_STAMP + MAGIC + CLIENT_GUID
-
-    s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
-    s.settimeout(timeout)
+def is_ip(host):
     try:
-        s.sendto(packet, (host, port))
-        data, addr = s.recvfrom(2048)
-        offset = 35
-        length = struct.unpack('>H', data[offset:offset+2])[0]
-        motd = data[offset+2:offset+2+length].decode('utf-8', errors='replace')
-        fields = motd.split(';')
-        print(f"Host:        {addr[0]}:{addr[1]}")
-        print(f"Edition:     {fields[0]}")
-        print(f"Server name: {fields[1]}")
-        print(f"Version:     {fields[3]}")
-        print(f"Players:     {fields[4]}/{fields[5]}")
-        print(f"Level name:  {fields[7]}")
-        print(f"Game mode:   {fields[8]}")
-        print(f"Raw MOTD:    {motd}")
+        ipaddress.ip_address(host)
         return True
-    except socket.timeout:
-        print(f"Timed out connecting to {host}:{port}")
+    except ValueError:
         return False
-    except Exception as e:
-        print(f"Error: {e}")
-        return False
-    finally:
-        s.close()
+
+
+def fetch(url, context=None, timeout=5):
+    with urllib.request.urlopen(url, context=context, timeout=timeout) as resp:
+        return json.loads(resp.read())
+
+
+def ping(target):
+    host, _, port = target.partition(":")
+    port = port or "19132"
+    base = f"{host}:{port}"
+    print(f"=== {base} ===")
+
+    attempts = [("HTTPS (verified cert)", f"https://{base}/v1/join", ssl.create_default_context())]
+    if is_ip(host):
+        # Clients connecting by IP accept the fallback, so it counts as working
+        attempts.append(("plain HTTP (IP fallback)", f"http://{base}/v1/join", None))
+
+    for label, url, ctx in attempts:
+        try:
+            info = fetch(url, ctx)
+        except Exception as e:
+            print(f"  {label:26} FAILED: {e}")
+            continue
+        print(f"  {label:26} OK")
+        print(f"  Server name: {info.get('name')}")
+        print(f"  Version:     {info.get('version')} (protocol {info.get('protocol')})")
+        print(f"  Level name:  {info.get('level')}")
+        print(f"  Players:     {info.get('players')}/{info.get('maxPlayers')}")
+        print(f"  Game type:   {info.get('gameType')}")
+        return True
+    return False
+
+
+def main():
+    targets = sys.argv[1:] or DEFAULT_TARGETS
+    results = [ping(t) for t in targets]
+    sys.exit(0 if all(results) else 1)
 
 
 if __name__ == "__main__":
-    targets = sys.argv[1:] if len(sys.argv) > 1 else ["172.20.100.202", "65.130.147.150"]
-
-    for target in targets:
-        host, port = (target.rsplit(":", 1) + ["19132"])[:2]
-        print(f"=== {host}:{port} ===")
-        ping_bedrock(host, int(port))
-        print()
+    main()

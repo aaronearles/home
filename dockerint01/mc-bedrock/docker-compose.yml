@@ -3,58 +3,88 @@ services:
     image: itzg/minecraft-bedrock-server
     container_name: minecraft_itzg
     restart: unless-stopped
-    ports:
-      - 19132:19132/tcp
-      - 19132:19132/udp
     environment:
       - UID=0
       - GID=0
       - TZ=US/Denver
       - EULA=true
       - SERVER_NAME=EARLES
-      - GAMEMODE=survival
-      - FORCE_GAMEMODE=false
+      # Active world/mode comes from .env (written by switch-world.sh); defaults = Skyblock
+      - GAMEMODE=${MC_GAMEMODE:-survival}
+      # Put players in the world's game mode on join, so modes don't leak between worlds
+      - FORCE_GAMEMODE=true
       - DIFFICULTY=easy
-      - ALLOW_CHEATS=true
+      # Per world (from .env): enabling cheats permanently disables achievements for that world
+      - ALLOW_CHEATS=${MC_ALLOW_CHEATS:-true}
       - MAX_PLAYERS=10
       - ONLINE_MODE=true
       # - WHITE_LIST
       # - ALLOW_LIST
-      # - SERVER_PORT
+      # NetherNet signaling is plain HTTP on 19133; Traefik serves HTTPS on 19132
+      - SERVER_PORT=19133
       # - SERVER_PORT_V6
+      - TRANSPORT=nethernet
+      - SERVER_UDP_PORTS=19140-19159
       - ENABLE_LAN_VISIBILITY=true
       - VIEW_DISTANCE=64
       # - TICK_DISTANCE
       - PLAYER_IDLE_TIMEOUT=0
       - MAX_THREADS=4
-      # - LEVEL_NAME=DroneWorld
-      - LEVEL_NAME=PaleGarden
-      - LEVEL_SEED=3515201313347228787
-      # - LEVEL_TYPE
+      # Rotation (switch-world.sh): Skyblock (FLAT void) / Earles2026 / Creative.
+      # Older worlds: DroneWorld, PaleGarden (seed 3515201313347228787)
+      - LEVEL_NAME=${MC_LEVEL_NAME:-Skyblock}
+      - LEVEL_SEED=
+      # Skyblock is a void world: FLAT generator with an all-air layer set in level.dat
+      - LEVEL_TYPE=${MC_LEVEL_TYPE:-FLAT}
       - DEFAULT_PLAYER_PERMISSION_LEVEL=member
       # - OPS=2533275026015377,2535456288371262
-      - OPS=2533275026015377,2535421067961767,2535407829863530,2535456288371262 #aearles, hcearles, ttearles, hairlesspete846
+      # No operators, so nobody can switch game mode. Commenting this out doesn't clear
+      # data/permissions.json on its own; that file was emptied to [] as well.
+      # - OPS=2533275026015377,2535421067961767,2535407829863530,2535456288371262 #aearles, hcearles, ttearles, hairlesspete846
     volumes:
       - ./data:/data
-    networks:
-      - backend
+    # Host networking: NetherNet transport negotiates a per-client UDP port, which
+    # doesn't survive Docker's bridge NAT. Server listens on TCP 19133 (plain-HTTP
+    # signaling, fronted by Traefik on 19132 - see ../traefik/config/conf/external-minecraft.yaml)
+    # and UDP 19140-19159 (gameplay).
+    network_mode: host
+    # BDS silently fails to bind its TCP port while connections from the previous run are
+    # still in TIME_WAIT (~60s), leaving the server unjoinable. On a quick restart
+    # (world files written <65s ago, i.e. at last shutdown), wait that out first.
+    entrypoint:
+      - bash
+      - -c
+      - |
+        last=$$(find /data/worlds -type f -printf '%T@\n' 2>/dev/null | sort -n | tail -1)
+        wait=$$(( 65 - ($$EPOCHSECONDS - $${last%.*}) ))
+        if [ -n "$$last" ] && [ $$wait -gt 0 ]; then
+          echo "Quick restart: waiting $${wait}s for port 19133 TIME_WAIT to clear..."
+          sleep $$wait
+        fi
+        exec /opt/demoter-entry.sh
+    # Image's default healthcheck is a RakNet UDP ping, which NetherNet doesn't answer.
+    healthcheck:
+      test: ["CMD", "bash", "-c", "exec 3<>/dev/tcp/127.0.0.1/19133"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 60s
 
   mcxboxbroadcast:
     image: eclipse-temurin:21-jre-jammy
     container_name: mcxboxbroadcast
     restart: unless-stopped
-    working_dir: /opt/app
-    command: java -jar MCXboxBroadcastStandalone.jar
     environment:
       - TZ=US/Denver
     volumes:
-      - ./MCXboxBroadcastStandalone.jar:/opt/app/MCXboxBroadcastStandalone.jar
-      - ./config/config.yml:/opt/app/config.yml
-      - ./config/cache:/opt/app/cache
-      - ./config/logs:/opt/app/logs
+      # Jar lives outside the working dir; mount ./config as a whole directory so the
+      # app can atomically rewrite config.yml (single-file bind mounts break the rename).
+      - ./MCXboxBroadcastStandalone.jar:/opt/MCXboxBroadcastStandalone.jar:ro
+      - ./config:/opt/app
     networks:
       - backend
-
+    working_dir: /opt/app
+    command: java -jar /opt/MCXboxBroadcastStandalone.jar
 
 networks:
   backend:
