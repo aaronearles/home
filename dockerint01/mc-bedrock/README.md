@@ -22,7 +22,8 @@ mc-bedrock/
 ├── CLAUDE.md                   # Loads the runbook for Claude Code sessions in this dir
 ├── switch-world.sh             # Rotate between skyblock / survival / creative
 ├── reset-skyblock.sh           # Full or live reset of the Skyblock world
-├── backup-worlds.sh            # Nightly (cron) backup of all worlds, 14-day retention
+├── backup-worlds.sh            # Nightly backup of all worlds (14 days) / --snapshot of the active world (7 days)
+├── join-snapshot.sh            # Watcher: snapshots the active world whenever a player joins
 ├── .env                        # Active world/mode, written by switch-world.sh (not in git)
 ├── tools/leveldat.py           # Reads/edits Bedrock level.dat (little-endian NBT)
 ├── ping.py                     # NetherNet status check (GET /v1/join)
@@ -31,7 +32,7 @@ mc-bedrock/
 ├── MCXboxBroadcastStandalone.jar  # Downloaded by update.sh (not in git)
 ├── config/
 │   └── config.yml              # MCXboxBroadcast configuration
-├── backups/                    # nightly/ archives + backup.log, Skyblock reset backups (not in git)
+├── backups/                    # nightly/, snapshots/ (per-join), Skyblock reset backups (not in git)
 └── data/                       # BDS data: worlds, server.properties, permissions.json (not in git)
 ```
 
@@ -132,6 +133,16 @@ A cron job runs `backup-worlds.sh` nightly at 10:00 UTC (3-4am Denver):
 ```
 
 It archives all of `data/worlds/` to `backups/nightly/worlds-<timestamp>.tar.gz` (~80 MB) and prunes archives older than 14 days. The active world is captured consistently while the server runs: BDS `save hold`, then `save query` (file list with exact lengths; files are copied and truncated to them), then `save resume`. The world is paused for ~3s. Run it by hand any time with `./backup-worlds.sh`.
+
+### Snapshot on join
+
+`join-snapshot.sh` follows the server log. Whenever a player joins, it snapshots the **active world** to `backups/snapshots/<World>-<timestamp>-join-<player>.tar.gz` (~1 MB, kept 7 days), so a world can be rolled back to how it was before any session. A 2-minute cooldown merges group joins. Cron keeps exactly one copy running:
+
+```
+* * * * * flock -n /home/aearles/mc-bedrock/backups/.join-snapshot.lock /home/aearles/mc-bedrock/join-snapshot.sh >> /home/aearles/mc-bedrock/backups/snapshots/snapshot.log 2>&1
+```
+
+Nightly backups and snapshots share `backups/.backup.lock`, so they never overlap.
 
 ## Updating
 

@@ -193,7 +193,15 @@ The server rotates between three worlds:
   - The active world is paused for ~3s with `save hold`.
   - Files are copied and truncated to the lengths `save query` reports, then `save resume`.
   - If the script dies mid-way, its trap still sends `save resume`. If the world ever seems frozen (nothing saves), run `...send-command "save resume"`.
+- **On every join (snapshot of the active world only):** `join-snapshot.sh` follows the server log, and on `Player connected: <name>` runs `./backup-worlds.sh --snapshot join-<name>`.
+  - Output: `backups/snapshots/<World>-<timestamp>-join-<name>.tar.gz`. These are ~1 MB, kept 7 days.
+  - 2-minute cooldown, so a group joining together produces one snapshot.
+  - Log: `backups/snapshots/snapshot.log`.
+  - Cron starts the watcher every minute under `flock -n`, so exactly one copy runs and it restarts itself after a reboot or crash. Check with `pgrep -af join-snapshot` (expect `flock`, two `bash join-snapshot.sh` and a `docker logs -f`).
+  - Take one by hand with `./backup-worlds.sh --snapshot <reason>`.
+- Nightly backups and snapshots share a lock (`backups/.backup.lock`), so they never pause saves at the same time.
 - **Full Skyblock resets** also leave `backups/Skyblock-<timestamp>.tar.gz`.
+- **Roll a world back to before a session:** pick the `backups/snapshots/` file from before the join you want to undo. Restore it like a nightly backup (below); the archive holds just that one world.
 - **Restore one world from a nightly backup** (ask first):
   ```bash
   ./switch-world.sh                                    # if restoring the ACTIVE world, stop first:
@@ -285,6 +293,7 @@ docker compose start minecraft
 | `data/worlds/<name>/` | Worlds (root-owned) |
 | `.env` | Active world/mode (`MC_MODE`, `MC_LEVEL_NAME`, `MC_LEVEL_TYPE`, `MC_GAMEMODE`). Written by `switch-world.sh`. |
 | `backups/nightly/` | Nightly world archives + `backup.log` (14-day retention) |
+| `backups/snapshots/` | Per-join snapshots of the active world + `snapshot.log` (7-day retention) |
 | `backups/Skyblock-*.tar.gz` | Made by full Skyblock resets |
 | `~/traefik-internal/config/conf/external-minecraft.yaml` | TCP routers 19132 → 172.20.100.202:19133 |
 | `*.bak-YYYYMMDD` | Hand-made backups of edited files |
