@@ -22,8 +22,8 @@ Operating guide for the family Minecraft Bedrock server. It's written so an AI a
 | Gamertag | XUID | Who |
 |---|---|---|
 | `aearles` | 2533275026015377 | Dad / owner |
-| `hcearles` | 2535421067961767 | kid |
-| `ttearles` | 2535407829863530 | kid |
+| `hcearles` | 2535421067961767 | Henry (kid) |
+| `ttearles` | 2535407829863530 | Theo (kid) |
 | `hairlesspete846` | 2535456288371262 | friend |
 
 ## Golden rules
