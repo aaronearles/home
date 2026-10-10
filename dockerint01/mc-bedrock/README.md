@@ -1,6 +1,6 @@
 # mc-bedrock
 
-Minecraft Bedrock Dedicated Server (BDS) with Xbox Live broadcasting via MCXboxBroadcast, so Xbox and mobile players can join from the friends list. Currently runs a hand-built classic **Skyblock** world that can be reset on demand.
+Minecraft Bedrock Dedicated Server (BDS) with Xbox Live broadcasting via MCXboxBroadcast, so Xbox and mobile players can join from the friends list. Rotates between three worlds (a hand-built classic **Skyblock**, a normal **survival** world and a **creative** world), with nightly backups.
 
 > Day-to-day operation (giving items, resets, restarts, troubleshooting) is documented in **[ADMIN-RUNBOOK.md](ADMIN-RUNBOOK.md)**, which is written so an AI agent can operate the server.
 
@@ -20,7 +20,10 @@ mc-bedrock/
 ├── README.md
 ├── ADMIN-RUNBOOK.md            # Operating guide (AI-agent friendly)
 ├── CLAUDE.md                   # Loads the runbook for Claude Code sessions in this dir
+├── switch-world.sh             # Rotate between skyblock / survival / creative
 ├── reset-skyblock.sh           # Full or live reset of the Skyblock world
+├── backup-worlds.sh            # Nightly (cron) backup of all worlds, 14-day retention
+├── .env                        # Active world/mode, written by switch-world.sh (not in git)
 ├── tools/leveldat.py           # Reads/edits Bedrock level.dat (little-endian NBT)
 ├── ping.py                     # NetherNet status check (GET /v1/join)
 ├── update.sh                   # Updates JAR, pulls images, recreates containers
@@ -28,7 +31,7 @@ mc-bedrock/
 ├── MCXboxBroadcastStandalone.jar  # Downloaded by update.sh (not in git)
 ├── config/
 │   └── config.yml              # MCXboxBroadcast configuration
-├── backups/                    # World backups made by reset-skyblock.sh (not in git)
+├── backups/                    # nightly/ archives + backup.log, Skyblock reset backups (not in git)
 └── data/                       # BDS data: worlds, server.properties, permissions.json (not in git)
 ```
 
@@ -100,7 +103,35 @@ The Skyblock world is a FLAT world whose `FlatWorldLayers` in `level.dat` is a s
 
 `tools/leveldat.py` is what makes the full reset possible. It edits `level.dat` (a root-owned file, so the script runs it in a throwaway `python:3.12-alpine` container).
 
-Other worlds (`Earles2026`, `PaleGarden`, `DroneWorld`) are kept in `data/worlds/`. Switch with `LEVEL_NAME`. Comment out `LEVEL_TYPE=FLAT` for non-Skyblock worlds.
+## World rotation
+
+| Mode | World | Type | Game mode |
+|---|---|---|---|
+| `skyblock` | `Skyblock` | void FLAT | survival |
+| `survival` | `Earles2026` | normal | survival |
+| `creative` | `Creative` | normal | creative |
+
+```bash
+./switch-world.sh               # show active mode
+./switch-world.sh creative      # switch (~80s; players are warned, then disconnected)
+```
+
+`docker-compose.yml` reads `LEVEL_NAME`, `LEVEL_TYPE` and `GAMEMODE` from `.env` (`MC_LEVEL_NAME`, `MC_LEVEL_TYPE`, `MC_GAMEMODE`). Without a `.env` it defaults to Skyblock. `switch-world.sh`:
+- rewrites `.env` and recreates the container
+- enables coordinates
+- updates the world name and game mode the Xbox broadcast advertises
+
+Worlds are never reset by switching. `FORCE_GAMEMODE=true` keeps players in each world's game mode. Older worlds (`PaleGarden`, `DroneWorld`) remain in `data/worlds/`.
+
+## Backups
+
+A cron job runs `backup-worlds.sh` nightly at 10:00 UTC (3-4am Denver):
+
+```
+0 10 * * * /home/aearles/mc-bedrock/backup-worlds.sh >> /home/aearles/mc-bedrock/backups/nightly/backup.log 2>&1
+```
+
+It archives all of `data/worlds/` to `backups/nightly/worlds-<timestamp>.tar.gz` (~80 MB) and prunes archives older than 14 days. The active world is captured consistently while the server runs: BDS `save hold`, then `save query` (file list with exact lengths; files are copied and truncated to them), then `save resume`. The world is paused for ~3s. Run it by hand any time with `./backup-worlds.sh`.
 
 ## Updating
 

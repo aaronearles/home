@@ -16,9 +16,11 @@
 set -euo pipefail
 cd "$(dirname "$0")"
 
-WORLD=$(grep -E '^\s*- LEVEL_NAME=' docker-compose.yml | head -1 | sed 's/.*LEVEL_NAME=//')
+# Effective settings (compose interpolates them from .env, which switch-world.sh manages)
+compose_env() { docker compose config minecraft | sed -n "s/^ *$1: *\"\{0,1\}\([^\"]*\)\"\{0,1\}$/\1/p" | head -1; }
+WORLD=$(compose_env LEVEL_NAME)
 [[ "$WORLD" == "Skyblock" ]] || { echo "LEVEL_NAME is '$WORLD', not Skyblock - refusing to reset." >&2; exit 1; }
-grep -qE '^\s*- LEVEL_TYPE=FLAT' docker-compose.yml || { echo "LEVEL_TYPE=FLAT is not set in docker-compose.yml" >&2; exit 1; }
+[[ "$(compose_env LEVEL_TYPE)" == "FLAT" ]] || { echo "LEVEL_TYPE is not FLAT - is Skyblock the active world? (./switch-world.sh skyblock)" >&2; exit 1; }
 
 LIVE=0; YES=0
 for a in "$@"; do

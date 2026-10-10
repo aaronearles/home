@@ -9,8 +9,10 @@ services:
       - TZ=US/Denver
       - EULA=true
       - SERVER_NAME=EARLES
-      - GAMEMODE=survival
-      - FORCE_GAMEMODE=false
+      # Active world/mode comes from .env (written by switch-world.sh); defaults = Skyblock
+      - GAMEMODE=${MC_GAMEMODE:-survival}
+      # Put players in the world's game mode on join, so modes don't leak between worlds
+      - FORCE_GAMEMODE=true
       - DIFFICULTY=easy
       - ALLOW_CHEATS=true
       - MAX_PLAYERS=10
@@ -27,14 +29,12 @@ services:
       # - TICK_DISTANCE
       - PLAYER_IDLE_TIMEOUT=0
       - MAX_THREADS=4
-      # - LEVEL_NAME=DroneWorld
-      # - LEVEL_NAME=PaleGarden
-      # - LEVEL_SEED=3515201313347228787
-      # - LEVEL_NAME=Earles2026
-      - LEVEL_NAME=Skyblock
+      # Rotation (switch-world.sh): Skyblock (FLAT void) / Earles2026 / Creative.
+      # Older worlds: DroneWorld, PaleGarden (seed 3515201313347228787)
+      - LEVEL_NAME=${MC_LEVEL_NAME:-Skyblock}
       - LEVEL_SEED=
       # Skyblock is a void world: FLAT generator with an all-air layer set in level.dat
-      - LEVEL_TYPE=FLAT
+      - LEVEL_TYPE=${MC_LEVEL_TYPE:-FLAT}
       - DEFAULT_PLAYER_PERMISSION_LEVEL=member
       # - OPS=2533275026015377,2535456288371262
       # No operators, so nobody can switch game mode. Commenting this out doesn't clear

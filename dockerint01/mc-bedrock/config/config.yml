@@ -20,7 +20,7 @@ session:
     host-name: EARLES
 
     # The world name to broadcast
-    world-name: PaleGarden
+    world-name: Skyblock
 
     # The game mode to broadcast (Survival, Creative, Adventure)
     game-mode: Survival

@@ -13,8 +13,8 @@ Operating guide for the family Minecraft Bedrock server. It's written so an AI a
 | Containers | `minecraft_itzg` (service `minecraft`), `mcxboxbroadcast`, `traefik` |
 | Server address | `mc.earles.io` (port 19132), or `172.20.100.202` |
 | Xbox broadcast account | `mcearlesio`: players friend it and join from the Friends tab |
-| Current world | `Skyblock` (`LEVEL_NAME` in `docker-compose.yml`) |
-| Game settings | Survival, easy, **cheats ON**, keep inventory ON, coordinates shown, **no operators** |
+| Active world | One of three rotation modes: `./switch-world.sh` with no argument prints it (stored in `.env`) |
+| Game settings | Easy, **cheats ON**, coordinates shown, force-gamemode ON, **no operators**. Skyblock also has keep inventory ON. |
 | Bedrock version | 1.26.52 (NetherNet transport) |
 
 ### Players
@@ -129,7 +129,7 @@ Game rules live in the world, so they survive restarts. A full Skyblock reset re
 | Completely fresh start | `./reset-skyblock.sh -y` (ask the owner first) | ~2 min, restarts the server. Backs up to `backups/Skyblock-<timestamp>.tar.gz`, creates a brand-new world (new seed, empty inventories), rebuilds the island. |
 
 - Both modes finish with 4 block checks and print `Done! Fresh Skyblock is ready.` If you see `only N/4 checks passed`, check the log.
-- The script refuses to run unless `LEVEL_NAME=Skyblock` and `LEVEL_TYPE=FLAT`.
+- The script refuses to run unless Skyblock is the active world (`./switch-world.sh skyblock` first).
 - Players who were **offline** during a live reset reappear where they logged out. If that spot was cleared, they fall into the void (keep inventory saves their items).
 - The island layout and chest contents are the heredoc in `build_island()` in the script.
 - **Restoring a backup** (ask first): `docker compose stop minecraft && mv data/worlds/Skyblock data/worlds/Skyblock.old-$(date +%s) && tar -xzf backups/<file> -C data/worlds && docker compose start minecraft`. `data/worlds/` is owned by aearles, so no container is needed for this.
@@ -161,13 +161,47 @@ docker compose restart minecraft
 ### Update to the latest Bedrock and broadcaster
 `./update.sh` (ask first if people are playing). Afterwards, run the health checklist.
 
-### Switch worlds (ask the owner first)
-Edit `docker-compose.yml`:
-1. Set `LEVEL_NAME=<World>`.
-2. For non-Skyblock worlds, **comment out `LEVEL_TYPE=FLAT`.**
-3. Run `docker compose up -d minecraft`.
+### Switch worlds / modes (ask the owner first if people are playing)
+The server rotates between three worlds:
 
-Worlds live in `data/worlds/` (`Skyblock`, `Earles2026`, `PaleGarden`, `DroneWorld`, ...). A new `LEVEL_NAME` generates a new world.
+| Mode | World | Type | Game mode |
+|---|---|---|---|
+| `skyblock` | `Skyblock` | void FLAT | survival (keep inventory ON) |
+| `survival` | `Earles2026` | normal | survival |
+| `creative` | `Creative` | normal | creative |
+
+```bash
+./switch-world.sh                 # show the active mode
+./switch-world.sh creative -y     # switch (-y skips the prompt)
+```
+- Takes ~80s: it warns players, rewrites `.env`, recreates the container, turns on coordinates, and updates the world name the Xbox Friends tab shows (`config/config.yml`).
+- Worlds are **never deleted or reset** by switching. Each resumes where it was left.
+- A missing world is generated on first switch. A missing Skyblock world is fully built via `reset-skyblock.sh`.
+- `FORCE_GAMEMODE=true` puts every player in the world's mode on join, so creative doesn't leak into survival.
+- **Don't edit `LEVEL_NAME` / `LEVEL_TYPE` / `GAMEMODE` in `docker-compose.yml`.** They come from `.env` (`MC_LEVEL_NAME`, `MC_LEVEL_TYPE`, `MC_GAMEMODE`), and the compose defaults are Skyblock. To add a mode, extend the three arrays at the top of `switch-world.sh`.
+- `Earles2026` may still remember `aearles` as an operator from before. After switching to `survival`, if aearles can change game mode, run `...send-command "deop aearles"` while they're online.
+- Older worlds outside the rotation (`PaleGarden`, `DroneWorld`, ...) stay in `data/worlds/`.
+
+## Backups
+
+- **Nightly (cron, 10:00 UTC = 3-4am Denver):** `backup-worlds.sh` archives **all** of `data/worlds/` to `backups/nightly/worlds-<timestamp>.tar.gz` and deletes ones older than 14 days.
+  - Log: `backups/nightly/backup.log`. Check it with `tail backups/nightly/backup.log`.
+  - Each archive is ~80 MB (mostly old PaleGarden copies).
+  - Cron entry: `crontab -l`.
+- **On demand:** `./backup-worlds.sh` (takes ~6s, safe while people play).
+  - The active world is paused for ~3s with `save hold`.
+  - Files are copied and truncated to the lengths `save query` reports, then `save resume`.
+  - If the script dies mid-way, its trap still sends `save resume`. If the world ever seems frozen (nothing saves), run `...send-command "save resume"`.
+- **Full Skyblock resets** also leave `backups/Skyblock-<timestamp>.tar.gz`.
+- **Restore one world from a nightly backup** (ask first):
+  ```bash
+  ./switch-world.sh                                    # if restoring the ACTIVE world, stop first:
+  docker compose stop minecraft
+  mv data/worlds/<World> data/worlds/<World>.old-$(date +%s)
+  tar -xzf backups/nightly/worlds-<stamp>.tar.gz -C data/worlds <World>
+  docker compose start minecraft
+  ```
+  Inactive worlds can be restored without stopping the server.
 
 ## Permissions, cheats and game modes
 
@@ -248,6 +282,8 @@ docker compose start minecraft
 | `data/permissions.json` | Operator list (`[]` = none) |
 | `data/keys/server_identity_key.pem` | Server identity (keep it; regenerating forces players to re-trust) |
 | `data/worlds/<name>/` | Worlds (root-owned) |
-| `backups/` | Tarballs from `reset-skyblock.sh` |
+| `.env` | Active world/mode (`MC_MODE`, `MC_LEVEL_NAME`, `MC_LEVEL_TYPE`, `MC_GAMEMODE`). Written by `switch-world.sh`. |
+| `backups/nightly/` | Nightly world archives + `backup.log` (14-day retention) |
+| `backups/Skyblock-*.tar.gz` | Made by full Skyblock resets |
 | `~/traefik-internal/config/conf/external-minecraft.yaml` | TCP routers 19132 → 172.20.100.202:19133 |
 | `*.bak-YYYYMMDD` | Hand-made backups of edited files |
