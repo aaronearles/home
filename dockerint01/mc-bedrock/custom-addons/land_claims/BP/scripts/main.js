@@ -24,11 +24,11 @@ const SIZE = 32;              // claim is SIZE x SIZE blocks
 const MAX_PER_PLAYER = 3;
 const FLAG = "earles:claim_flag";
 const WALL_INSET = 5;         // stone wall this many blocks inside the claim edge
-const WALL_HEIGHT = 2;        // cobblestone walls stacked (1.5 blocks each, can't be jumped)
+const WALL_HEIGHT = 2;        // min blocks above the ground (cobblestone + wall cap; can't be jumped)
 const WALL_BLOCK = "minecraft:cobblestone_wall";
 // Blocks the wall may replace / looks through when finding the ground
-const SOFT = /air|grass$|short_grass|tall_grass|fern|flower|dandelion|poppy|tulip|orchid|allium|bluet|daisy|cornflower|lily_of_the_valley|sapling|bush|dead_bush|snow_layer|vine|leaves|leaf_litter|mushroom$|sweet_berry|azalea$|pink_petals|wildflowers|seagrass|kelp/;
-const PASS_THROUGH = /air|leaves|log|_wood$|vine|snow_layer|leaf_litter|grass$|short_grass|tall_grass|fern|flower|bush|sapling/;
+const SOFT = /^minecraft:(cave_)?air$|grass$|short_grass|tall_grass|fern|flower|dandelion|poppy|tulip|orchid|allium|bluet|daisy|cornflower|lily_of_the_valley|sapling|bush|dead_bush|snow_layer|vine|leaves|leaf_litter|mushroom$|sweet_berry|azalea$|pink_petals|wildflowers|seagrass|kelp/;
+const PASS_THROUGH = /^minecraft:(cave_)?air$|leaves|log|_wood$|vine|snow_layer|leaf_litter|grass$|short_grass|tall_grass|fern|flower|bush|sapling/;
 const FACE = { Up: [0, 1, 0], Down: [0, -1, 0], North: [0, 0, -1], South: [0, 0, 1], East: [1, 0, 0], West: [-1, 0, 0] };
 
 let claims = null;            // cache: [{ id, dim, x1, z1, x2, z2, owner }]
@@ -186,17 +186,39 @@ function groundAt(dim, x, z) {
     return undefined;
 }
 
+// The wall ring as a closed loop (order matters for smoothing): top edge, right edge,
+// bottom edge (backwards), left edge (backwards).
 function wallRing(c) {
     const x1 = c.x1 + WALL_INSET, z1 = c.z1 + WALL_INSET, x2 = c.x2 - WALL_INSET, z2 = c.z2 - WALL_INSET;
     const ring = [];
-    for (let x = x1; x <= x2; x++) ring.push([x, z1], [x, z2]);
-    for (let z = z1 + 1; z < z2; z++) ring.push([x1, z], [x2, z]);
+    for (let x = x1; x <= x2; x++) ring.push([x, z1]);
+    for (let z = z1 + 1; z <= z2; z++) ring.push([x2, z]);
+    for (let x = x2 - 1; x >= x1; x--) ring.push([x, z2]);
+    for (let z = z2 - 1; z > z1; z--) ring.push([x1, z]);
     return ring;
 }
 
-// Remove the claim's wall ring (only cobblestone walls on the ring columns)
+const WALL_BASE = "minecraft:cobblestone";   // solid fill under the cap where the wall stands taller
+const MAX_RISE = 10;                        // never more than this above local ground (ravines)
+let lastWallStats = "";
+
+function wallKey(c) {
+    return `wall:${c.id}`;
+}
+
+// Remove the claim's wall: exactly the blocks we placed (recorded), or - for walls built
+// before recording existed - any cobblestone walls on the ring columns.
 function removeWall(dim, c) {
     let removed = 0;
+    const rec = tryRun(() => world.getDynamicProperty(wallKey(c)));
+    if (typeof rec === "string") {
+        for (const [x, y, z] of JSON.parse(rec)) {
+            const b = tryRun(() => dim.getBlock({ x, y, z }));
+            if (b && (b.typeId === WALL_BLOCK || b.typeId === WALL_BASE)) { tryRun(() => b.setType("minecraft:air")); removed++; }
+        }
+        tryRun(() => world.setDynamicProperty(wallKey(c), undefined));
+        return removed;
+    }
     for (const [x, z] of wallRing(c)) {
         const top = tryRun(() => dim.getTopmostBlock({ x, z }));
         if (!top) continue;
@@ -208,19 +230,71 @@ function removeWall(dim, c) {
     return removed;
 }
 
-// A ring of stone walls WALL_INSET blocks inside the claim, following the terrain.
-// Water columns are skipped (no walls underwater).
+// Water surface above a column's ground, or undefined if it's dry
+function waterSurface(dim, x, z, g) {
+    let y = g + 1, wet = false;
+    for (; y < g + 64; y++) {
+        const t = tryRun(() => dim.getBlock({ x, y, z })?.typeId);
+        if (t === "minecraft:water" || t === "minecraft:flowing_water") wet = true; else break;
+    }
+    return wet ? y - 1 : undefined;
+}
+
+// A ring of stone wall WALL_INSET blocks inside the claim, with a SMOOTH top line:
+//  1. measure the ground under every ring column
+//  2. target top = ground + WALL_HEIGHT, then relax around the loop so neighbouring tops
+//     differ by at most 1 block (dips are raised to meet their neighbours, never lowered,
+//     so the wall is always at least WALL_HEIGHT above its own ground)
+//  3. build cobblestone up from the ground with a cobblestone-wall cap on top
+// Water columns follow the water surface for smoothing but get no blocks (no walls in lakes).
+// Rebuilding replaces the previous wall. Every placed block is recorded for clean removal.
 function buildWall(dim, c) {
-    let placed = 0;
-    for (const [x, z] of wallRing(c)) {
-        const g = groundAt(dim, x, z);
-        if (g === undefined) continue;
-        for (let h = 1; h <= WALL_HEIGHT; h++) {
-            const b = tryRun(() => dim.getBlock({ x, y: g + h, z }));
-            if (b && SOFT.test(b.typeId)) { tryRun(() => b.setType(WALL_BLOCK)); placed++; }
+    removeWall(dim, c);
+    const ring = wallRing(c);
+    const n = ring.length;
+    const ground = new Array(n), wet = new Array(n).fill(false);
+    let last;
+    for (let i = 0; i < n; i++) {
+        const [x, z] = ring[i];
+        let g = groundAt(dim, x, z);
+        if (g !== undefined) {
+            const w = waterSurface(dim, x, z, g);
+            if (w !== undefined) { wet[i] = true; g = w; }
+        }
+        ground[i] = g ?? last;
+        if (ground[i] !== undefined) last = ground[i];
+    }
+    for (let i = 0; i < n; i++) ground[i] ??= last ?? 64;    // fill any leading unknowns
+
+    const top = ground.map((g) => g + WALL_HEIGHT);
+    for (let changed = true, guard = 0; changed && guard < 200; guard++) {
+        changed = false;
+        for (let i = 0; i < n; i++) {
+            const want = Math.min(Math.max(top[i], top[(i + n - 1) % n] - 1, top[(i + 1) % n] - 1), ground[i] + MAX_RISE);
+            if (want !== top[i]) { top[i] = want; changed = true; }
         }
     }
-    return placed;
+
+    const placed = [];
+    for (let i = 0; i < n; i++) {
+        if (wet[i]) continue;
+        const [x, z] = ring[i];
+        for (let y = ground[i] + 1; y <= top[i]; y++) {
+            const b = tryRun(() => dim.getBlock({ x, y, z }));
+            if (!b || !SOFT.test(b.typeId)) continue;
+            if (tryRun(() => { b.setType(y === top[i] ? WALL_BLOCK : WALL_BASE); return true; })) placed.push([x, y, z]);
+        }
+    }
+    tryRun(() => world.setDynamicProperty(wallKey(c), JSON.stringify(placed)));
+    let maxStep = 0, minAbove = Infinity, maxAbove = 0;
+    for (let i = 0; i < n; i++) {
+        maxStep = Math.max(maxStep, Math.abs(top[i] - top[(i + 1) % n]));
+        minAbove = Math.min(minAbove, top[i] - ground[i]);
+        maxAbove = Math.max(maxAbove, top[i] - ground[i]);
+    }
+    lastWallStats = `columns=${n} wet=${wet.filter(Boolean).length} ground=${Math.min(...ground)}..${Math.max(...ground)} ` +
+        `top=${Math.min(...top)}..${Math.max(...top)} maxStep=${maxStep} heightAboveGround=${minAbove}..${maxAbove}`;
+    return placed.length;
 }
 
 function showBorder(dim, c, y) {
@@ -277,13 +351,13 @@ async function menu(player) {
         }
     } else if (action === "wall") {
         const n = buildWall(dim, here);
-        player.sendMessage(`§aBuilt a stone wall (${n} blocks) ${WALL_INSET} blocks inside the edge.`);
+        player.sendMessage(`§aBuilt a stone wall (${n} blocks) ${WALL_INSET} blocks inside the edge. Building it again replaces it.`);
     } else if (action === "border") {
         showBorder(dim, here, Math.floor(player.location.y));
     } else if (action === "remove") {
         const ok = await show(player, new ActionFormData().title("§cRemove claim?")
             .body("Anyone will be able to change this land again.").button("§cYes, remove it").button("Cancel"));
-        if (!ok.canceled && ok.selection === 0) { removeClaim(here); player.sendMessage("§eClaim removed."); }
+        if (!ok.canceled && ok.selection === 0) { removeWall(dim, here); removeClaim(here); player.sendMessage("§eClaim (and its wall) removed."); }
     } else if (action === "trust") {
         const others = world.getAllPlayers().map((p) => p.name).filter((n) => n !== name && !trusted.includes(n));
         if (!others.length) return player.sendMessage("§eNobody else is online to trust right now.");
@@ -323,12 +397,12 @@ system.afterEvents.scriptEventReceive.subscribe((ev) => {
         console.warn(`[claims] trust: ` + JSON.stringify(Object.fromEntries(Object.entries(trust).map(([k, v]) => [k, [...v]]))));
     } else if (cmd === "remove") {
         const c = claims.find((k) => k.id === Number(rest[0]));
-        if (c) { removeClaim(c); console.warn(`[claims] removed #${c.id} (${c.owner})`); } else console.warn(`[claims] no claim #${rest[0]}`);
+        if (c) { removeWall(world.getDimension(c.dim), c); removeClaim(c); console.warn(`[claims] removed #${c.id} (${c.owner}) and its wall`); } else console.warn(`[claims] no claim #${rest[0]}`);
     } else if (cmd === "wall") {
         const c = claims.find((k) => k.id === Number(rest[0]));
         if (!c) { console.warn(`[claims] no claim #${rest[0]}`); return; }
         const n = buildWall(world.getDimension(c.dim), c);
-        console.warn(`[claims] built wall on #${c.id}: ${n} blocks`);
+        console.warn(`[claims] built wall on #${c.id}: ${n} blocks; ${lastWallStats}`);
     } else if (cmd === "unwall") {
         const c = claims.find((k) => k.id === Number(rest[0]));
         if (!c) { console.warn(`[claims] no claim #${rest[0]}`); return; }
@@ -344,7 +418,7 @@ system.afterEvents.scriptEventReceive.subscribe((ev) => {
     } else if (cmd === "removeall") {
         const owner = rest.join(" ");
         const theirs = claims.filter((k) => k.owner === owner);
-        for (const c of theirs) removeClaim(c);
+        for (const c of theirs) { removeWall(world.getDimension(c.dim), c); removeClaim(c); }
         console.warn(`[claims] removed ${theirs.length} claim(s) of ${owner}`);
     } else {
         console.warn("[claims] usage: scriptevent earles:claims list | remove <id> | removeall <owner> | wall <id> | unwall <id> | probe <x> <z>");
