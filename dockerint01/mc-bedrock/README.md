@@ -33,6 +33,7 @@ mc-bedrock/
 ├── ping.py                     # NetherNet status check (GET /v1/join)
 ├── update.sh                   # Updates JAR, pulls images, recreates containers
 ├── commands.txt                # Handy console commands
+├── drill-hole.sh               # 1x1 shaft in front of a player down to y=-50 with water at the bottom
 ├── MCXboxBroadcastStandalone.jar  # Downloaded by update.sh (not in git)
 ├── config/
 │   └── config.yml              # MCXboxBroadcast configuration

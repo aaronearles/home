@@ -119,6 +119,8 @@ Game rules live in the world, so they survive restarts. A full Skyblock reset re
 ```
 
 ### Build helpers (run with a player name or @p)
+- `./drill-hole.sh <player> [bottom_y]` drills a 1×1 shaft one block in front of the player, down to y=-50 (default), with a water source at the bottom to land in. Lava in the 3×3 around the shaft becomes stone; stone floor under the water.
+- The trick behind it, reusable for any "in front of the player" command: `execute as <player> at @s rotated ~ 0 positioned ^ ^ ^1 run <command>` means one block ahead at feet level, ignoring head pitch. `^ ^ ^N` = N blocks ahead.
 `./build-house.sh <player> [wall] [floor]`, `./build-smiley.sh <player>`, `./build-smiley-xl.sh <player>`, `./build-sonic.sh <player> [scale]`, `./spawn-chest.sh <player>` (a chest of netherite gear next to them), `./cycle-time.sh <secs>` / `./cycle-days.sh <secs>` (time-lapse; Ctrl+C to stop).
 
 ## Skyblock resets
