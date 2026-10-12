@@ -25,7 +25,7 @@ declare -A GAMEMODE=([skyblock]=survival [survival]=survival [creative]=creative
 # Cheats permanently disable achievements in a world, so keep them off for survival
 declare -A CHEATS=([skyblock]=true [survival]=false [creative]=true [experimental]=true)
 # Add-ons (dirs under addons/) enabled for a mode's world
-declare -A ADDONS=([experimental]="blasters tnt_destructive")
+declare -A ADDONS=([experimental]="blasters tnt_destructive tornado_tnt")
 
 MC="docker compose exec -T minecraft send-command"
 mc() { $MC "$1" </dev/null >/dev/null; }

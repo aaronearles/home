@@ -1,5 +1,6 @@
 #!/usr/bin/env bash
-# Installs add-ons from addons/<name>/ into the server and enables them for a world.
+# Installs add-ons from addons/<name>/ (downloaded) or custom-addons/<name>/ (our own,
+# in git) into the server and enables them for a world.
 # Usage: ./setup-addons.sh <World> <addon> [addon...]
 #   e.g. ./setup-addons.sh Experimental blasters tnt_destructive
 #
@@ -20,17 +21,18 @@ WORLD="${1:?Usage: $0 <World> <addon> [addon...]}"
 shift
 [[ $# -gt 0 ]] || { echo "Usage: $0 <World> <addon> [addon...]" >&2; exit 1; }
 for a in "$@"; do
-    [[ -d "addons/$a" ]] || { echo "No such add-on: addons/$a (fetch it with fetch-addon.sh)" >&2; exit 1; }
+    [[ -d "addons/$a" || -d "custom-addons/$a" ]] || { echo "No such add-on: $a (not in addons/ or custom-addons/; fetch it with fetch-addon.sh)" >&2; exit 1; }
 done
 
 mkdir -p "data/worlds/$WORLD"
-docker run --rm -i -v "$PWD/addons:/src:ro" -v "$PWD/data:/data" python:3.12-alpine \
+mkdir -p custom-addons
+docker run --rm -i -v "$PWD/addons:/src:ro" -v "$PWD/custom-addons:/custom:ro" -v "$PWD/data:/data" python:3.12-alpine \
     python3 -I - "$WORLD" "$@" <<'EOF'
 import json, os, re, shutil, sys
 world, addons = sys.argv[1], sys.argv[2:]
 bps, rps = [], []
 for a in addons:
-    base = f"/src/{a}"
+    base = f"/src/{a}" if os.path.isdir(f"/src/{a}") else f"/custom/{a}"
     lst = os.path.join(base, "packs.list")
     if os.path.exists(lst):
         rels = [l.strip() for l in open(lst) if l.strip() and not l.startswith("#")]

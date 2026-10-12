@@ -1,0 +1,41 @@
+{
+  "format_version": "1.26.10",
+  "minecraft:block": {
+    "description": {
+      "identifier": "earles:tornado_tnt",
+      "menu_category": {
+        "category": "items"
+      }
+    },
+    "components": {
+      "earles:tornado_tnt": {},
+      "minecraft:geometry": "minecraft:geometry.full_block",
+      "minecraft:material_instances": {
+        "*": {
+          "texture": "earles_tornado_tnt_side",
+          "render_method": "opaque"
+        },
+        "up": {
+          "texture": "earles_tornado_tnt_top",
+          "render_method": "opaque"
+        },
+        "down": {
+          "texture": "earles_tornado_tnt_bottom",
+          "render_method": "opaque"
+        }
+      },
+      "minecraft:destructible_by_mining": {
+        "seconds_to_destroy": 0
+      },
+      "minecraft:destructible_by_explosion": true,
+      "minecraft:map_color": "#3fa9f5",
+      "minecraft:tick": {
+        "interval_range": [
+          4,
+          4
+        ],
+        "looping": true
+      }
+    }
+  }
+}

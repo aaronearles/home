@@ -169,7 +169,7 @@ The server rotates between four worlds:
 | `skyblock` | `Skyblock` | void FLAT | survival (keep inventory ON) | on |
 | `survival` | `Earles2026` | normal | survival | **off** (achievements) |
 | `creative` | `Creative` | normal | creative | on |
-| `experimental` | `Experimental` | normal | creative | on, + add-ons: Blasters, TNT Destructive |
+| `experimental` | `Experimental` | normal | creative | on, + add-ons: Blasters, TNT Destructive, Tornado TNT (ours) |
 
 ```bash
 ./switch-world.sh                 # show the active mode
@@ -185,6 +185,10 @@ The server rotates between four worlds:
 - Older worlds outside the rotation (`PaleGarden`, `DroneWorld`, ...) stay in `data/worlds/`.
 
 ### Add-ons (experimental mode)
+- **Our own add-ons** live in `custom-addons/<name>/{BP,RP}` (in git); `setup-addons.sh` finds them as well as downloaded ones. **Tornado TNT** (`custom-addons/tornado_tnt`, see its README) is on in experimental mode:
+  - `give <player> earles:tornado_tnt 16`
+  - test with `scriptevent earles:tornado <x> <y> <z>`
+  - after script edits: `setup-addons.sh` + `send-command reload`
 - Community add-ons live in `addons/<name>/{BP,RP}`. Where each came from (CurseForge IDs, sha256, review notes) is in `addons/SOURCES.md`.
 - `switch-world.sh experimental` runs `./setup-addons.sh Experimental blasters tnt_destructive`. That copies the packs to `data/{behavior,resource}_packs/addon_<name>` and writes the world's `world_behavior_packs.json` / `world_resource_packs.json`.
 - Check they loaded: the server log after start should show `Pack Stack - [00] Blasters Add-On ...` and `[01] ...TNT Destructive...`. `Pack Stack - None` means the world's pack JSON files are missing.
