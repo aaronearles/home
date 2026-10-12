@@ -56,14 +56,14 @@ Downloaded with `fetch-addon.sh`, hashes pinned in `addons.tsv`. Checks:
 | `spiderman` | v1.0.3 (26.40) | 28 MB | OK | 202 scripts, normal gameplay commands. **Overrides player.json** (BP and RP). |
 | `marvel` | v3.0.1 (26.30) | 30 MB | Caution | Includes Spider-Man and many heroes. **Overrides player.json.** Flight runs `gamemode c` / `gamemode s` / `gamemode a` and `ability mayfly`, so it **switches players' game mode**. It needs the **Education Edition** world toggle for flight. Declares `script_eval` but doesn't use it. |
 | `morphing_bracelet` | v0.3.4 beta (26.50) | 2 MB | OK, solo | Packed in `.brarchive`. Its `eval` only evaluates sound conditions from its own data. The author says it heavily modifies **player.json**, so don't combine it with other add-ons. |
-| `pickup_carry` | v3.1.14 (26.50) | 1 MB | **Hold** | Scripts are **deliberately obfuscated**: encrypted strings, `eval`/`new Function` of runtime-decoded code, anti-debug. Can't be verified. Needs the **Beta APIs** experiment. **Overrides player.json.** |
+| ~~`pickup_carry`~~ | v3.1.14 (26.50) | 1 MB | **Rejected and deleted 2026-10-12. Project 1251469 is blocked in `fetch-addon.sh`** | Scripts are **deliberately obfuscated**: encrypted strings, `eval`/`new Function` of runtime-decoded code, anti-debug. Can't be verified. Needs the **Beta APIs** experiment. **Overrides player.json.** |
 
 ### Can't share a world: player.json overrides
-Only one add-on that replaces the player definition works per world. Those are `cobbledrock`, `marvel`, `spiderman`, `pickup_carry` and `morphing_bracelet`. Blasters and TNT don't override it.
+Only one add-on that replaces the player definition works per world. Those are `cobbledrock`, `marvel`, `spiderman` and `morphing_bracelet`. Blasters and TNT don't override it.
 
 ### Suggested groupings (when the kids are ready)
 - **Experimental (current world):** `blasters`, `tnt_destructive` + `orbital_railgun`, `portal_gun`, `quick_structures`, `immortal_dogs`, `serp_pokedrock`. None of these touch player.json. `tree_physics` works too, but only on newly generated trees.
 - **Pokémon world:** `cobbledrock` alone. It's heavy and owns player.json. Start with `serp_pokedrock` in Experimental to see whether they like it first.
 - **Heroes world:** `spiderman` (simpler), or `marvel` (bigger, needs the Education toggle, flips game modes).
 - **Morph world:** `morphing_bracelet` on its own.
-- **Not enabled:** `pickup_carry`, until there's a reason to trust it.
+- **Rejected:** `pickup_carry` was deleted, and its project is blocked from being fetched again.

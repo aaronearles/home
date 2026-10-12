@@ -18,9 +18,20 @@
 set -euo pipefail
 cd "$(dirname "$0")"
 REG=addons/addons.tsv
+# CurseForge projects we never want (reviewed and rejected - see addons/SOURCES.md)
+BLOCKED_PROJECTS=(
+    1251469   # Pickup & Carry (sirob): obfuscated scripts that eval runtime-decoded code
+)
 
 fetch() {
     local name="$1" project="$2" files="$3" wants="${4:-}"
+    local b
+    for b in "${BLOCKED_PROJECTS[@]}"; do
+        if [[ "$project" == "$b" ]]; then
+            echo "ERROR: CurseForge project $project is blocked (rejected in review, see addons/SOURCES.md)" >&2
+            return 1
+        fi
+    done
     local tmp; tmp=$(mktemp -d)
     trap 'rm -rf -- "${tmp:?}"' RETURN
     IFS='+' read -ra ids <<< "$files"

@@ -190,7 +190,7 @@ The server rotates between four worlds:
 - Check they loaded: the server log after start should show `Pack Stack - [00] Blasters Add-On ...` and `[01] ...TNT Destructive...`. `Pack Stack - None` means the world's pack JSON files are missing.
 - Known harmless warning: `Component 'destructive:tnt_ignite' was not registered in script`. It's a bug in the TNT add-on itself; its redstone ignition works.
 - `TEXTUREPACK_REQUIRED=true`, so players must accept the resource-pack download when joining (otherwise add-on items are invisible).
-- **Saved add-ons:** 13 are in `addons/` (registry `addons/addons.tsv`). Read the per-add-on review and suggested world groupings in `addons/SOURCES.md` **before** enabling any. Only one add-on that overrides `player.json` works per world. `pickup_carry` is on hold (obfuscated code).
+- **Saved add-ons:** 12 are in `addons/` (registry `addons/addons.tsv`). Read the per-add-on review and suggested world groupings in `addons/SOURCES.md` **before** enabling any. Only one add-on that overrides `player.json` works per world. `pickup_carry` was rejected and deleted (obfuscated code); `fetch-addon.sh` refuses its project ID (`BLOCKED_PROJECTS`). Never re-add it.
 - **Multi-pack add-ons** (e.g. CobbleDrock Core + Content) live in `addons/<name>/packs/<pack>/`. An optional `addons/<name>/packs.list` limits which packs `setup-addons.sh` enables (Tree Physics uses this).
 - **Restoring saved add-ons:** `./fetch-addon.sh --all` re-downloads everything in `addons/addons.tsv` and refuses on a sha256 mismatch. Favorites: `blasters`, `tnt_destructive`. Enable them for any world with `./setup-addons.sh <World> blasters tnt_destructive` (takes effect when that world next loads).
 - **Adding or updating an add-on** (ask first):
