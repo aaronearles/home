@@ -115,7 +115,7 @@ The Skyblock world is a FLAT world whose `FlatWorldLayers` in `level.dat` is a s
 | `skyblock` | `Skyblock` | void FLAT | survival | on |
 | `survival` | `Earles2026` | normal | survival | off (keeps achievements) |
 | `creative` | `Creative` | normal | creative | on |
-| `experimental` | `Experimental` | normal | creative | on, + Blasters, TNT Destructive & our Tornado TNT |
+| `experimental` | `Experimental` | normal | creative | on, + Blasters, TNT Destructive, our Tornado TNT, Orbital Railgun, Portal Gun, Quick Craft |
 
 ```bash
 ./switch-world.sh               # show active mode

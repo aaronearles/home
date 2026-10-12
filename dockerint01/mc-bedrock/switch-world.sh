@@ -9,7 +9,7 @@
 #   survival  Earles2026  normal world, survival, cheats OFF (keeps achievements)
 #   creative  Creative    normal world, creative, cheats on (generated on first switch)
 #   experimental  Experimental  normal world, creative, cheats on, with community add-ons
-#             (Blasters, TNT Destructive - see addons/SOURCES.md); add-ons are (re)installed
+#             (see ADDONS below and addons/SOURCES.md); add-ons are (re)installed
 #             by setup-addons.sh on every switch to this mode
 #
 # How it works: docker-compose.yml takes LEVEL_NAME / LEVEL_TYPE / GAMEMODE / ALLOW_CHEATS from .env.
@@ -25,7 +25,7 @@ declare -A GAMEMODE=([skyblock]=survival [survival]=survival [creative]=creative
 # Cheats permanently disable achievements in a world, so keep them off for survival
 declare -A CHEATS=([skyblock]=true [survival]=false [creative]=true [experimental]=true)
 # Add-ons (dirs under addons/) enabled for a mode's world
-declare -A ADDONS=([experimental]="blasters tnt_destructive tornado_tnt")
+declare -A ADDONS=([experimental]="blasters tnt_destructive tornado_tnt orbital_railgun portal_gun quick_structures")
 
 MC="docker compose exec -T minecraft send-command"
 mc() { $MC "$1" </dev/null >/dev/null; }

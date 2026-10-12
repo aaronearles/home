@@ -169,7 +169,7 @@ The server rotates between four worlds:
 | `skyblock` | `Skyblock` | void FLAT | survival (keep inventory ON) | on |
 | `survival` | `Earles2026` | normal | survival | **off** (achievements) |
 | `creative` | `Creative` | normal | creative | on |
-| `experimental` | `Experimental` | normal | creative | on, + add-ons: Blasters, TNT Destructive, Tornado TNT (ours) |
+| `experimental` | `Experimental` | normal | creative | on, + add-ons: Blasters, TNT Destructive, Tornado TNT (ours), Orbital Railgun, Portal Gun, Quick Craft |
 
 ```bash
 ./switch-world.sh                 # show the active mode
@@ -195,6 +195,10 @@ The server rotates between four worlds:
 - Known harmless warning: `Component 'destructive:tnt_ignite' was not registered in script`. It's a bug in the TNT add-on itself; its redstone ignition works.
 - `TEXTUREPACK_REQUIRED=true`, so players must accept the resource-pack download when joining (otherwise add-on items are invisible).
 - **Saved add-ons:** 12 are in `addons/` (registry `addons/addons.tsv`). Read the per-add-on review and suggested world groupings in `addons/SOURCES.md` **before** enabling any. Only one add-on that overrides `player.json` works per world. `pickup_carry` was rejected and deleted (obfuscated code); `fetch-addon.sh` refuses its project ID (`BLOCKED_PROJECTS`). Never re-add it.
+- **Before enabling more add-ons together:**
+  - Check that no two replace the same file. Scripts, texts and the merged texture/sound lists are fine.
+  - Check that no two define the same identifier.
+  - After the restart, read the log for `[Scripting]` / `[Blocks]` errors. An add-on can need a newer script API than this BDS has (Tree Physics did). If so, drop it from `ADDONS` and restart.
 - **Multi-pack add-ons** (e.g. CobbleDrock Core + Content) live in `addons/<name>/packs/<pack>/`. An optional `addons/<name>/packs.list` limits which packs `setup-addons.sh` enables (Tree Physics uses this).
 - **Restoring saved add-ons:** `./fetch-addon.sh --all` re-downloads everything in `addons/addons.tsv` and refuses on a sha256 mismatch. Favorites: `blasters`, `tnt_destructive`. Enable them for any world with `./setup-addons.sh <World> blasters tnt_destructive` (takes effect when that world next loads).
 - **Adding or updating an add-on** (ask first):

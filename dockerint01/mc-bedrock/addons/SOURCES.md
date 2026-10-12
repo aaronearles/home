@@ -49,7 +49,7 @@ Downloaded with `fetch-addon.sh`, hashes pinned in `addons.tsv`. Checks:
 | `orbital_railgun` | v7 (26.30) | 2 MB | OK | Stable script modules. Runs `fill`, `setblock`, `camerashake`, `tickingarea`, `time`. Big terrain damage by design. |
 | `portal_gun` | v1.1.1 (26.40) | 7 MB | OK | Stable modules. Runs `camera`, `setblock`. Author says "under active development". |
 | `quick_structures` | Quick Craft v3.8 | 5 MB | OK | Stable modules (1.12.0). Runs `tickingarea`, `playsound`. |
-| `tree_physics` | 1.0.2 (26.40) | 1 MB | OK | Stable modules. URLs are code comments. `packs.list` enables the main BP+RP only (the Compatible BP is an optional alternative). Only affects **newly generated** trees, so best in a new world. |
+| `tree_physics` | 1.0.2 (26.40) | 1 MB | **Doesn't run on this server (2026-10-12)**. Its script imports `EntitySwingSource`, which BDS 1.26.52's `@minecraft/server` 2.8.0 doesn't export, so the script fails and a block fails to parse. Retry after a BDS update. | Stable modules. URLs are code comments. `packs.list` enables the main BP+RP only (the Compatible BP is an optional alternative). Only affects **newly generated** trees, so best in a new world. |
 | `immortal_dogs` | V1.1 | 1 MB | OK | Data-only behavior pack, no scripts. |
 | `serp_pokedrock` | v1.34.13 Base | 11 MB | OK | Stable modules. Declares the `script_eval` capability but never uses eval. The base download has 1 BP + 1 RP; the page mentions optional extra resource packs (not downloaded). |
 | `cobbledrock` | Full 1.3.2 | 273 MB | OK, heavy | Core + Content (2 BP + 2 RP, ~24k files). Stable modules, ~140 scripts, nothing risky. **Overrides player.json.** Clients must download ~270 MB on first join, which is slow on Xbox. |
@@ -62,7 +62,7 @@ Downloaded with `fetch-addon.sh`, hashes pinned in `addons.tsv`. Checks:
 Only one add-on that replaces the player definition works per world. Those are `cobbledrock`, `marvel`, `spiderman` and `morphing_bracelet`. Blasters and TNT don't override it.
 
 ### Suggested groupings (when the kids are ready)
-- **Experimental (current world):** `blasters`, `tnt_destructive` + `orbital_railgun`, `portal_gun`, `quick_structures`, `immortal_dogs`, `serp_pokedrock`. None of these touch player.json. `tree_physics` works too, but only on newly generated trees.
+- **Experimental (current world):** `blasters`, `tnt_destructive` + `orbital_railgun`, `portal_gun`, `quick_structures`, `immortal_dogs`, `serp_pokedrock`. None of these touch player.json. **Enabled 2026-10-12:** orbital_railgun, portal_gun, quick_structures (plus tornado_tnt, ours); a file/identifier overlap check found no conflicts. `tree_physics` failed to load (see above).
 - **Pokémon world:** `cobbledrock` alone. It's heavy and owns player.json. Start with `serp_pokedrock` in Experimental to see whether they like it first.
 - **Heroes world:** `spiderman` (simpler), or `marvel` (bigger, needs the Education toggle, flips game modes).
 - **Morph world:** `morphing_bracelet` on its own.
