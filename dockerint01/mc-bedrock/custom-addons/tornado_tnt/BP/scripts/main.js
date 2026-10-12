@@ -2,7 +2,8 @@
 // Light the block (flint and steel, fire charge, or redstone) and after a short fuse it
 // becomes a tornado that wanders around, rips up surface blocks, and flings mobs and
 // players into the air. Built with limits so it can't lag the server:
-// short lifetime, capped block-breaking rate, max tornadoes at once, no item drops.
+// short lifetime, capped block-breaking rate, max tornadoes at once, no item drops
+// (flying debris items are removed after a few seconds and capped in number).
 //
 // Console/test: `scriptevent earles:tornado <x> <y> <z>` spawns one in the overworld.
 import { system, world } from "@minecraft/server";
@@ -16,7 +17,12 @@ const HEIGHT = 18;                // funnel height
 const PULL_RADIUS = 8;            // entities inside get sucked in
 const BREAK_RADIUS = 3;           // blocks inside get ripped up
 const BLOCKS_PER_STEP = 3;        // ~30 blocks/s max
-const FUNNEL_PARTICLES = 26;
+const FUNNEL_PARTICLES = 36;      // custom earles:tornado_cloud puffs per step (3 spiral arms)
+const DEBRIS_CHANCE = 0.6;        // share of ripped-up blocks that fly as visible debris
+const MAX_DEBRIS = 40;            // flying debris items alive at once (all tornadoes)
+const DEBRIS_TICKS = 70;          // debris is removed after ~3.5 s so it can't pile up
+const CLOUD = "earles:tornado_cloud";
+const DEBRIS_TAG = "earles_tornado_debris"; // admin cleanup: kill @e[type=item,tag=earles_tornado_debris]
 
 const UNBREAKABLE = new Set([
     "minecraft:air", "minecraft:bedrock", "minecraft:barrier", "minecraft:light_block",
@@ -28,6 +34,10 @@ const UNBREAKABLE = new Set([
 const DONT_FLING = new Set(["minecraft:xp_orb", "minecraft:painting", "minecraft:leash_knot"]);
 
 const tornadoes = [];
+const debris = [];                // { entity, id, expires }
+const usedDims = new Set();       // dimensions that have had tornadoes (for the orphan sweep)
+const lit = new Set();            // blocks currently fusing, so they can't be lit twice
+let tick = 0;
 
 function tryRun(fn) {
     try { return fn(); } catch { return undefined; }
@@ -35,15 +45,23 @@ function tryRun(fn) {
 
 function ignite(block) {
     const dim = block.dimension;
-    const at = { x: block.location.x + 0.5, y: block.location.y + 0.5, z: block.location.z + 0.5 };
-    block.setType("minecraft:air");
+    const { x, y, z } = block.location;
+    const key = `${dim.id}:${x},${y},${z}`;
+    if (lit.has(key)) return;
+    lit.add(key);
+    const at = { x: x + 0.5, y: y + 0.5, z: z + 0.5 };
     tryRun(() => dim.playSound("random.fuse", at));
     let t = 0;
     const id = system.runInterval(() => {
         t += 2;
-        tryRun(() => dim.spawnParticle("minecraft:basic_smoke_particle", { x: at.x, y: at.y + 0.6, z: at.z }));
+        // Block stays put while it fizzes, like vanilla TNT
+        tryRun(() => dim.spawnParticle("minecraft:basic_flame_particle", { x: at.x, y: at.y + 0.55, z: at.z }));
+        tryRun(() => dim.spawnParticle(CLOUD, { x: at.x, y: at.y + 0.8, z: at.z }));
         if (t >= FUSE_TICKS) {
             system.clearRun(id);
+            lit.delete(key);
+            const b = tryRun(() => dim.getBlock({ x, y, z }));
+            if (b?.typeId === "earles:tornado_tnt") tryRun(() => b.setType("minecraft:air"));
             spawnTornado(dim, at);
         }
     }, 2);
@@ -55,6 +73,7 @@ function spawnTornado(dim, at) {
         return;
     }
     tornadoes.push({ dim, x: at.x, y: Math.floor(at.y), z: at.z, age: 0, heading: Math.random() * Math.PI * 2 });
+    usedDims.add(dim.id);
     tryRun(() => dim.playSound("ambient.weather.thunder", at, { volume: 2 }));
 }
 
@@ -79,13 +98,18 @@ function step(tw) {
 
     // Funnel: a rising spiral that widens with height
     for (let i = 0; i < FUNNEL_PARTICLES; i++) {
-        const h = (i / FUNNEL_PARTICLES) * HEIGHT;
-        const r = 0.4 + h * 0.32;
-        const a = tw.age * 0.45 + i * 0.95;
+        const arm = i % 3;
+        const h = Math.random() * HEIGHT;
+        const r = 0.5 + h * 0.3 + Math.random() * 0.4;
+        const a = tw.age * 0.5 - h * 0.35 + arm * (Math.PI * 2 / 3);
         const p = { x: tw.x + Math.cos(a) * r, y: tw.y + h, z: tw.z + Math.sin(a) * r };
-        tryRun(() => dim.spawnParticle("minecraft:basic_smoke_particle", p));
+        tryRun(() => dim.spawnParticle(CLOUD, p));
     }
-    if (tw.age % 8 === 0) {
+    for (let i = 0; i < 6; i++) {                                   // dust skirt at the base
+        const a = Math.random() * Math.PI * 2, r = 1.5 + Math.random() * 2;
+        tryRun(() => dim.spawnParticle(CLOUD, { x: tw.x + Math.cos(a) * r, y: tw.y + 0.3, z: tw.z + Math.sin(a) * r }));
+    }
+    if (tw.age % 10 === 0) {
         tryRun(() => dim.spawnParticle("minecraft:large_explosion", { x: tw.x, y: tw.y + 0.5, z: tw.z }));
     }
     if (tw.age % 40 === 0) {
@@ -125,6 +149,15 @@ function step(tw) {
         if (!top || UNBREAKABLE.has(top.typeId) || top.isLiquid) continue;
         if (top.location.y < tw.y - 4 || top.location.y > tw.y + 8) continue;   // stay near the ground
         const { x, y, z } = top.location;
+        if (debris.length < MAX_DEBRIS && Math.random() < DEBRIS_CHANCE) {
+            const stack = tryRun(() => top.getItemStack(1));
+            const chunk = stack && tryRun(() => dim.spawnItem(stack, { x: x + 0.5, y: y + 1, z: z + 0.5 }));
+            if (chunk) {
+                tryRun(() => chunk.addTag(DEBRIS_TAG));
+                tryRun(() => chunk.applyImpulse({ x: (Math.random() - 0.5) * 0.4, y: 0.5 + Math.random() * 0.3, z: (Math.random() - 0.5) * 0.4 }));
+                debris.push({ entity: chunk, id: chunk.id, expires: tick + DEBRIS_TICKS });
+            }
+        }
         if (destroy) {
             tryRun(() => dim.runCommand(`setblock ${x} ${y} ${z} air destroy`));
         } else {
@@ -135,6 +168,30 @@ function step(tw) {
 }
 
 system.runInterval(() => {
+    tick += STEP;
+    for (let i = debris.length - 1; i >= 0; i--) {
+        const d = debris[i];
+        if (tick < d.expires) continue;
+        // Re-resolve by id: the entity may have been unloaded (flung out of loaded chunks)
+        const e = tryRun(() => (d.entity.isValid ? d.entity : world.getEntity(d.id)));
+        if (e && tryRun(() => e.isValid)) {
+            tryRun(() => e.dimension.spawnParticle(CLOUD, e.location));
+            tryRun(() => e.remove());
+            debris.splice(i, 1);
+        } else if (tick > d.expires + 20 * 60) {
+            debris.splice(i, 1);   // still unloaded after a minute: the orphan sweep will get it later
+        }
+    }
+    // Orphan sweep: tagged debris we're no longer tracking (e.g. its chunk just reloaded)
+    if (tick % 100 === 0) {
+        const tracked = new Set(debris.map((d) => d.id));
+        for (const dimId of usedDims) {
+            const dim = tryRun(() => world.getDimension(dimId));
+            for (const e of tryRun(() => dim.getEntities({ type: "minecraft:item", tags: [DEBRIS_TAG] })) ?? []) {
+                if (!tracked.has(e.id)) tryRun(() => e.remove());
+            }
+        }
+    }
     for (let i = tornadoes.length - 1; i >= 0; i--) {
         const tw = tornadoes[i];
         let alive = tw.age < LIFETIME_TICKS;
