@@ -1,0 +1,354 @@
+{
+  "format_version": "1.26.10",
+  "minecraft:block": {
+    "description": {
+      "identifier": "earles:owner_lever",
+      "menu_category": {
+        "category": "items"
+      },
+      "states": {
+        "earles:on": [
+          false,
+          true
+        ]
+      },
+      "traits": {
+        "minecraft:placement_position": {
+          "enabled_states": [
+            "minecraft:block_face"
+          ]
+        }
+      }
+    },
+    "components": {
+      "earles:owner_lever": {},
+      "minecraft:geometry": "geometry.earles_lever_north_off",
+      "minecraft:material_instances": {
+        "*": {
+          "texture": "earles_lever_off",
+          "render_method": "opaque"
+        }
+      },
+      "minecraft:collision_box": false,
+      "minecraft:selection_box": {
+        "origin": [
+          -3,
+          4,
+          -1
+        ],
+        "size": [
+          6,
+          8,
+          9
+        ]
+      },
+      "minecraft:light_dampening": 0,
+      "minecraft:destructible_by_mining": {
+        "seconds_to_destroy": 0.3
+      },
+      "minecraft:destructible_by_explosion": false,
+      "minecraft:map_color": "#ff7a00"
+    },
+    "permutations": [
+      {
+        "condition": "q.block_state('minecraft:block_face') == 'north' && !q.block_state('earles:on')",
+        "components": {
+          "minecraft:geometry": "geometry.earles_lever_north_off",
+          "minecraft:selection_box": {
+            "origin": [
+              -3,
+              4,
+              -1
+            ],
+            "size": [
+              6,
+              8,
+              9
+            ]
+          }
+        }
+      },
+      {
+        "condition": "q.block_state('minecraft:block_face') == 'north' && q.block_state('earles:on')",
+        "components": {
+          "minecraft:geometry": "geometry.earles_lever_north_on",
+          "minecraft:selection_box": {
+            "origin": [
+              -3,
+              4,
+              -1
+            ],
+            "size": [
+              6,
+              8,
+              9
+            ]
+          },
+          "minecraft:redstone_producer": {
+            "power": 15,
+            "connected_faces": [
+              "north",
+              "south",
+              "east",
+              "west",
+              "up",
+              "down"
+            ],
+            "strongly_powered_face": "south"
+          }
+        }
+      },
+      {
+        "condition": "q.block_state('minecraft:block_face') == 'south' && !q.block_state('earles:on')",
+        "components": {
+          "minecraft:geometry": "geometry.earles_lever_south_off",
+          "minecraft:selection_box": {
+            "origin": [
+              -3,
+              4,
+              -8
+            ],
+            "size": [
+              6,
+              8,
+              9
+            ]
+          }
+        }
+      },
+      {
+        "condition": "q.block_state('minecraft:block_face') == 'south' && q.block_state('earles:on')",
+        "components": {
+          "minecraft:geometry": "geometry.earles_lever_south_on",
+          "minecraft:selection_box": {
+            "origin": [
+              -3,
+              4,
+              -8
+            ],
+            "size": [
+              6,
+              8,
+              9
+            ]
+          },
+          "minecraft:redstone_producer": {
+            "power": 15,
+            "connected_faces": [
+              "north",
+              "south",
+              "east",
+              "west",
+              "up",
+              "down"
+            ],
+            "strongly_powered_face": "north"
+          }
+        }
+      },
+      {
+        "condition": "q.block_state('minecraft:block_face') == 'east' && !q.block_state('earles:on')",
+        "components": {
+          "minecraft:geometry": "geometry.earles_lever_east_off",
+          "minecraft:selection_box": {
+            "origin": [
+              -8,
+              4,
+              -3
+            ],
+            "size": [
+              9,
+              8,
+              6
+            ]
+          }
+        }
+      },
+      {
+        "condition": "q.block_state('minecraft:block_face') == 'east' && q.block_state('earles:on')",
+        "components": {
+          "minecraft:geometry": "geometry.earles_lever_east_on",
+          "minecraft:selection_box": {
+            "origin": [
+              -8,
+              4,
+              -3
+            ],
+            "size": [
+              9,
+              8,
+              6
+            ]
+          },
+          "minecraft:redstone_producer": {
+            "power": 15,
+            "connected_faces": [
+              "north",
+              "south",
+              "east",
+              "west",
+              "up",
+              "down"
+            ],
+            "strongly_powered_face": "west"
+          }
+        }
+      },
+      {
+        "condition": "q.block_state('minecraft:block_face') == 'west' && !q.block_state('earles:on')",
+        "components": {
+          "minecraft:geometry": "geometry.earles_lever_west_off",
+          "minecraft:selection_box": {
+            "origin": [
+              -1,
+              4,
+              -3
+            ],
+            "size": [
+              9,
+              8,
+              6
+            ]
+          }
+        }
+      },
+      {
+        "condition": "q.block_state('minecraft:block_face') == 'west' && q.block_state('earles:on')",
+        "components": {
+          "minecraft:geometry": "geometry.earles_lever_west_on",
+          "minecraft:selection_box": {
+            "origin": [
+              -1,
+              4,
+              -3
+            ],
+            "size": [
+              9,
+              8,
+              6
+            ]
+          },
+          "minecraft:redstone_producer": {
+            "power": 15,
+            "connected_faces": [
+              "north",
+              "south",
+              "east",
+              "west",
+              "up",
+              "down"
+            ],
+            "strongly_powered_face": "east"
+          }
+        }
+      },
+      {
+        "condition": "q.block_state('minecraft:block_face') == 'up' && !q.block_state('earles:on')",
+        "components": {
+          "minecraft:geometry": "geometry.earles_lever_up_off",
+          "minecraft:selection_box": {
+            "origin": [
+              -3,
+              0,
+              -4
+            ],
+            "size": [
+              6,
+              9,
+              8
+            ]
+          }
+        }
+      },
+      {
+        "condition": "q.block_state('minecraft:block_face') == 'up' && q.block_state('earles:on')",
+        "components": {
+          "minecraft:geometry": "geometry.earles_lever_up_on",
+          "minecraft:selection_box": {
+            "origin": [
+              -3,
+              0,
+              -4
+            ],
+            "size": [
+              6,
+              9,
+              8
+            ]
+          },
+          "minecraft:redstone_producer": {
+            "power": 15,
+            "connected_faces": [
+              "north",
+              "south",
+              "east",
+              "west",
+              "up",
+              "down"
+            ],
+            "strongly_powered_face": "down"
+          }
+        }
+      },
+      {
+        "condition": "q.block_state('minecraft:block_face') == 'down' && !q.block_state('earles:on')",
+        "components": {
+          "minecraft:geometry": "geometry.earles_lever_down_off",
+          "minecraft:selection_box": {
+            "origin": [
+              -3,
+              7,
+              -4
+            ],
+            "size": [
+              6,
+              9,
+              8
+            ]
+          }
+        }
+      },
+      {
+        "condition": "q.block_state('minecraft:block_face') == 'down' && q.block_state('earles:on')",
+        "components": {
+          "minecraft:geometry": "geometry.earles_lever_down_on",
+          "minecraft:selection_box": {
+            "origin": [
+              -3,
+              7,
+              -4
+            ],
+            "size": [
+              6,
+              9,
+              8
+            ]
+          },
+          "minecraft:redstone_producer": {
+            "power": 15,
+            "connected_faces": [
+              "north",
+              "south",
+              "east",
+              "west",
+              "up",
+              "down"
+            ],
+            "strongly_powered_face": "up"
+          }
+        }
+      },
+      {
+        "condition": "q.block_state('earles:on')",
+        "components": {
+          "minecraft:material_instances": {
+            "*": {
+              "texture": "earles_lever_on",
+              "render_method": "opaque"
+            }
+          }
+        }
+      }
+    ]
+  }
+}

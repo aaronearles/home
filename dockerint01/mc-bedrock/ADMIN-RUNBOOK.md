@@ -172,8 +172,8 @@ The server rotates between five worlds:
 |---|---|---|---|---|
 | `skyblock` | `Skyblock` | void FLAT | survival (keep inventory ON) | on |
 | `survival` | `Earles2026` | normal | survival | **off** (achievements) |
-| `creative` | `Creative` | normal | creative | on, + Land Claims, Owner Button (ours) |
-| `experimental` | `Experimental` | normal | creative | on, + add-ons: Land Claims, Owner Button (ours), Blasters, TNT Destructive, Tornado TNT (ours), Orbital Railgun, Portal Gun, Quick Craft |
+| `creative` | `Creative` | normal | creative | on, + Land Claims, Owner Button & Lever (ours) |
+| `experimental` | `Experimental` | normal | creative | on, + add-ons: Land Claims, Owner Button & Lever (ours), Blasters, TNT Destructive, Tornado TNT (ours), Orbital Railgun, Portal Gun, Quick Craft |
 | `pokemon` | `Pokemon` | normal | survival (keep inventory ON) | on, + CobbleDrock **Core** (Pokémon, catching, battles, Pokédex, PC). First join downloads a ~270 MB resource pack. |
 
 ```bash
@@ -191,9 +191,9 @@ The server rotates between five worlds:
 - Older worlds outside the rotation (`PaleGarden`, `DroneWorld`, ...) stay in `data/worlds/`. `Pokemon.experiments-test-20261012` is a throwaway test world (experiments on) that can be deleted.
 
 ### Add-ons (experimental mode)
-- **Owner Button** (`custom-addons/owner_button`, see its README) is on in creative and experimental.
-  - An orange button only its owner can press. It powers redstone for 1.5 s and strongly powers the block it's on.
-  - Admin: `scriptevent earles:button list | place <x> <y> <z> <owner> | press <x> <y> <z>`.
+- **Owner Button & Owner Lever** (`custom-addons/owner_button`, see its README) are on in creative and experimental.
+  - Orange button and lever that only their owner can use. The button gives a 1.5 s pulse; the lever toggles and holds power while on. Both strongly power the block they're on.
+  - Admin: `scriptevent earles:button list | place <x> <y> <z> <owner> [lever] | press <x> <y> <z>`.
   - The PIN Keypad was removed 2026-10-12 (the PIN was visible on split-screen).
 - **Land Claims** (`custom-addons/land_claims`, see its README) is on in creative and experimental.
   - Players use the Claim Flag (`give <player> earles:claim_flag`) to claim 32×32 from bedrock to sky, up to 3 each, with trust.

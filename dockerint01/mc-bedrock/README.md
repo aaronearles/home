@@ -115,8 +115,8 @@ The Skyblock world is a FLAT world whose `FlatWorldLayers` in `level.dat` is a s
 |---|---|---|---|---|
 | `skyblock` | `Skyblock` | void FLAT | survival | on |
 | `survival` | `Earles2026` | normal | survival | off (keeps achievements) |
-| `creative` | `Creative` | normal | creative | on, + our Land Claims & Owner Button |
-| `experimental` | `Experimental` | normal | creative | on, + our Land Claims, Owner Button & Tornado TNT, Blasters, TNT Destructive, Orbital Railgun, Portal Gun, Quick Craft |
+| `creative` | `Creative` | normal | creative | on, + our Land Claims & Owner Button/Lever |
+| `experimental` | `Experimental` | normal | creative | on, + our Land Claims, Owner Button/Lever & Tornado TNT, Blasters, TNT Destructive, Orbital Railgun, Portal Gun, Quick Craft |
 | `pokemon` | `Pokemon` | normal | survival, keep inventory | on, + CobbleDrock Core (Pokémon) |
 
 ```bash

@@ -9,6 +9,12 @@
     },
     "earles_button_on": {
       "textures": "textures/blocks/owner_button_on"
+    },
+    "earles_lever_off": {
+      "textures": "textures/blocks/owner_lever_off"
+    },
+    "earles_lever_on": {
+      "textures": "textures/blocks/owner_lever_on"
     }
   }
 }
