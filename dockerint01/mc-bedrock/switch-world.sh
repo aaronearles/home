@@ -27,7 +27,7 @@ declare -A GAMEMODE=([skyblock]=survival [survival]=survival [creative]=creative
 # Cheats permanently disable achievements in a world, so keep them off for survival
 declare -A CHEATS=([skyblock]=true [survival]=false [creative]=true [experimental]=true [pokemon]=true)
 # Add-ons (dirs under addons/) enabled for a mode's world
-declare -A ADDONS=([experimental]="land_claims blasters tnt_destructive tornado_tnt orbital_railgun portal_gun quick_structures" [creative]="land_claims" [pokemon]="cobbledrock")
+declare -A ADDONS=([experimental]="land_claims keypad blasters tnt_destructive tornado_tnt orbital_railgun portal_gun quick_structures" [creative]="land_claims keypad" [pokemon]="cobbledrock")
 # Extra game rules applied after every switch to a mode ("rule value" pairs, ;-separated)
 declare -A RULES=([pokemon]="keepinventory true")
 

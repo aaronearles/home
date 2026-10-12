@@ -1,0 +1,58 @@
+{
+  "format_version": "1.26.10",
+  "minecraft:block": {
+    "description": {
+      "identifier": "earles:keypad",
+      "menu_category": {
+        "category": "items"
+      },
+      "states": {
+        "earles:powered": [
+          false,
+          true
+        ]
+      }
+    },
+    "components": {
+      "earles:keypad": {},
+      "minecraft:geometry": "minecraft:geometry.full_block",
+      "minecraft:material_instances": {
+        "*": {
+          "texture": "earles_keypad",
+          "render_method": "opaque"
+        }
+      },
+      "minecraft:destructible_by_mining": {
+        "seconds_to_destroy": 0.5
+      },
+      "minecraft:destructible_by_explosion": false,
+      "minecraft:map_color": "#5a5f66"
+    },
+    "permutations": [
+      {
+        "condition": "q.block_state('earles:powered')",
+        "components": {
+          "minecraft:material_instances": {
+            "*": {
+              "texture": "earles_keypad_on",
+              "render_method": "opaque"
+            }
+          },
+          "minecraft:light_emission": 7,
+          "minecraft:redstone_producer": {
+            "power": 15,
+            "connected_faces": [
+              "north",
+              "south",
+              "east",
+              "west",
+              "up",
+              "down"
+            ],
+            "strongly_powered_face": "down"
+          }
+        }
+      }
+    ]
+  }
+}

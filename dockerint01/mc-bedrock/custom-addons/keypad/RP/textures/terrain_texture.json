@@ -1,0 +1,14 @@
+{
+  "resource_pack_name": "earles_keypad",
+  "texture_name": "atlas.terrain",
+  "padding": 8,
+  "num_mip_levels": 4,
+  "texture_data": {
+    "earles_keypad": {
+      "textures": "textures/blocks/keypad"
+    },
+    "earles_keypad_on": {
+      "textures": "textures/blocks/keypad_on"
+    }
+  }
+}

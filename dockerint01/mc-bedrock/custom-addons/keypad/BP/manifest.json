@@ -1,0 +1,58 @@
+{
+  "format_version": 2,
+  "header": {
+    "name": "PIN Keypad",
+    "description": "A keypad that powers redstone only with the right PIN - Earles server",
+    "uuid": "2cefc054-31a8-49f2-ad6b-4fae92a36637",
+    "version": [
+      1,
+      0,
+      0
+    ],
+    "min_engine_version": [
+      1,
+      26,
+      50
+    ]
+  },
+  "modules": [
+    {
+      "type": "data",
+      "uuid": "74a44123-5da0-403f-9e0a-c9ed9419a6e3",
+      "version": [
+        1,
+        0,
+        0
+      ]
+    },
+    {
+      "type": "script",
+      "language": "javascript",
+      "uuid": "f13636eb-4aba-4f9b-81b3-57195e40f746",
+      "version": [
+        1,
+        0,
+        0
+      ],
+      "entry": "scripts/main.js"
+    }
+  ],
+  "dependencies": [
+    {
+      "uuid": "0312e34e-d194-4a17-9b05-1dacd8f97978",
+      "version": [
+        1,
+        0,
+        0
+      ]
+    },
+    {
+      "module_name": "@minecraft/server",
+      "version": "2.9.0"
+    },
+    {
+      "module_name": "@minecraft/server-ui",
+      "version": "2.1.0"
+    }
+  ]
+}
