@@ -190,10 +190,11 @@ The server rotates between four worlds:
 - Check they loaded: the server log after start should show `Pack Stack - [00] Blasters Add-On ...` and `[01] ...TNT Destructive...`. `Pack Stack - None` means the world's pack JSON files are missing.
 - Known harmless warning: `Component 'destructive:tnt_ignite' was not registered in script`. It's a bug in the TNT add-on itself; its redstone ignition works.
 - `TEXTUREPACK_REQUIRED=true`, so players must accept the resource-pack download when joining (otherwise add-on items are invisible).
+- **Restoring saved add-ons:** `./fetch-addon.sh --all` re-downloads everything in `addons/addons.tsv` and refuses on a sha256 mismatch. Favorites: `blasters`, `tnt_destructive`. Enable them for any world with `./setup-addons.sh <World> blasters tnt_destructive` (takes effect when that world next loads).
 - **Adding or updating an add-on** (ask first):
-  1. Download it with `curl -sSL -o x.mcaddon "https://www.curseforge.com/api/v1/mods/<project>/files/<file>/download"`. The web pages are Cloudflare-blocked, but this API works; WebFetch can read the page for the IDs.
-  2. Extract it into its own empty dir. Review `manifest.json` (script module versions; avoid `-beta` unless you also enable Beta APIs) and any `scripts/*.js` (look for `@minecraft/server-net`, `eval`, odd `runCommand`s).
-  3. Copy it to `addons/<name>/{BP,RP}`, record it in `SOURCES.md`, and add the name to `ADDONS[...]` in `switch-world.sh`.
+  1. `./fetch-addon.sh <name> <project_id> <file_id>` downloads it, unpacks it safely into `addons/<name>/{BP,RP}` and records it in `addons.tsv`. WebFetch can read the CurseForge page for the IDs.
+  2. Review `manifest.json` (script module versions; avoid `-beta` unless you also enable Beta APIs) and any `scripts/*.js` (look for `@minecraft/server-net`, `eval`, odd `runCommand`s).
+  3. Note the review in `SOURCES.md`, and add the name to `ADDONS[...]` in `switch-world.sh`, or run `setup-addons.sh` for a world.
 - Add-ons with experimental features would also need experiment toggles in `level.dat` (not needed for the current two). Toggling experiments is permanent for a world.
 
 ## Backups

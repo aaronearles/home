@@ -22,7 +22,8 @@ mc-bedrock/
 ├── CLAUDE.md                   # Loads the runbook for Claude Code sessions in this dir
 ├── switch-world.sh             # Rotate between skyblock / survival / creative / experimental
 ├── setup-addons.sh             # Install add-ons from addons/ and enable them for a world
-├── addons/                     # Community add-on packs (not in git) + SOURCES.md (provenance)
+├── fetch-addon.sh              # Download a CurseForge add-on into addons/ (--all restores the registry)
+├── addons/                     # Community add-on packs (not in git) + addons.tsv registry & SOURCES.md (in git)
 ├── reset-skyblock.sh           # Full or live reset of the Skyblock world
 ├── backup-worlds.sh            # Nightly backup of all worlds (14 days) / --snapshot of the active world (7 days)
 ├── join-snapshot.sh            # Watcher: snapshots the active world whenever a player joins

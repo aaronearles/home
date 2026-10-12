@@ -7,11 +7,17 @@ Community add-ons (third-party content, not committed to git). Each one has `BP/
 | `blasters` | [Blasters](https://www.curseforge.com/minecraft-bedrock/addons/blasters) v1.0.0 | arcstarstudios | 1707080 / 8945889 | `Blasters-v1.0.0.mcaddon` | `8b0630783678ea8dbc053202e233c97834e505e2ab5168a1dac1af5dad918ad2` |
 | `tnt_destructive` | [TNT Destructive](https://www.curseforge.com/minecraft-bedrock/addons/tnt-destructive-addon) V17 | LasokarXD | 1421053 / 8774863 | `TNT Destructive Addon.mcaddon` | `1eb875eaafde814a28a6ac70b19a50d86f0900b3b0fe5e3d994dbb58238605f9` |
 
-## Download
+## Saved add-ons and re-fetching
 
-The CurseForge web pages are behind a Cloudflare bot check, but the file download API isn't:
+`addons/addons.tsv` (in git) is the registry: name, CurseForge project ID, file ID, sha256. Each `addons/<name>/` holds the unpacked `BP/`, `RP/` and the `original.mcaddon`.
 
-    curl -sSL -o file.mcaddon "https://www.curseforge.com/api/v1/mods/<project>/files/<file>/download"
+    ./fetch-addon.sh --all                          # restore every registered add-on (hash-checked)
+    ./fetch-addon.sh <name> <project_id> <file_id>  # add a new one (then review it!)
+    ./setup-addons.sh <World> <name> [name...]      # enable add-ons for any world
+
+The CurseForge web pages are behind a Cloudflare bot check, but the download API isn't (`https://www.curseforge.com/api/v1/mods/<project>/files/<file>/download`).
+
+**Favorites** (the kids loved these, 2026-10-12): `blasters`, `tnt_destructive`. They're on in `experimental` mode. To put them in another world: `./setup-addons.sh <World> blasters tnt_destructive`, then restart while that world is active.
 
 ## Review notes (2026-10-12)
 
