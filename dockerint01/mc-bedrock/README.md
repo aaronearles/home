@@ -1,6 +1,6 @@
 # mc-bedrock
 
-Minecraft Bedrock Dedicated Server (BDS) with Xbox Live broadcasting via MCXboxBroadcast, so Xbox and mobile players can join from the friends list. Rotates between three worlds (a hand-built classic **Skyblock**, a normal **survival** world and a **creative** world), with nightly backups.
+Minecraft Bedrock Dedicated Server (BDS) with Xbox Live broadcasting via MCXboxBroadcast, so Xbox and mobile players can join from the friends list. Rotates between four worlds (a hand-built classic **Skyblock**, a normal **survival** world, a **creative** world and an **experimental** creative world with community add-ons), with nightly backups.
 
 > Day-to-day operation (giving items, resets, restarts, troubleshooting) is documented in **[ADMIN-RUNBOOK.md](ADMIN-RUNBOOK.md)**, which is written so an AI agent can operate the server.
 
@@ -20,7 +20,9 @@ mc-bedrock/
 ├── README.md
 ├── ADMIN-RUNBOOK.md            # Operating guide (AI-agent friendly)
 ├── CLAUDE.md                   # Loads the runbook for Claude Code sessions in this dir
-├── switch-world.sh             # Rotate between skyblock / survival / creative
+├── switch-world.sh             # Rotate between skyblock / survival / creative / experimental
+├── setup-addons.sh             # Install add-ons from addons/ and enable them for a world
+├── addons/                     # Community add-on packs (not in git) + SOURCES.md (provenance)
 ├── reset-skyblock.sh           # Full or live reset of the Skyblock world
 ├── backup-worlds.sh            # Nightly backup of all worlds (14 days) / --snapshot of the active world (7 days)
 ├── join-snapshot.sh            # Watcher: snapshots the active world whenever a player joins
@@ -111,6 +113,7 @@ The Skyblock world is a FLAT world whose `FlatWorldLayers` in `level.dat` is a s
 | `skyblock` | `Skyblock` | void FLAT | survival | on |
 | `survival` | `Earles2026` | normal | survival | off (keeps achievements) |
 | `creative` | `Creative` | normal | creative | on |
+| `experimental` | `Experimental` | normal | creative | on, + Blasters & TNT Destructive add-ons |
 
 ```bash
 ./switch-world.sh               # show active mode

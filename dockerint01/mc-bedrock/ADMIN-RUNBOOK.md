@@ -162,13 +162,14 @@ docker compose restart minecraft
 `./update.sh` (ask first if people are playing). Afterwards, run the health checklist.
 
 ### Switch worlds / modes (ask the owner first if people are playing)
-The server rotates between three worlds:
+The server rotates between four worlds:
 
 | Mode | World | Type | Game mode | Cheats |
 |---|---|---|---|---|
 | `skyblock` | `Skyblock` | void FLAT | survival (keep inventory ON) | on |
 | `survival` | `Earles2026` | normal | survival | **off** (achievements) |
 | `creative` | `Creative` | normal | creative | on |
+| `experimental` | `Experimental` | normal | creative | on, + add-ons: Blasters, TNT Destructive |
 
 ```bash
 ./switch-world.sh                 # show the active mode
@@ -182,6 +183,18 @@ The server rotates between three worlds:
 - **Cheats are per mode on purpose.** Loading a world with cheats on permanently costs it achievements, so never load `Earles2026` with `MC_ALLOW_CHEATS=true`. Console commands (`give`, `gamerule`, ...) work without cheats anyway.
 - `Earles2026` may still remember `aearles` as an operator from before. After switching to `survival`, if aearles can change game mode, run `...send-command "deop aearles"` while they're online.
 - Older worlds outside the rotation (`PaleGarden`, `DroneWorld`, ...) stay in `data/worlds/`.
+
+### Add-ons (experimental mode)
+- Community add-ons live in `addons/<name>/{BP,RP}`. Where each came from (CurseForge IDs, sha256, review notes) is in `addons/SOURCES.md`.
+- `switch-world.sh experimental` runs `./setup-addons.sh Experimental blasters tnt_destructive`. That copies the packs to `data/{behavior,resource}_packs/addon_<name>` and writes the world's `world_behavior_packs.json` / `world_resource_packs.json`.
+- Check they loaded: the server log after start should show `Pack Stack - [00] Blasters Add-On ...` and `[01] ...TNT Destructive...`. `Pack Stack - None` means the world's pack JSON files are missing.
+- Known harmless warning: `Component 'destructive:tnt_ignite' was not registered in script`. It's a bug in the TNT add-on itself; its redstone ignition works.
+- `TEXTUREPACK_REQUIRED=true`, so players must accept the resource-pack download when joining (otherwise add-on items are invisible).
+- **Adding or updating an add-on** (ask first):
+  1. Download it with `curl -sSL -o x.mcaddon "https://www.curseforge.com/api/v1/mods/<project>/files/<file>/download"`. The web pages are Cloudflare-blocked, but this API works; WebFetch can read the page for the IDs.
+  2. Extract it into its own empty dir. Review `manifest.json` (script module versions; avoid `-beta` unless you also enable Beta APIs) and any `scripts/*.js` (look for `@minecraft/server-net`, `eval`, odd `runCommand`s).
+  3. Copy it to `addons/<name>/{BP,RP}`, record it in `SOURCES.md`, and add the name to `ADDONS[...]` in `switch-world.sh`.
+- Add-ons with experimental features would also need experiment toggles in `level.dat` (not needed for the current two). Toggling experiments is permanent for a world.
 
 ## Backups
 
@@ -292,6 +305,7 @@ docker compose start minecraft
 | `data/permissions.json` | Operator list (`[]` = none) |
 | `data/keys/server_identity_key.pem` | Server identity (keep it; regenerating forces players to re-trust) |
 | `data/worlds/<name>/` | Worlds (root-owned) |
+| `addons/` | Community add-on packs + `SOURCES.md` (not in git) |
 | `.env` | Active world/mode (`MC_MODE`, `MC_LEVEL_NAME`, `MC_LEVEL_TYPE`, `MC_GAMEMODE`). Written by `switch-world.sh`. |
 | `backups/nightly/` | Nightly world archives + `backup.log` (14-day retention) |
 | `backups/snapshots/` | Per-join snapshots of the active world + `snapshot.log` (7-day retention) |

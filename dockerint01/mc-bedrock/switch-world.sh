@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # Switches the server between the rotation worlds.
-# Usage: ./switch-world.sh [skyblock|survival|creative] [-y]
+# Usage: ./switch-world.sh [skyblock|survival|creative|experimental] [-y]
 #        ./switch-world.sh            (no mode: show the active world)
 #   -y skips the confirmation prompt
 #
@@ -8,6 +8,9 @@
 #   skyblock  Skyblock    void FLAT world, survival, cheats on (built by reset-skyblock.sh if missing)
 #   survival  Earles2026  normal world, survival, cheats OFF (keeps achievements)
 #   creative  Creative    normal world, creative, cheats on (generated on first switch)
+#   experimental  Experimental  normal world, creative, cheats on, with community add-ons
+#             (Blasters, TNT Destructive - see addons/SOURCES.md); add-ons are (re)installed
+#             by setup-addons.sh on every switch to this mode
 #
 # How it works: docker-compose.yml takes LEVEL_NAME / LEVEL_TYPE / GAMEMODE / ALLOW_CHEATS from .env.
 # This rewrites .env, recreates the minecraft container (~80s, incl. the TIME_WAIT
@@ -16,11 +19,13 @@
 set -euo pipefail
 cd "$(dirname "$0")"
 
-declare -A LEVEL=([skyblock]=Skyblock [survival]=Earles2026 [creative]=Creative)
-declare -A TYPE=([skyblock]=FLAT [survival]=DEFAULT [creative]=DEFAULT)
-declare -A GAMEMODE=([skyblock]=survival [survival]=survival [creative]=creative)
+declare -A LEVEL=([skyblock]=Skyblock [survival]=Earles2026 [creative]=Creative [experimental]=Experimental)
+declare -A TYPE=([skyblock]=FLAT [survival]=DEFAULT [creative]=DEFAULT [experimental]=DEFAULT)
+declare -A GAMEMODE=([skyblock]=survival [survival]=survival [creative]=creative [experimental]=creative)
 # Cheats permanently disable achievements in a world, so keep them off for survival
-declare -A CHEATS=([skyblock]=true [survival]=false [creative]=true)
+declare -A CHEATS=([skyblock]=true [survival]=false [creative]=true [experimental]=true)
+# Add-ons (dirs under addons/) enabled for a mode's world
+declare -A ADDONS=([experimental]="blasters tnt_destructive")
 
 MC="docker compose exec -T minecraft send-command"
 mc() { $MC "$1" </dev/null >/dev/null; }
@@ -31,8 +36,8 @@ MODE=""; YES=0
 for a in "$@"; do
     case "$a" in
         -y) YES=1 ;;
-        skyblock|survival|creative) MODE="$a" ;;
-        *) echo "Unknown option: $a (expected skyblock, survival or creative)" >&2; exit 1 ;;
+        skyblock|survival|creative|experimental) MODE="$a" ;;
+        *) echo "Unknown option: $a (expected skyblock, survival, creative or experimental)" >&2; exit 1 ;;
     esac
 done
 
@@ -70,6 +75,12 @@ MC_LEVEL_TYPE=${TYPE[$MODE]}
 MC_GAMEMODE=${GAMEMODE[$MODE]}
 MC_ALLOW_CHEATS=${CHEATS[$MODE]}
 EOF
+
+if [[ -n "${ADDONS[$MODE]:-}" ]]; then
+    echo "Installing add-ons: ${ADDONS[$MODE]}..."
+    # shellcheck disable=SC2086
+    ./setup-addons.sh "${LEVEL[$MODE]}" ${ADDONS[$MODE]}
+fi
 
 echo "Recreating server (waits ~65s for the port to clear)..."
 since=$(date -u +%Y-%m-%dT%H:%M:%SZ)

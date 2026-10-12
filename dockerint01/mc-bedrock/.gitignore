@@ -5,3 +5,4 @@ config/logs/
 backups/
 *.bak-*
 .env
+addons/*/

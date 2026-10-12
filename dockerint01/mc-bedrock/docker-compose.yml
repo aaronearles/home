@@ -26,6 +26,8 @@ services:
       - TRANSPORT=nethernet
       - SERVER_UDP_PORTS=19140-19159
       - ENABLE_LAN_VISIBILITY=true
+      # Make clients download add-on resource packs (otherwise add-on items are invisible)
+      - TEXTUREPACK_REQUIRED=true
       - VIEW_DISTANCE=64
       # - TICK_DISTANCE
       - PLAYER_IDLE_TIMEOUT=0
