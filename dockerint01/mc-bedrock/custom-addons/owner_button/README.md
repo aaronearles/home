@@ -18,6 +18,11 @@ Written 2026-10-12. It replaces the PIN Keypad: the PIN menu showed on screen, s
 - **Anyone else** gets "This is Henry's button" and nothing happens.
 - **Only the owner can break it.** Explosions can't.
 
+## Why have these when claims exist?
+Inside a Land Claim, untrusted players already can't press vanilla buttons, levers or doors. Owner Buttons and Levers add two things:
+- they stay **owner-only even for trusted players**, e.g. Theo can build on your land but not open your vault
+- they work **on unclaimed land** too
+
 ## How it works
 - **Orientation:** the `minecraft:placement_position` trait gives `minecraft:block_face`, the face that was clicked, pointing away from the wall. There are 6 permutations, each with its own geometry (`RP/models/blocks/button_<face>.geo.json`) and selection box, and no collision.
 - **Power:** a pressed permutation adds `minecraft:redstone_producer` (power 15, strongly powering the face toward the wall). Releasing **re-places** the block, because just flipping the state doesn't notify neighbouring redstone.

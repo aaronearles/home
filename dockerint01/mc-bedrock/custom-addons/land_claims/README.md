@@ -32,6 +32,11 @@ Written 2026-10-12. Each player can claim up to **3** squares of **32×32**, fro
 - **Orbital Railgun** and some **TNT Destructive** types edit blocks directly with commands or scripts, not real explosions, so they **may still damage claims**.
 - **Quick Craft** structures placed overlapping a claim.
 - Fire spreading in, lava/water flowing in from outside, pistons, mob griefing (endermen).
+- **Redstone that isn't an interaction** still works in a claim:
+  - pressure plates and tripwires (walking isn't blocked)
+  - **arrows hitting wooden buttons**
+
+  Use stone buttons, levers or Owner Buttons on claimed doors.
 - **The wall stops walking, not everything:** ender pearls, elytra, or a very tall pillar plus a sprint-jump can still get over. Walls skip water.
 - Claims belong to a **gamertag**: if Theo plays as `aearles`, he's using aearles's claims.
 
