@@ -3,7 +3,7 @@
 // becomes a tornado that wanders around, rips up surface blocks, and flings mobs and
 // players into the air. Built with limits so it can't lag the server:
 // short lifetime, capped block-breaking rate, max tornadoes at once, no item drops
-// (flying debris items are removed after a few seconds and capped in number).
+// (flying debris chunks are removed after a few seconds and capped in number).
 //
 // Console/test: `scriptevent earles:tornado <x> <y> <z>` spawns one in the overworld.
 import { system, world } from "@minecraft/server";
@@ -18,11 +18,25 @@ const PULL_RADIUS = 8;            // entities inside get sucked in
 const BREAK_RADIUS = 3;           // blocks inside get ripped up
 const BLOCKS_PER_STEP = 3;        // ~30 blocks/s max
 const FUNNEL_PARTICLES = 36;      // custom earles:tornado_cloud puffs per step (3 spiral arms)
-const DEBRIS_CHANCE = 0.6;        // share of ripped-up blocks that fly as visible debris
-const MAX_DEBRIS = 40;            // flying debris items alive at once (all tornadoes)
+const DEBRIS_CHANCE = 0.7;        // share of ripped-up blocks that fly as visible debris
+const MAX_DEBRIS = 40;            // flying debris chunks alive at once (all tornadoes)
 const DEBRIS_TICKS = 70;          // debris is removed after ~3.5 s so it can't pile up
 const CLOUD = "earles:tornado_cloud";
-const DEBRIS_TAG = "earles_tornado_debris"; // admin cleanup: kill @e[type=item,tag=earles_tornado_debris]
+const DEBRIS = "earles:tornado_debris";   // spinning half-block chunk (can't be picked up); admin cleanup: kill @e[type=earles:tornado_debris]
+// Debris look, matched by block id (index = entity property earles:kind, see RP render controller)
+const KINDS = [
+    [/grass_block|grass_path|podzol|mycelium/, 1],
+    [/leaves/, 5],
+    [/log|_wood|stem|hyphae/, 4],
+    [/planks|stairs|slab|fence|door|bookshelf|crafting_table|chest/, 6],
+    [/cobble/, 7],
+    [/sand|gravel/, 3],
+    [/dirt|farmland|mud|clay|snow/, 0],
+];
+function debrisKind(typeId) {
+    for (const [re, k] of KINDS) if (re.test(typeId)) return k;
+    return 2;   // stone-ish
+}
 
 const UNBREAKABLE = new Set([
     "minecraft:air", "minecraft:bedrock", "minecraft:barrier", "minecraft:light_block",
@@ -150,10 +164,10 @@ function step(tw) {
         if (top.location.y < tw.y - 4 || top.location.y > tw.y + 8) continue;   // stay near the ground
         const { x, y, z } = top.location;
         if (debris.length < MAX_DEBRIS && Math.random() < DEBRIS_CHANCE) {
-            const stack = tryRun(() => top.getItemStack(1));
-            const chunk = stack && tryRun(() => dim.spawnItem(stack, { x: x + 0.5, y: y + 1, z: z + 0.5 }));
+            const kind = debrisKind(top.typeId);
+            const chunk = tryRun(() => dim.spawnEntity(DEBRIS, { x: x + 0.5, y: y + 0.6, z: z + 0.5 }));
             if (chunk) {
-                tryRun(() => chunk.addTag(DEBRIS_TAG));
+                tryRun(() => chunk.setProperty("earles:kind", kind));
                 tryRun(() => chunk.applyImpulse({ x: (Math.random() - 0.5) * 0.4, y: 0.5 + Math.random() * 0.3, z: (Math.random() - 0.5) * 0.4 }));
                 debris.push({ entity: chunk, id: chunk.id, expires: tick + DEBRIS_TICKS });
             }
@@ -187,7 +201,7 @@ system.runInterval(() => {
         const tracked = new Set(debris.map((d) => d.id));
         for (const dimId of usedDims) {
             const dim = tryRun(() => world.getDimension(dimId));
-            for (const e of tryRun(() => dim.getEntities({ type: "minecraft:item", tags: [DEBRIS_TAG] })) ?? []) {
+            for (const e of tryRun(() => dim.getEntities({ type: DEBRIS })) ?? []) {
                 if (!tracked.has(e.id)) tryRun(() => e.remove());
             }
         }

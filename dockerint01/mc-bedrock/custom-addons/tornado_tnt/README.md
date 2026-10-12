@@ -7,8 +7,7 @@ Written 2026-10-12 for Henry and Theo. Block `earles:tornado_tnt`: a sky-blue TN
 - **What it does:**
   - It wanders across the ground for 30 s.
   - A funnel of big grey-brown cloud puffs (custom particle `earles:tornado_cloud`, in `RP/particles/`) rises 18 blocks in three twisting arms, with a dust skirt at the base.
-  - It rips up surface blocks within 3 blocks (max ~30/s). ~60% of them fly as visible debris items that get caught in the funnel.
-  - Debris is tagged `earles_tornado_debris`, removed after ~3.5 s, and capped at 40 at once. A 5 s sweep removes tagged debris that was flung into unloaded chunks once they reload. Manual cleanup: `kill @e[type=item,tag=earles_tornado_debris]`.
+  - It rips up surface blocks within 3 blocks (max ~30/s). ~70% fly as **debris**: entity `earles:tornado_debris`, a spinning half-block cube textured to match what was ripped up (dirt, grass, stone, sand, log, leaves, planks, cobblestone; entity property `earles:kind`). Debris can't be picked up or damaged. It's removed after ~3.5 s and capped at 40 at once; a 5 s sweep removes debris flung into unloaded chunks once they reload. Manual cleanup: `kill @e[type=earles:tornado_debris]`.
   - It sucks in mobs and players within 8 blocks, spins them, lifts them up to ~70% of the funnel height and throws them out.
   - Players get slow falling so they land safely; mobs take fall damage.
 - **Limits:**
@@ -28,7 +27,8 @@ After editing:
 
 ## Gotchas found while building
 
-- Resource-pack changes (particles, textures) need a manifest **version bump** (now 1.1.0) so clients re-download, plus a server restart.
+- Resource-pack changes (particles, textures) need a manifest **version bump** (now 1.2.0) so clients re-download, plus a server restart.
+- v1.1 used dropped items as debris. They're tiny, and players caught in the funnel picked them up, so blocks seemed to just vanish. v1.2 uses a custom entity instead.
 - Debris flung outside loaded chunks freezes there and can't be removed until the chunk loads, hence the tag + orphan sweep.
 - The vanilla smoke particles (`basic_smoke_particle`) are too small and faint to read as a tornado. The custom billboard particle reuses the vanilla smoke flipbook at ~10× size.
 

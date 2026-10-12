@@ -1,0 +1,30 @@
+{
+  "format_version": "1.8.0",
+  "render_controllers": {
+    "controller.render.earles_tornado_debris": {
+      "arrays": {
+        "textures": {
+          "Array.kinds": [
+            "Texture.dirt",
+            "Texture.grass",
+            "Texture.stone",
+            "Texture.sand",
+            "Texture.log",
+            "Texture.leaves",
+            "Texture.planks",
+            "Texture.cobble"
+          ]
+        }
+      },
+      "geometry": "Geometry.default",
+      "materials": [
+        {
+          "*": "Material.default"
+        }
+      ],
+      "textures": [
+        "Array.kinds[q.property('earles:kind')]"
+      ]
+    }
+  }
+}

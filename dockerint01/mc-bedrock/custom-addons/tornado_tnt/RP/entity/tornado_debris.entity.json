@@ -1,0 +1,35 @@
+{
+  "format_version": "1.10.0",
+  "minecraft:client_entity": {
+    "description": {
+      "identifier": "earles:tornado_debris",
+      "materials": {
+        "default": "entity_alphatest"
+      },
+      "textures": {
+        "dirt": "textures/blocks/dirt",
+        "grass": "textures/blocks/grass_side_carried",
+        "stone": "textures/blocks/stone",
+        "sand": "textures/blocks/sand",
+        "log": "textures/blocks/log_oak",
+        "leaves": "textures/blocks/leaves_oak_carried",
+        "planks": "textures/blocks/planks_oak",
+        "cobble": "textures/blocks/cobblestone"
+      },
+      "geometry": {
+        "default": "geometry.earles_tornado_debris"
+      },
+      "render_controllers": [
+        "controller.render.earles_tornado_debris"
+      ],
+      "animations": {
+        "spin": "animation.earles_tornado_debris.spin"
+      },
+      "scripts": {
+        "animate": [
+          "spin"
+        ]
+      }
+    }
+  }
+}
