@@ -1,9 +1,9 @@
 {
   "format_version": 2,
   "header": {
-    "name": "PIN Keypad",
-    "description": "A keypad that powers redstone only with the right PIN - Earles server",
-    "uuid": "2cefc054-31a8-49f2-ad6b-4fae92a36637",
+    "name": "Owner Button",
+    "description": "An orange button only its owner can press - Earles server",
+    "uuid": "61cb9b77-8df2-4d30-855e-e0f6f92d13ba",
     "version": [
       1,
       0,
@@ -18,7 +18,7 @@
   "modules": [
     {
       "type": "data",
-      "uuid": "74a44123-5da0-403f-9e0a-c9ed9419a6e3",
+      "uuid": "c5f3b4e9-5025-4a48-a472-a0efa540a444",
       "version": [
         1,
         0,
@@ -28,7 +28,7 @@
     {
       "type": "script",
       "language": "javascript",
-      "uuid": "f13636eb-4aba-4f9b-81b3-57195e40f746",
+      "uuid": "1ac633d2-90aa-4eeb-8671-94df1228d753",
       "version": [
         1,
         0,
@@ -39,7 +39,7 @@
   ],
   "dependencies": [
     {
-      "uuid": "0312e34e-d194-4a17-9b05-1dacd8f97978",
+      "uuid": "5a271252-97ea-40c2-ac62-e52e5f8f3e49",
       "version": [
         1,
         0,
@@ -49,10 +49,6 @@
     {
       "module_name": "@minecraft/server",
       "version": "2.9.0"
-    },
-    {
-      "module_name": "@minecraft/server-ui",
-      "version": "2.1.0"
     }
   ]
 }

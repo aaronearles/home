@@ -1,6 +1,6 @@
 {
   "format_version": "1.21.40",
-  "earles:keypad": {
+  "earles:owner_button": {
     "sound": "stone"
   }
 }
