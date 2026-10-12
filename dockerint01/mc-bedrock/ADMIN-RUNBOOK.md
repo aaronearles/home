@@ -269,6 +269,22 @@ Read the results:
   - `TRANSPORT TYPE ERROR` should no longer appear
   - `0 blocks filled`
 
+### "The game is crawling" (lag)
+1. **Server speed (TPS):** run `time query gametime` twice, 10 seconds apart, and divide the difference by the elapsed seconds. **20 = full speed.** Below ~15, the server is struggling. At 20 while it still feels slow, the lag is on the client (Xbox/iPhone rendering).
+2. **Entity count:** `testfor @e` lists every loaded entity. Count it with Python (the list is huge). Explosions leave hundreds of dropped items, arrows and XP orbs that load **both** server and client.
+3. **Clean up:**
+   - `kill @e[type=item]`, `kill @e[type=arrow]`, `kill @e[type=xp_orb]`
+   - add-on TNT that's still lit, e.g. `kill @e[type=destructive:tnt_duplicator_ignited]`. The duplicator TNT copies itself, which is the worst offender.
+   - Never `kill @e` without a type: it kills players and pets.
+4. **Prevent it** (creative worlds): `gamerule dotiledrops false`, so blown-up blocks vanish instead of becoming item entities. It's already set in `Experimental`, but **not** carried over if that world is recreated.
+5. **Also check:**
+   - `docker stats --no-stream minecraft_itzg`
+   - `uptime` (12 cores; load under ~4 is fine)
+   - the log for `[Scripting]` errors. TNT Destructive spams harmless `InvalidEntityError`s during explosions.
+6. **Heavier fixes (ask first, need a restart):**
+   - Lower `VIEW_DISTANCE` (currently 64 chunks, which is very high) to 16-24.
+   - Raise `MAX_THREADS` (currently 4).
+
 ### Seeing what a device is actually doing (advanced)
 Packet capture without sudo, using a throwaway container on the host network:
 ```bash
