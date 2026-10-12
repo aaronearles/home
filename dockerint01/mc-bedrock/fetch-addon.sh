@@ -1,81 +1,109 @@
 #!/usr/bin/env bash
-# Downloads a CurseForge Bedrock add-on and unpacks it into addons/<name>/{BP,RP},
-# keeping the original .mcaddon as addons/<name>/original.mcaddon.
-# Usage: ./fetch-addon.sh <name> <project_id> <file_id> [expected_sha256]
-#   e.g. ./fetch-addon.sh blasters 1707080 8945889 8b0630...
-#   ./fetch-addon.sh --all      re-fetch everything listed in addons/addons.tsv
+# Downloads a CurseForge Bedrock add-on and unpacks it into addons/<name>/, keeping
+# the original download(s) as addons/<name>/original-<file_id>.<ext>.
+# Usage: ./fetch-addon.sh <name> <project_id> <file_id>[+<file_id>...] [sha256[+sha256...]]
+#   e.g. ./fetch-addon.sh blasters 1707080 8945889
+#        ./fetch-addon.sh pickup_carry 1251469 8896058+8896059     (BP and RP are separate files)
+#   ./fetch-addon.sh --all      re-fetch everything listed in addons/addons.tsv (hash-checked)
 #
-# Find the IDs on the add-on's CurseForge page: project ID in the sidebar, file ID in
-# the download link (/download/<file_id>). The web pages are behind Cloudflare, but the
-# download API below isn't.
-# A new add-on is recorded in addons/addons.tsv. Then REVIEW it (manifest.json and
-# scripts/*.js, see addons/SOURCES.md) before enabling it with setup-addons.sh.
+# Layout: an add-on with one behavior pack and/or one resource pack is unpacked to
+# addons/<name>/BP and addons/<name>/RP. One with more packs (e.g. Core + Content) goes
+# to addons/<name>/packs/<pack>/. setup-addons.sh enables every pack found, or only those
+# listed in addons/<name>/packs.list if that file exists.
+#
+# Find the IDs on the CurseForge page: project ID in the sidebar, file ID in the download
+# link (/download/<file_id>). The web pages are behind Cloudflare; the download API isn't.
+# New add-ons are recorded in addons/addons.tsv. Then REVIEW them (manifests, scripts,
+# player.json overrides, experiments; see addons/SOURCES.md) before enabling any.
 set -euo pipefail
 cd "$(dirname "$0")"
 REG=addons/addons.tsv
 
 fetch() {
-    local name="$1" project="$2" file="$3" want="${4:-}"
+    local name="$1" project="$2" files="$3" wants="${4:-}"
     local tmp; tmp=$(mktemp -d)
     trap 'rm -rf -- "${tmp:?}"' RETURN
-    echo "Downloading $name (project $project, file $file)..."
-    curl -fsSL -A 'Mozilla/5.0' -o "$tmp/a.mcaddon" \
-        "https://www.curseforge.com/api/v1/mods/$project/files/$file/download"
-    local got; got=$(sha256sum "$tmp/a.mcaddon" | cut -d' ' -f1)
-    if [[ -n "$want" && "$got" != "$want" ]]; then
-        echo "ERROR: sha256 mismatch for $name (got $got, expected $want) - not installing" >&2
-        return 1
-    fi
-    # Unpack safely (no paths escaping the dir), sort packs into BP/RP by manifest module type
-    python3 -I - "$tmp/a.mcaddon" "$tmp/x" <<'EOF'
-import json, os, shutil, sys, zipfile, io
-src, out = sys.argv[1:3]
-def safe_extract(zf, dest):
-    for i in zf.infolist():
+    IFS='+' read -ra ids <<< "$files"
+    IFS='+' read -ra want <<< "$wants"
+    local shas=() i=0
+    for id in "${ids[@]}"; do
+        echo "Downloading $name (project $project, file $id)..."
+        curl -fsSL -A 'Mozilla/5.0' -o "$tmp/$id.bin" \
+            "https://www.curseforge.com/api/v1/mods/$project/files/$id/download"
+        local got; got=$(sha256sum "$tmp/$id.bin" | cut -d' ' -f1)
+        if [[ -n "${want[$i]:-}" && "$got" != "${want[$i]}" ]]; then
+            echo "ERROR: sha256 mismatch for $name file $id (got $got, expected ${want[$i]}) - not installing" >&2
+            return 1
+        fi
+        shas+=("$got"); i=$((i + 1))
+    done
+
+    # Unpack safely (no paths escaping the dir, size cap, nested .mcpack/.mcaddon),
+    # then sort packs by manifest module type
+    python3 -I - "$tmp" "${ids[@]}" <<'EOF'
+import json, os, re, shutil, sys, zipfile
+tmp, ids = sys.argv[1], sys.argv[2:]
+raw = os.path.join(tmp, "raw")
+def safe_extract(path, dest):
+    z = zipfile.ZipFile(path)
+    if sum(i.file_size for i in z.infolist()) > 2_000_000_000:
+        sys.exit(f"archive too large: {path}")
+    for i in z.infolist():
         p = os.path.normpath(i.filename)
         if p.startswith("..") or os.path.isabs(p):
             sys.exit(f"unsafe path in archive: {i.filename}")
-    zf.extractall(dest)
-z = zipfile.ZipFile(src)
-safe_extract(z, out + "/raw")
-# .mcaddon may contain nested .mcpack zips
-for root, _, files in os.walk(out + "/raw"):
-    for f in files:
-        if f.lower().endswith(".mcpack"):
-            safe_extract(zipfile.ZipFile(os.path.join(root, f)), os.path.join(root, f[:-7]))
-found = {}
-for root, _, files in os.walk(out + "/raw"):
-    if "manifest.json" in files:
-        m = json.load(open(os.path.join(root, "manifest.json")))
-        types = {mod.get("type") for mod in m.get("modules", [])}
-        kind = "RP" if types == {"resources"} else "BP"
-        if kind in found:
-            sys.exit(f"more than one {kind} pack found - handle this add-on manually")
-        found[kind] = root
-for kind, root in found.items():
-    shutil.move(root, os.path.join(out, kind))
-print("packs:", ", ".join(sorted(found)) or "none")
-if not found: sys.exit("no manifest.json found")
+    z.extractall(dest)
+for fid in ids:
+    safe_extract(os.path.join(tmp, f"{fid}.bin"), os.path.join(raw, fid))
+again = True
+while again:
+    again = False
+    for r, _, fs in os.walk(raw):
+        for f in fs:
+            if f.lower().endswith((".mcpack", ".mcaddon", ".zip")):
+                p = os.path.join(r, f)
+                safe_extract(p, os.path.join(r, re.sub(r"\.\w+$", "", f) + "__x"))
+                os.remove(p); again = True
+packs = []
+for r, dirs, fs in os.walk(raw):
+    if "manifest.json" in fs:
+        t = re.sub(r"^\s*//.*$", "", open(os.path.join(r, "manifest.json"), encoding="utf-8").read(), flags=re.M)
+        types = {m.get("type") for m in json.loads(t).get("modules", [])}
+        packs.append(("RP" if types == {"resources"} else "BP", r))
+        dirs[:] = []          # don't descend into a pack
+if not packs:
+    sys.exit("no manifest.json found")
+kinds = [k for k, _ in packs]
+out = os.path.join(tmp, "out")
+if kinds.count("BP") <= 1 and kinds.count("RP") <= 1:
+    for k, r in packs:
+        shutil.move(r, os.path.join(out, k))
+else:
+    for k, r in packs:
+        sub = re.sub(r"[^A-Za-z0-9_.-]+", "_", os.path.basename(r).removesuffix("__x")).strip("_") or k
+        shutil.move(r, os.path.join(out, "packs", sub))
+for k, r in packs:
+    print(f"  {k}: {os.path.relpath(r, raw)}")
 EOF
     mkdir -p "addons/$name"
-    rm -rf -- "addons/$name/BP" "addons/$name/RP"
-    [[ -d "$tmp/x/BP" ]] && mv "$tmp/x/BP" "addons/$name/BP"
-    [[ -d "$tmp/x/RP" ]] && mv "$tmp/x/RP" "addons/$name/RP"
-    cp "$tmp/a.mcaddon" "addons/$name/original.mcaddon"
-    # Record (or update) in the registry
+    rm -rf -- "addons/$name/BP" "addons/$name/RP" "addons/$name/packs"
+    rm -f -- addons/"$name"/original*
+    cp -a "$tmp/out/." "addons/$name/"
+    for id in "${ids[@]}"; do cp "$tmp/$id.bin" "addons/$name/original-$id.zip"; done
+
     touch "$REG"
     grep -v "^$name	" "$REG" > "$REG.new" || true
-    printf '%s\t%s\t%s\t%s\n' "$name" "$project" "$file" "$got" >> "$REG.new"
+    printf '%s\t%s\t%s\t%s\n' "$name" "$project" "$files" "$(IFS=+; echo "${shas[*]}")" >> "$REG.new"
     sort -o "$REG" "$REG.new"; rm -f "$REG.new"
-    echo "OK: addons/$name (sha256 $got)"
+    echo "OK: addons/$name"
 }
 
 if [[ "${1:-}" == "--all" ]]; then
-    while IFS=$'\t' read -r name project file sha; do
+    while IFS=$'\t' read -r name project files sha; do
         [[ -z "$name" || "$name" == \#* ]] && continue
-        fetch "$name" "$project" "$file" "$sha"
+        fetch "$name" "$project" "$files" "$sha"
     done < "$REG"
 else
-    [[ $# -ge 3 ]] || { sed -n '2,12p' "$0"; exit 1; }
+    [[ $# -ge 3 ]] || { sed -n '2,20p' "$0"; exit 1; }
     fetch "$@"
 fi
