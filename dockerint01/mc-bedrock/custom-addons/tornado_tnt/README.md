@@ -8,6 +8,7 @@ Written 2026-10-12 for Henry and Theo. Block `earles:tornado_tnt`: a sky-blue TN
   - It wanders across the ground for 30 s.
   - A funnel of big grey-brown cloud puffs (custom particle `earles:tornado_cloud`, in `RP/particles/`) rises 18 blocks in three twisting arms, with a dust skirt at the base.
   - It rips up surface blocks within 3 blocks (max ~30/s). ~70% fly as **debris**: entity `earles:tornado_debris`, a spinning half-block cube textured to match what was ripped up (dirt, grass, stone, sand, log, leaves, planks, cobblestone; entity property `earles:kind`). Debris can't be picked up or damaged. It's removed after ~3.5 s and capped at 40 at once; a 5 s sweep removes debris flung into unloaded chunks once they reload. Manual cleanup: `kill @e[type=earles:tornado_debris]`.
+  - It skips land claimed with the Land Claims add-on (reads the `earles_claims` scoreboard every 2 s).
   - It sucks in mobs and players within 8 blocks, spins them, lifts them up to ~70% of the funnel height and throws them out.
   - Players get slow falling so they land safely; mobs take fall damage.
 - **Limits:**

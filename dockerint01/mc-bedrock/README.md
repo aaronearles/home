@@ -23,7 +23,7 @@ mc-bedrock/
 ├── switch-world.sh             # Rotate between skyblock / survival / creative / experimental
 ├── setup-addons.sh             # Install add-ons from addons/ and enable them for a world
 ├── fetch-addon.sh              # Download a CurseForge add-on into addons/ (--all restores the registry)
-├── custom-addons/              # Our own add-ons (in git), e.g. tornado_tnt
+├── custom-addons/              # Our own add-ons (in git): tornado_tnt, land_claims
 ├── addons/                     # Community add-on packs (not in git) + addons.tsv registry & SOURCES.md (in git)
 ├── reset-skyblock.sh           # Full or live reset of the Skyblock world
 ├── backup-worlds.sh            # Nightly backup of all worlds (14 days) / --snapshot of the active world (7 days)
@@ -114,8 +114,8 @@ The Skyblock world is a FLAT world whose `FlatWorldLayers` in `level.dat` is a s
 |---|---|---|---|---|
 | `skyblock` | `Skyblock` | void FLAT | survival | on |
 | `survival` | `Earles2026` | normal | survival | off (keeps achievements) |
-| `creative` | `Creative` | normal | creative | on |
-| `experimental` | `Experimental` | normal | creative | on, + Blasters, TNT Destructive, our Tornado TNT, Orbital Railgun, Portal Gun, Quick Craft |
+| `creative` | `Creative` | normal | creative | on, + our Land Claims |
+| `experimental` | `Experimental` | normal | creative | on, + our Land Claims & Tornado TNT, Blasters, TNT Destructive, Orbital Railgun, Portal Gun, Quick Craft |
 | `pokemon` | `Pokemon` | normal | survival, keep inventory | on, + CobbleDrock Core (Pokémon) |
 
 ```bash

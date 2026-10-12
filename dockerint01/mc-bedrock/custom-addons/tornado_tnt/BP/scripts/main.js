@@ -48,6 +48,20 @@ const UNBREAKABLE = new Set([
 const DONT_FLING = new Set(["minecraft:xp_orb", "minecraft:painting", "minecraft:leash_knot"]);
 
 const tornadoes = [];
+// Land Claims add-on registry (scoreboard "earles_claims", fake players "c|id|dim|x1|z1|x2|z2|owner").
+// Claimed land is never ripped up. Refreshed every 2 s.
+let claimBoxes = [];
+function refreshClaims() {
+    const obj = tryRun(() => world.scoreboard.getObjective("earles_claims"));
+    claimBoxes = [];
+    for (const p of tryRun(() => obj?.getParticipants()) ?? []) {
+        const f = p.displayName.split("|");
+        if (f[0] === "c" && f.length >= 8) claimBoxes.push({ dim: f[2], x1: +f[3], z1: +f[4], x2: +f[5], z2: +f[6] });
+    }
+}
+function claimed(dimId, x, z) {
+    return claimBoxes.some((c) => c.dim === dimId && x >= c.x1 && x <= c.x2 && z >= c.z1 && z <= c.z2);
+}
 const debris = [];                // { entity, id, expires }
 const usedDims = new Set();       // dimensions that have had tornadoes (for the orphan sweep)
 const lit = new Set();            // blocks currently fusing, so they can't be lit twice
@@ -161,6 +175,7 @@ function step(tw) {
         const bx = Math.floor(tw.x + Math.cos(a) * r), bz = Math.floor(tw.z + Math.sin(a) * r);
         const top = tryRun(() => dim.getTopmostBlock({ x: bx, z: bz }));
         if (!top || UNBREAKABLE.has(top.typeId) || top.isLiquid) continue;
+        if (claimed(dim.id, bx, bz)) continue;   // Land Claims: hands off claimed land
         if (top.location.y < tw.y - 4 || top.location.y > tw.y + 8) continue;   // stay near the ground
         const { x, y, z } = top.location;
         if (debris.length < MAX_DEBRIS && Math.random() < DEBRIS_CHANCE) {
@@ -183,6 +198,7 @@ function step(tw) {
 
 system.runInterval(() => {
     tick += STEP;
+    if (tick % 40 === 0) refreshClaims();
     for (let i = debris.length - 1; i >= 0; i--) {
         const d = debris[i];
         if (tick < d.expires) continue;

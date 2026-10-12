@@ -168,8 +168,8 @@ The server rotates between five worlds:
 |---|---|---|---|---|
 | `skyblock` | `Skyblock` | void FLAT | survival (keep inventory ON) | on |
 | `survival` | `Earles2026` | normal | survival | **off** (achievements) |
-| `creative` | `Creative` | normal | creative | on |
-| `experimental` | `Experimental` | normal | creative | on, + add-ons: Blasters, TNT Destructive, Tornado TNT (ours), Orbital Railgun, Portal Gun, Quick Craft |
+| `creative` | `Creative` | normal | creative | on, + Land Claims (ours) |
+| `experimental` | `Experimental` | normal | creative | on, + add-ons: Land Claims (ours), Blasters, TNT Destructive, Tornado TNT (ours), Orbital Railgun, Portal Gun, Quick Craft |
 | `pokemon` | `Pokemon` | normal | survival (keep inventory ON) | on, + CobbleDrock **Core** (Pokémon, catching, battles, Pokédex, PC). First join downloads a ~270 MB resource pack. |
 
 ```bash
@@ -187,6 +187,10 @@ The server rotates between five worlds:
 - Older worlds outside the rotation (`PaleGarden`, `DroneWorld`, ...) stay in `data/worlds/`. `Pokemon.experiments-test-20261012` is a throwaway test world (experiments on) that can be deleted.
 
 ### Add-ons (experimental mode)
+- **Land Claims** (`custom-addons/land_claims`, see its README) is on in creative and experimental.
+  - Players use the Claim Flag (`give <player> earles:claim_flag`) to claim 32×32 from bedrock to sky, up to 3 each, with trust.
+  - Admin: `scriptevent earles:claims list | remove <id> | removeall <owner>` (output in the server log).
+  - Railgun and some TNT Destructive types can still damage claims.
 - **Our own add-ons** live in `custom-addons/<name>/{BP,RP}` (in git); `setup-addons.sh` finds them as well as downloaded ones. **Tornado TNT** (`custom-addons/tornado_tnt`, see its README) is on in experimental mode:
   - `give <player> earles:tornado_tnt 16`
   - test with `scriptevent earles:tornado <x> <y> <z>`
