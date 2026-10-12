@@ -21,6 +21,8 @@ entryPoints:
     address: :25
   squid:
     address: :3128
+  minecraft: # Minecraft Bedrock NetherNet signaling (see conf/external-minecraft.yaml)
+    address: :19132
 
 providers:
   docker:

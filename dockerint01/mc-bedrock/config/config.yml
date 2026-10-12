@@ -20,7 +20,10 @@ session:
     host-name: EARLES
 
     # The world name to broadcast
-    world-name: PaleGarden
+    world-name: Earles2026
+
+    # The game mode to broadcast (Survival, Creative, Adventure)
+    game-mode: Survival
 
     # The current number of players
     players: 0
@@ -34,17 +37,26 @@ session:
     # The port of the server
     port: 19132
 
-# Friend/follower list sync settings
+  # Restrict the local UDP port range for WebRTC (NetherNet) ICE candidates,
+  # so only a small range needs opening behind a firewall or in Docker with
+  # host networking. Each in-progress join uses one port (freed once the player
+  # is transferred), so this caps concurrent joins, not total players.
+  # Leave both at 0 for the OS ephemeral range (default).
+  ice-port-range:
+    # Lowest UDP port to use, or 0 for the OS default
+    min: 0
+
+    # Highest UDP port to use, or 0 for the OS default
+    max: 0
+
+# Friend list sync settings
 friend-sync:
   # The amount of time in seconds to update session information
   # Warning: This can be no lower than 20 due to Xbox rate limits
   update-interval: 20
 
-  # Should we automatically follow people that follow us
-  auto-follow: false
-
-  # Should we automatically unfollow people that no longer follow us
-  auto-unfollow: false
+  # Should we automatically accept friend requests
+  auto-friend: true
 
   # Should we automatically send an invite when a friend is added
   initial-invite: false
@@ -86,4 +98,4 @@ debug-mode: false
 suppress-session-update-message: true
 
 # Do not change!
-config-version: 2
+config-version: 5

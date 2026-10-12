@@ -1,0 +1,3 @@
+# Main pack only; TreePhysicsCompatibleBP is an optional alternative for UI-conflicting resource packs
+packs/TreePhysicsBP
+packs/TreePhysicsRP

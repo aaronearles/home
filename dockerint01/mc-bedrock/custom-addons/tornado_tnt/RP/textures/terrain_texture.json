@@ -1,0 +1,17 @@
+{
+  "resource_pack_name": "earles_tornado",
+  "texture_name": "atlas.terrain",
+  "padding": 8,
+  "num_mip_levels": 4,
+  "texture_data": {
+    "earles_tornado_tnt_side": {
+      "textures": "textures/blocks/tornado_tnt_side"
+    },
+    "earles_tornado_tnt_top": {
+      "textures": "textures/blocks/tornado_tnt_top"
+    },
+    "earles_tornado_tnt_bottom": {
+      "textures": "textures/blocks/tornado_tnt_bottom"
+    }
+  }
+}

@@ -1,0 +1,39 @@
+{
+  "format_version": 2,
+  "header": {
+    "name": "Land Claims (resources)",
+    "description": "Claim Flag item texture",
+    "uuid": "6fc4d2be-1d4c-4b31-845e-519e3f4e7e4b",
+    "version": [
+      1,
+      0,
+      0
+    ],
+    "min_engine_version": [
+      1,
+      26,
+      50
+    ]
+  },
+  "modules": [
+    {
+      "type": "resources",
+      "uuid": "0bdc72db-6132-4289-b88c-6306a518a17a",
+      "version": [
+        1,
+        0,
+        0
+      ]
+    }
+  ],
+  "dependencies": [
+    {
+      "uuid": "da43fb21-a67a-4f83-8758-dea37728f099",
+      "version": [
+        1,
+        0,
+        0
+      ]
+    }
+  ]
+}

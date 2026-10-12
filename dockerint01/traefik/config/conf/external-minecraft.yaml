@@ -1,0 +1,37 @@
+# Minecraft Bedrock (mc-bedrock stack) NetherNet signaling on TCP 19132.
+# Clients open HTTPS first; BDS only speaks plain HTTP, listening on the host at :19133
+# (gameplay is UDP 19140-19159 straight to the host, not through Traefik).
+#  - SNI mc.earles.io      -> terminate TLS with a real cert, forward plain HTTP to BDS
+#  - TLS without SNI (IP)  -> default cert; client rejects it and retries in plain HTTP
+#  - plain HTTP            -> passthrough to BDS
+tcp:
+  routers:
+    minecraft-tls:
+      rule: "HostSNI(`mc.earles.io`)"
+      entryPoints:
+        - minecraft
+      service: minecraft
+      tls:
+        certResolver: production
+        options: proxy@file
+
+    minecraft-tls-ip:
+      rule: "HostSNI(`*`)"
+      priority: 1
+      entryPoints:
+        - minecraft
+      service: minecraft
+      tls:
+        options: proxy@file
+
+    minecraft-plain:
+      rule: "HostSNI(`*`)"
+      entryPoints:
+        - minecraft
+      service: minecraft
+
+  services:
+    minecraft:
+      loadBalancer:
+        servers:
+          - address: "172.20.100.202:19133"

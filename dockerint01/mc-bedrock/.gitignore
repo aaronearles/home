@@ -2,3 +2,8 @@ data/
 MCXboxBroadcastStandalone.jar
 config/cache/
 config/logs/
+backups/
+*.bak-*
+.env
+addons/*/*
+!addons/*/packs.list
