@@ -13,6 +13,9 @@
 //   scriptevent earles:claims list
 //   scriptevent earles:claims remove <id>
 //   scriptevent earles:claims removeall <owner>
+//   scriptevent earles:claims wall <id>                build the stone wall on a claim
+//   scriptevent earles:claims unwall <id>              remove that wall (cobblestone walls on the ring only)
+//   scriptevent earles:claims probe <x> <z>            debug: what the wall builder sees as ground there
 import { system, world } from "@minecraft/server";
 import { ActionFormData, ModalFormData } from "@minecraft/server-ui";
 
@@ -20,6 +23,12 @@ const OBJECTIVE = "earles_claims";
 const SIZE = 32;              // claim is SIZE x SIZE blocks
 const MAX_PER_PLAYER = 3;
 const FLAG = "earles:claim_flag";
+const WALL_INSET = 5;         // stone wall this many blocks inside the claim edge
+const WALL_HEIGHT = 2;        // cobblestone walls stacked (1.5 blocks each, can't be jumped)
+const WALL_BLOCK = "minecraft:cobblestone_wall";
+// Blocks the wall may replace / looks through when finding the ground
+const SOFT = /air|grass$|short_grass|tall_grass|fern|flower|dandelion|poppy|tulip|orchid|allium|bluet|daisy|cornflower|lily_of_the_valley|sapling|bush|dead_bush|snow_layer|vine|leaves|leaf_litter|mushroom$|sweet_berry|azalea$|pink_petals|wildflowers|seagrass|kelp/;
+const PASS_THROUGH = /air|leaves|log|_wood$|vine|snow_layer|leaf_litter|grass$|short_grass|tall_grass|fern|flower|bush|sapling/;
 const FACE = { Up: [0, 1, 0], Down: [0, -1, 0], North: [0, 0, -1], South: [0, 0, 1], East: [1, 0, 0], West: [-1, 0, 0] };
 
 let claims = null;            // cache: [{ id, dim, x1, z1, x2, z2, owner }]
@@ -164,6 +173,56 @@ async function show(player, form) {
     return { canceled: true };
 }
 
+// Ground at (x, z): scanning down from the topmost block, the first block that isn't air,
+// leaves, a trunk or a plant (so walls go on the terrain, not on tree tops).
+function groundAt(dim, x, z) {
+    const top = tryRun(() => dim.getTopmostBlock({ x, z }));
+    if (!top) return undefined;
+    for (let y = top.location.y; y > top.location.y - 40; y--) {
+        const b = tryRun(() => dim.getBlock({ x, y, z }));
+        if (!b) return undefined;
+        if (!PASS_THROUGH.test(b.typeId)) return y;
+    }
+    return undefined;
+}
+
+function wallRing(c) {
+    const x1 = c.x1 + WALL_INSET, z1 = c.z1 + WALL_INSET, x2 = c.x2 - WALL_INSET, z2 = c.z2 - WALL_INSET;
+    const ring = [];
+    for (let x = x1; x <= x2; x++) ring.push([x, z1], [x, z2]);
+    for (let z = z1 + 1; z < z2; z++) ring.push([x1, z], [x2, z]);
+    return ring;
+}
+
+// Remove the claim's wall ring (only cobblestone walls on the ring columns)
+function removeWall(dim, c) {
+    let removed = 0;
+    for (const [x, z] of wallRing(c)) {
+        const top = tryRun(() => dim.getTopmostBlock({ x, z }));
+        if (!top) continue;
+        for (let y = top.location.y; y > top.location.y - 48; y--) {
+            const b = tryRun(() => dim.getBlock({ x, y, z }));
+            if (b?.typeId === WALL_BLOCK) { tryRun(() => b.setType("minecraft:air")); removed++; }
+        }
+    }
+    return removed;
+}
+
+// A ring of stone walls WALL_INSET blocks inside the claim, following the terrain.
+// Water columns are skipped (no walls underwater).
+function buildWall(dim, c) {
+    let placed = 0;
+    for (const [x, z] of wallRing(c)) {
+        const g = groundAt(dim, x, z);
+        if (g === undefined) continue;
+        for (let h = 1; h <= WALL_HEIGHT; h++) {
+            const b = tryRun(() => dim.getBlock({ x, y: g + h, z }));
+            if (b && SOFT.test(b.typeId)) { tryRun(() => b.setType(WALL_BLOCK)); placed++; }
+        }
+    }
+    return placed;
+}
+
 function showBorder(dim, c, y) {
     let t = 0;
     const id = system.runInterval(() => {
@@ -190,7 +249,9 @@ async function menu(player) {
         .body(`${where}\nYou have ${mine.length}/${MAX_PER_PLAYER} claims.\nTrusted: ${trusted.length ? trusted.join(", ") : "nobody"}`);
     const actions = [];
     if (!here) { form.button(`§2Claim land here\n§r${SIZE}×${SIZE}, bedrock to sky`); actions.push("claim"); }
+    if (!here) { form.button(`§2Claim land here + stone wall\n§r${WALL_INSET} blocks inside the edge`); actions.push("claim_wall"); }
     if (here) { form.button("Show borders"); actions.push("border"); }
+    if (here?.owner === name) { form.button(`Build stone wall\n§r${WALL_INSET} blocks inside the edge`); actions.push("wall"); }
     if (here?.owner === name) { form.button("§cRemove this claim"); actions.push("remove"); }
     form.button("Trust a player"); actions.push("trust");
     if (trusted.length) { form.button("Stop trusting a player"); actions.push("untrust"); }
@@ -200,7 +261,7 @@ async function menu(player) {
     if (r.canceled || r.selection === undefined) return;
     const action = actions[r.selection];
 
-    if (action === "claim") {
+    if (action === "claim" || action === "claim_wall") {
         if (mine.length >= MAX_PER_PLAYER) return player.sendMessage(`§cYou already have ${MAX_PER_PLAYER} claims. Remove one first.`);
         const x1 = Math.floor(player.location.x) - SIZE / 2, z1 = Math.floor(player.location.z) - SIZE / 2;
         const c = { id: Math.max(0, ...getClaims().map((k) => k.id)) + 1, dim: dim.id, x1, z1, x2: x1 + SIZE - 1, z2: z1 + SIZE - 1, owner: name };
@@ -210,6 +271,13 @@ async function menu(player) {
         lastClaim.set(name, c.id);
         player.sendMessage(`§aClaimed! ${SIZE}×${SIZE} from (${c.x1}, ${c.z1}) to (${c.x2}, ${c.z2}), bedrock to sky.`);
         showBorder(dim, c, Math.floor(player.location.y));
+        if (action === "claim_wall") {
+            const n = buildWall(dim, c);
+            player.sendMessage(`§aBuilt a stone wall (${n} blocks) ${WALL_INSET} blocks inside the edge. Break a piece to make a gate - only you can.`);
+        }
+    } else if (action === "wall") {
+        const n = buildWall(dim, here);
+        player.sendMessage(`§aBuilt a stone wall (${n} blocks) ${WALL_INSET} blocks inside the edge.`);
     } else if (action === "border") {
         showBorder(dim, here, Math.floor(player.location.y));
     } else if (action === "remove") {
@@ -256,12 +324,29 @@ system.afterEvents.scriptEventReceive.subscribe((ev) => {
     } else if (cmd === "remove") {
         const c = claims.find((k) => k.id === Number(rest[0]));
         if (c) { removeClaim(c); console.warn(`[claims] removed #${c.id} (${c.owner})`); } else console.warn(`[claims] no claim #${rest[0]}`);
+    } else if (cmd === "wall") {
+        const c = claims.find((k) => k.id === Number(rest[0]));
+        if (!c) { console.warn(`[claims] no claim #${rest[0]}`); return; }
+        const n = buildWall(world.getDimension(c.dim), c);
+        console.warn(`[claims] built wall on #${c.id}: ${n} blocks`);
+    } else if (cmd === "unwall") {
+        const c = claims.find((k) => k.id === Number(rest[0]));
+        if (!c) { console.warn(`[claims] no claim #${rest[0]}`); return; }
+        console.warn(`[claims] removed wall on #${c.id}: ${removeWall(world.getDimension(c.dim), c)} blocks`);
+    } else if (cmd === "probe") {
+        // Debug the wall builder: what does the ground finder see at x z?
+        const [x, z] = rest.map(Number);
+        const dim = world.getDimension("minecraft:overworld");
+        const top = tryRun(() => dim.getTopmostBlock({ x, z }));
+        const g = groundAt(dim, x, z);
+        const above = g === undefined ? [] : [1, 2].map((h) => tryRun(() => dim.getBlock({ x, y: g + h, z })?.typeId));
+        console.warn(`[claims] probe ${x},${z}: top=${top ? top.typeId + "@" + top.location.y : "none"} ground=${g} above=${above.join(",")}`);
     } else if (cmd === "removeall") {
         const owner = rest.join(" ");
         const theirs = claims.filter((k) => k.owner === owner);
         for (const c of theirs) removeClaim(c);
         console.warn(`[claims] removed ${theirs.length} claim(s) of ${owner}`);
     } else {
-        console.warn("[claims] usage: scriptevent earles:claims list | remove <id> | removeall <owner>");
+        console.warn("[claims] usage: scriptevent earles:claims list | remove <id> | removeall <owner> | wall <id> | unwall <id> | probe <x> <z>");
     }
 });

@@ -191,7 +191,8 @@ The server rotates between five worlds:
 ### Add-ons (experimental mode)
 - **Land Claims** (`custom-addons/land_claims`, see its README) is on in creative and experimental.
   - Players use the Claim Flag (`give <player> earles:claim_flag`) to claim 32×32 from bedrock to sky, up to 3 each, with trust.
-  - Admin: `scriptevent earles:claims list | remove <id> | removeall <owner>` (output in the server log).
+  - Optional stone wall ring (2 high, 5 blocks inside the edge) from the flag menu.
+  - Admin: `scriptevent earles:claims list | remove <id> | removeall <owner> | wall <id> | unwall <id> | probe <x> <z>` (output in the server log).
   - Railgun and some TNT Destructive types can still damage claims.
 - **Our own add-ons** live in `custom-addons/<name>/{BP,RP}` (in git); `setup-addons.sh` finds them as well as downloaded ones. **Tornado TNT** (`custom-addons/tornado_tnt`, see its README) is on in experimental mode:
   - `give <player> earles:tornado_tnt 16`
