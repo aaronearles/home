@@ -1,6 +1,6 @@
 # mc-bedrock
 
-Minecraft Bedrock Dedicated Server (BDS) with Xbox Live broadcasting via MCXboxBroadcast, so Xbox and mobile players can join from the friends list. Rotates between four worlds (a hand-built classic **Skyblock**, a normal **survival** world, a **creative** world and an **experimental** creative world with community add-ons), with nightly backups.
+Minecraft Bedrock Dedicated Server (BDS) with Xbox Live broadcasting via MCXboxBroadcast, so Xbox and mobile players can join from the friends list. Rotates between five worlds (a **Pokémon** world with CobbleDrock, a hand-built classic **Skyblock**, a normal **survival** world, a **creative** world and an **experimental** creative world with community add-ons), with nightly backups.
 
 > Day-to-day operation (giving items, resets, restarts, troubleshooting) is documented in **[ADMIN-RUNBOOK.md](ADMIN-RUNBOOK.md)**, which is written so an AI agent can operate the server.
 
@@ -116,6 +116,7 @@ The Skyblock world is a FLAT world whose `FlatWorldLayers` in `level.dat` is a s
 | `survival` | `Earles2026` | normal | survival | off (keeps achievements) |
 | `creative` | `Creative` | normal | creative | on |
 | `experimental` | `Experimental` | normal | creative | on, + Blasters, TNT Destructive, our Tornado TNT, Orbital Railgun, Portal Gun, Quick Craft |
+| `pokemon` | `Pokemon` | normal | survival, keep inventory | on, + CobbleDrock Core (Pokémon) |
 
 ```bash
 ./switch-world.sh               # show active mode

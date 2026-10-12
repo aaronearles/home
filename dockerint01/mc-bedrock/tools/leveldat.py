@@ -1,5 +1,6 @@
 """Minimal Bedrock level.dat (little-endian NBT) reader/editor.
-usage: leveldat.py FILE [key=byte | key:i=int | key:s=string ...]   (root tags only)"""
+usage: leveldat.py FILE [key=byte | key:i=int | key:s=string ...]
+       keys may be nested with dots (e.g. experiments.gametest=1); missing compounds are created"""
 import struct, sys
 def rs(b,o):
     n=struct.unpack_from('<H',b,o)[0]; return b[o+2:o+2+n].decode('utf-8','replace'),o+2+n
@@ -47,11 +48,18 @@ edits=[a.split('=') for a in sys.argv[2:]]
 if not edits:
     for k,(t,v) in sorted(root.items()):
         if t!=10: print(k,'=',v)
+        elif k=='experiments': print(k,'=',{kk:vv for kk,(tt,vv) in v.items()})
     sys.exit()
 for k,v in edits:
     # key=v -> byte; key:i=v -> int; key:s=v -> string
     k,_,t=k.partition(':'); tag={'':1,'b':1,'i':3,'s':8}[t]
-    old=root.get(k); assert old is None or old[0]==tag,(k,old)
-    root[k]=(tag, v if tag==8 else int(v)); print(k,':',old and old[1],'->',v)
+    *path,leaf=k.split('.')
+    node=root
+    for part in path:
+        if part not in node: node[part]=(10,{})
+        assert node[part][0]==10,(part,'is not a compound')
+        node=node[part][1]
+    old=node.get(leaf); assert old is None or old[0]==tag,(k,old)
+    node[leaf]=(tag, v if tag==8 else int(v)); print(k,':',old and old[1],'->',v)
 nb=bytes([10])+ws(name)+wp(10,root)
 open(f,'wb').write(struct.pack('<ii',ver,len(nb))+nb)

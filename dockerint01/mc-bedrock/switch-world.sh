@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # Switches the server between the rotation worlds.
-# Usage: ./switch-world.sh [skyblock|survival|creative|experimental] [-y]
+# Usage: ./switch-world.sh [skyblock|survival|creative|experimental|pokemon] [-y]
 #        ./switch-world.sh            (no mode: show the active world)
 #   -y skips the confirmation prompt
 #
@@ -11,6 +11,8 @@
 #   experimental  Experimental  normal world, creative, cheats on, with community add-ons
 #             (see ADDONS below and addons/SOURCES.md); add-ons are (re)installed
 #             by setup-addons.sh on every switch to this mode
+#   pokemon   Pokemon     normal world, survival, cheats on, keep inventory, CobbleDrock add-on
+#             (Core + Content; ~270 MB resource pack - first join downloads it)
 #
 # How it works: docker-compose.yml takes LEVEL_NAME / LEVEL_TYPE / GAMEMODE / ALLOW_CHEATS from .env.
 # This rewrites .env, recreates the minecraft container (~80s, incl. the TIME_WAIT
@@ -19,13 +21,15 @@
 set -euo pipefail
 cd "$(dirname "$0")"
 
-declare -A LEVEL=([skyblock]=Skyblock [survival]=Earles2026 [creative]=Creative [experimental]=Experimental)
-declare -A TYPE=([skyblock]=FLAT [survival]=DEFAULT [creative]=DEFAULT [experimental]=DEFAULT)
-declare -A GAMEMODE=([skyblock]=survival [survival]=survival [creative]=creative [experimental]=creative)
+declare -A LEVEL=([skyblock]=Skyblock [survival]=Earles2026 [creative]=Creative [experimental]=Experimental [pokemon]=Pokemon)
+declare -A TYPE=([skyblock]=FLAT [survival]=DEFAULT [creative]=DEFAULT [experimental]=DEFAULT [pokemon]=DEFAULT)
+declare -A GAMEMODE=([skyblock]=survival [survival]=survival [creative]=creative [experimental]=creative [pokemon]=survival)
 # Cheats permanently disable achievements in a world, so keep them off for survival
-declare -A CHEATS=([skyblock]=true [survival]=false [creative]=true [experimental]=true)
+declare -A CHEATS=([skyblock]=true [survival]=false [creative]=true [experimental]=true [pokemon]=true)
 # Add-ons (dirs under addons/) enabled for a mode's world
-declare -A ADDONS=([experimental]="blasters tnt_destructive tornado_tnt orbital_railgun portal_gun quick_structures")
+declare -A ADDONS=([experimental]="blasters tnt_destructive tornado_tnt orbital_railgun portal_gun quick_structures" [pokemon]="cobbledrock")
+# Extra game rules applied after every switch to a mode ("rule value" pairs, ;-separated)
+declare -A RULES=([pokemon]="keepinventory true")
 
 MC="docker compose exec -T minecraft send-command"
 mc() { $MC "$1" </dev/null >/dev/null; }
@@ -36,8 +40,8 @@ MODE=""; YES=0
 for a in "$@"; do
     case "$a" in
         -y) YES=1 ;;
-        skyblock|survival|creative|experimental) MODE="$a" ;;
-        *) echo "Unknown option: $a (expected skyblock, survival, creative or experimental)" >&2; exit 1 ;;
+        skyblock|survival|creative|experimental|pokemon) MODE="$a" ;;
+        *) echo "Unknown option: $a (expected skyblock, survival, creative, experimental or pokemon)" >&2; exit 1 ;;
     esac
 done
 
@@ -96,6 +100,10 @@ fi
 
 mc "gamerule showcoordinates true"
 mc "gamerule pvp false"   # no friendly fire in any world
+if [[ -n "${RULES[$MODE]:-}" ]]; then
+    IFS=";" read -ra rules <<< "${RULES[$MODE]}"
+    for r in "${rules[@]}"; do mc "gamerule $r"; done
+fi
 
 # What the Xbox friends list shows for the session
 sed -i -E "s/^(    world-name: ).*/\1${LEVEL[$MODE]}/; s/^(    game-mode: ).*/\1${GAMEMODE[$MODE]^}/" config/config.yml

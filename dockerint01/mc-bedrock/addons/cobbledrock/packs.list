@@ -1,0 +1,5 @@
+# Core only (2026-10-12): the Content packs need a newer Minecraft than BDS 1.26.52
+# (BiomeTypes script export, minecraft:multi_block block trait). Re-test after a BDS update:
+# add packs/CobbleDrock_Content_BP-1.3.2 and packs/CobbleDrock_Content_RP-1.3.2 back.
+packs/CobbleDrock_Core_BP-1.3.2
+packs/CobbleDrock_Core_RP-1.3.2

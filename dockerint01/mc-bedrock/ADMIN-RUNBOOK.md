@@ -162,7 +162,7 @@ docker compose restart minecraft
 `./update.sh` (ask first if people are playing). Afterwards, run the health checklist.
 
 ### Switch worlds / modes (ask the owner first if people are playing)
-The server rotates between four worlds:
+The server rotates between five worlds:
 
 | Mode | World | Type | Game mode | Cheats |
 |---|---|---|---|---|
@@ -170,6 +170,7 @@ The server rotates between four worlds:
 | `survival` | `Earles2026` | normal | survival | **off** (achievements) |
 | `creative` | `Creative` | normal | creative | on |
 | `experimental` | `Experimental` | normal | creative | on, + add-ons: Blasters, TNT Destructive, Tornado TNT (ours), Orbital Railgun, Portal Gun, Quick Craft |
+| `pokemon` | `Pokemon` | normal | survival (keep inventory ON) | on, + CobbleDrock **Core** (Pokémon, catching, battles, Pokédex, PC). First join downloads a ~270 MB resource pack. |
 
 ```bash
 ./switch-world.sh                 # show the active mode
@@ -182,7 +183,8 @@ The server rotates between four worlds:
 - **Don't edit `LEVEL_NAME` / `LEVEL_TYPE` / `GAMEMODE` / `ALLOW_CHEATS` in `docker-compose.yml`.** They come from `.env` (`MC_LEVEL_NAME`, `MC_LEVEL_TYPE`, `MC_GAMEMODE`, `MC_ALLOW_CHEATS`), and the compose defaults are Skyblock. To add a mode, extend the arrays at the top of `switch-world.sh`.
 - **Cheats are per mode on purpose.** Loading a world with cheats on permanently costs it achievements, so never load `Earles2026` with `MC_ALLOW_CHEATS=true`. Console commands (`give`, `gamerule`, ...) work without cheats anyway.
 - `Earles2026` may still remember `aearles` as an operator from before. After switching to `survival`, if aearles can change game mode, run `...send-command "deop aearles"` while they're online.
-- Older worlds outside the rotation (`PaleGarden`, `DroneWorld`, ...) stay in `data/worlds/`.
+- Per-mode extra game rules are in the `RULES` array in `switch-world.sh` (e.g. pokemon: `keepinventory true`).
+- Older worlds outside the rotation (`PaleGarden`, `DroneWorld`, ...) stay in `data/worlds/`. `Pokemon.experiments-test-20261012` is a throwaway test world (experiments on) that can be deleted.
 
 ### Add-ons (experimental mode)
 - **Our own add-ons** live in `custom-addons/<name>/{BP,RP}` (in git); `setup-addons.sh` finds them as well as downloaded ones. **Tornado TNT** (`custom-addons/tornado_tnt`, see its README) is on in experimental mode:
@@ -319,7 +321,8 @@ docker run --rm -v "$PWD/data/worlds/Skyblock:/w" -v "$PWD/tools/leveldat.py:/le
   python3 -I /leveldat.py /w/level.dat showcoordinates=1 spawnradius:i=0
 docker compose start minecraft
 ```
-- `key=1` sets a byte (true/false), `key:i=N` an int, `key:s=text` a string. With no edits it prints all values; reading also works from the host without a container.
+- `key=1` sets a byte (true/false), `key:i=N` an int, `key:s=text` a string. Nested keys use dots, e.g. `experiments.gametest=1` (Beta APIs) or `experiments.upcoming_creator_features=1`. Experiments are permanent for a world; the server log shows `Experiment(s) active: ...` when they apply.
+- With no edits it prints all values (plus the `experiments` compound); reading also works from the host without a container.
 - Bonus chest and starter map only take effect when terrain is (re)generated. That's why the full reset deletes `db/` after editing.
 
 ## Files reference
