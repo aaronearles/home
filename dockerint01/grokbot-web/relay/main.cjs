@@ -387,6 +387,14 @@ function onBrowserMessage(m) {
     const args = codec.decode(m.a);
     const method = args[0] && typeof args[0] === 'object' && args[0].method ? `.${args[0].method}` : '';
     debug('invoke', m.ch + method);
+    // The UI's reliability reports (mostly outcome "ok" telemetry): log the ones that are not ok, so
+    // relay-specific breakage is visible. They are also sent upstream by the app.
+    if (m.ch.endsWith(':reportClientFailure')) {
+      const report = args[0];
+      if (!report || typeof report !== 'object' || report.outcome !== 'ok') {
+        log('client failure:', JSON.stringify(codec.encode(args)).slice(0, 1500));
+      }
+    }
     Promise.resolve().then(() => invokeIpc(m.ch, args))
       .then((r) => toClient({ t: 'inv', id: m.id, r: codec.encode(r) }))
       .catch((e) => { log('invoke failed:', m.ch + method, e && e.message); toClient({ t: 'inv', id: m.id, e: codec.encode(e) }); });

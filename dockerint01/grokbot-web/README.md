@@ -50,6 +50,10 @@ docker run --rm -v "$PWD/tools:/test:ro" -v /tmp/out:/out \
   -e TEST_CLICK="Sign in" --entrypoint /test/smoke-test.sh grokbot-web:local
 ```
 
+## Logs
+
+`docker logs grokbot-web` shows `[relay]` lines: startup, links opened through `openExternal`, failed IPC invokes, scheme proxy failures, and UI reliability reports that are not `ok` (`client failure:`). Despite the name, most of the UI's `reportClientFailure` calls are ok-telemetry, so those are not logged. `RELAY_DEBUG=1` also logs every relayed channel name.
+
 ## Known gaps (spike)
 
 - **Frame schemes.** `sand-html-preview:`, `sand-canvas:` and `sand-mcp-app:` frames are proxied but untested. In the app they get their own origin; here they are forced to an opaque origin with a `CSP: sandbox` header (no `allow-same-origin`), so features that need frame storage may break. Absolute paths (`/x`) inside framed documents resolve to the relay root.
