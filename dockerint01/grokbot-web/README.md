@@ -42,13 +42,20 @@ browser                                         container (nothing displayed or 
 
 ## Setup
 
-The image builds on `grokbot-xpra:local`, the Xpra POC image in `../grokbot`. Build that first; it provides the installed app, the keyring, and Xvfb.
+The image is self-contained. It downloads the official Grok Bot `.deb` and stock Electron, both pinned by version and SHA-256 in the `Dockerfile`. From the `.deb` it unpacks only `resources/` and the icons, with `dpkg-deb -x`. The vendor's maintainer scripts (apt source, setuid `chrome-sandbox`) never run.
 
 ```bash
 cp .env.sample .env      # set RELAY_TOKEN (openssl rand -hex 24) and KEYRING_PASSWORD
 mkdir -p data/home
 docker compose build && docker compose up -d
 ```
+
+**Updating Grok Bot:**
+
+1. Get the new `.deb` URL; the download link redirects to `downloads.cursor.com/grokbot/stable/<build>/linux/x64/grok-bot_<version>_amd64.deb`.
+2. Set `GROKBOT_DEB_URL` and `GROKBOT_DEB_SHA256` in the `Dockerfile`.
+3. Check which Electron the new build uses: `strings "/opt/Grok Bot/grok-bot" | grep -m1 -o 'Electron/[0-9.]*'` on an extracted copy. Update `ELECTRON_VERSION` and `ELECTRON_SHA256` to match, using the release's `SHASUMS256.txt`.
+4. Rebuild, then run both tests in `tools/`.
 
 Open `https://grokbot-web.internal.earles.io/?token=<RELAY_TOKEN>` once per browser. The token is stored in an HttpOnly cookie.
 
