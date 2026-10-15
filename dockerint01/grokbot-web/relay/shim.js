@@ -190,6 +190,38 @@
     XMLHttpRequest.prototype.open = function (method, url, ...rest) { return open0.call(this, method, rewrite(url), ...rest); };
   }
 
+  // --- Chromium-only APIs the renderer assumes (it is built for Electron) ---
+  // ResizeObserver box "device-pixel-content-box": Safari throws a TypeError on observe(). Fall back to
+  // content-box and derive devicePixelContentBoxSize from it and devicePixelRatio.
+  function installResizeObserverFallback(win) {
+    const RO = win.ResizeObserver;
+    if (!RO) return false;
+    try {
+      const probe = new RO(() => {});
+      probe.observe(win.document.documentElement, { box: 'device-pixel-content-box' });
+      probe.disconnect();
+      return false;
+    } catch { /* unsupported: install the fallback */ }
+    const devicePixelBox = (sizes) => [...(sizes || [])].map((s) => ({
+      inlineSize: Math.round(s.inlineSize * win.devicePixelRatio),
+      blockSize: Math.round(s.blockSize * win.devicePixelRatio),
+    }));
+    const withDevicePixelBox = (e) => (e.devicePixelContentBoxSize ? e : {
+      target: e.target, contentRect: e.contentRect, borderBoxSize: e.borderBoxSize,
+      contentBoxSize: e.contentBoxSize, devicePixelContentBoxSize: devicePixelBox(e.contentBoxSize),
+    });
+    win.ResizeObserver = class ResizeObserver extends RO {
+      constructor(callback) { super((entries, observer) => callback(entries.map(withDevicePixelBox), observer)); }
+      observe(target, options) {
+        if (options && options.box === 'device-pixel-content-box') options = { ...options, box: 'content-box' };
+        return super.observe(target, options);
+      }
+    };
+    return true;
+  }
+  if (installResizeObserverFallback(window)) console.info('[relay] ResizeObserver device-pixel-content-box fallback active');
+  window.__relayInstallResizeObserverFallback = installResizeObserverFallback; // for tools/ tests
+
   window.__relayElectron = {
     ipcRenderer,
     contextBridge: { exposeInMainWorld: (key, api) => { window[key] = api; } },
