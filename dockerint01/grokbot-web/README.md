@@ -1,0 +1,56 @@
+# Grok Bot web UI (spike)
+
+This stack serves the **official Grok Bot UI as a normal web page** at `https://grokbot-web.internal.earles.io`. It does not stream a desktop.
+
+The app's own `app.asar` (main process, preload, renderer) runs unmodified. Only the transport between the UI and the main process is replaced.
+
+```
+browser                                         container (nothing displayed or streamed)
+┌───────────────────────────────┐  WebSocket    ┌─────────────────────────────────────────┐
+│ official renderer             │◀────────────▶│ relay/main.cjs (Electron main wrapper)  │
+│ official preload.cjs          │ + sync XHR    │   hidden blank main window, IPC/ports   │
+│ relay/shim.js = fake electron │   for boot    │   relayed  ⇅  official main + helpers   │
+└───────────────────────────────┘               └─────────────────────────────────────────┘
+```
+
+## How it works
+
+- **Runtime.** The vendor binary is fuse-locked: no run-as-node, no `NODE_OPTIONS`, no inspector, and ASAR integrity is enforced. So the app's `app.asar` runs under **stock Electron 42.1.0** instead. That is the same version the app ships, so its native modules load. The download's checksum is pinned in the `Dockerfile`.
+- **`relay/main.cjs`.** This wrapper:
+  - makes the app see a packaged install at `/opt/Grok Bot/resources`;
+  - hands the app a `BrowserWindow` subclass. For the main window, the subclass drops the preload, keeps the window hidden, and loads a blank page instead of `renderer/index.html`;
+  - forwards the window's `send` and `postMessage` (and their MessagePorts) to the browser;
+  - replays browser IPC as events from that real window, so the app's trusted-sender checks hold;
+  - forwards `shell.openExternal` to the browser.
+- **`relay/shim.js`.** This is the browser-side stand-in for the 7 `electron` APIs the preload uses: `contextBridge`, `ipcRenderer` (send/sendSync/invoke/on), `webFrame`, and `webUtils`. The preload is served wrapped as a normal script, so the vendor's CSP stays intact.
+- **Sign-in.** Cursor login is a polling flow (`loginDeepControl` → `/auth/poll`). The sign-in page opens in your browser (a new tab, or the banner link if the popup was blocked), and the main process picks up the result.
+
+## Setup
+
+The image builds on `grokbot-xpra:local`, the Xpra POC image in `../grokbot`. Build that first; it provides the installed app, the keyring, and Xvfb.
+
+```bash
+cp .env.sample .env      # set RELAY_TOKEN (openssl rand -hex 24) and KEYRING_PASSWORD
+mkdir -p data/home
+docker compose build && docker compose up -d
+```
+
+Open `https://grokbot-web.internal.earles.io/?token=<RELAY_TOKEN>` once per browser. The token is stored in an HttpOnly cookie.
+
+Only one browser tab is active at a time. Opening a new tab reloads the hidden window and takes over the session.
+
+## Smoke test
+
+`tools/` runs the image's own Electron as a headless browser. It loads the page, optionally clicks a button, and logs console output, failed requests, and window.open URLs. It also saves a screenshot.
+
+```bash
+docker run --rm -v "$PWD/tools:/test:ro" -v /tmp/out:/out \
+  -e TEST_URL="https://grokbot-web.internal.earles.io/?token=$(grep -oP '^RELAY_TOKEN=\K.*' .env)" \
+  -e TEST_CLICK="Sign in" --entrypoint /test/smoke-test.sh grokbot-web:local
+```
+
+## Known gaps (spike)
+
+- **Custom schemes.** `sand-avatar:`, `sand-favicon:`, `sand-media:`, `sand-canvas:`, `sand-html-preview:` and `sand-mcp-app:` are served by the main process through `protocol.handle`. They are not proxied yet, so avatars, media, and previews may be missing.
+- **Desktop-only features.** Window controls are no-ops. The `<webview>` teach-recording feature and the remote-computer (VNC) panel are untested.
+- **Fragility.** The relay depends on internal names: the `preload.cjs` path, the main-window detection, and the `sand:*` channels. Re-test after every app update.

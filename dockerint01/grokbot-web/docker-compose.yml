@@ -1,0 +1,34 @@
+# Grok Bot web UI spike: official renderer in the browser, official main process headless (see README.md)
+# Access: https://grokbot-web.internal.earles.io/?token=<RELAY_TOKEN> once, then the cookie is used
+services:
+  grokbot-web:
+    image: grokbot-web:local
+    build: .
+    container_name: grokbot-web
+    restart: unless-stopped
+    env_file:
+      - .env
+    volumes:
+      - ./data/home:/home/grokbot # App profile and keyring
+    # ports:
+    #   - 127.0.0.1:14600:14600 # Debug only
+    networks:
+      - traefik
+    shm_size: 2gb
+    healthcheck:
+      test: ["CMD", "curl", "-fsS", "-o", "/dev/null", "http://127.0.0.1:14600/healthz"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 60s
+    labels:
+      - traefik.enable=true
+      - traefik.docker.network=traefik
+      - traefik.http.routers.grokbot-web.rule=Host(`grokbot-web.internal.earles.io`)
+      - traefik.http.routers.grokbot-web.entrypoints=websecure
+      - traefik.http.routers.grokbot-web.tls.certresolver=production
+      - traefik.http.services.grokbot-web.loadbalancer.server.port=14600
+
+networks:
+  traefik:
+    external: true

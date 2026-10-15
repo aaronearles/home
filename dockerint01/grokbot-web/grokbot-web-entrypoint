@@ -1,0 +1,22 @@
+#!/bin/bash
+# Keyring + session bus + a virtual X display (Electron needs one on Linux; nothing is shown or
+# streamed), then the official app under stock Electron with the web relay in front of it.
+set -euo pipefail
+
+: "${KEYRING_PASSWORD:?must be set in .env, unlocks the keyring holding sign-in tokens}"
+umask 077
+printf '%s' "$KEYRING_PASSWORD" > "$XDG_RUNTIME_DIR/keyring-password"
+unset KEYRING_PASSWORD
+umask 022
+
+export DBUS_SESSION_BUS_ADDRESS="unix:path=$XDG_RUNTIME_DIR/bus"
+dbus-daemon --session --address="$DBUS_SESSION_BUS_ADDRESS" --fork
+eval "$(gnome-keyring-daemon --replace --unlock --components=secrets < "$XDG_RUNTIME_DIR/keyring-password")"
+export GNOME_KEYRING_CONTROL
+
+Xvfb :99 -screen 0 1280x800x24 -nolisten tcp &
+export DISPLAY=:99
+for _ in $(seq 50); do [ -S /tmp/.X11-unix/X99 ] && break; sleep 0.1; done
+
+# shellcheck disable=SC2086 # APP_ARGS is a list of flags
+exec /opt/electron/electron /opt/grokbot-relay ${APP_ARGS:-}

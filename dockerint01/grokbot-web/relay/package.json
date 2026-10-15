@@ -1,0 +1,8 @@
+{
+  "name": "sand",
+  "productName": "Grok Bot",
+  "desktopName": "grok-bot.desktop",
+  "version": "0.70.2",
+  "private": true,
+  "main": "main.cjs"
+}
