@@ -1,15 +1,13 @@
 # Grok Bot (browser-streamed)
 
-This stack runs the official Grok Bot Linux build (an Electron app) in a container. **Xpra** streams its windows to the browser at `https://grokbot.internal.earles.io`, behind Authentik.
+This stack runs the official Grok Bot Linux build (an Electron app) in a container. **Xpra** streams its windows to the browser at `https://grokbot.internal.earles.io`, behind the Xpra password. It is internal only: no public route, and Traefik serves it on the LAN/VPN.
 
 The app is installed as shipped, with no patches. It talks to xAI and Cursor directly from the container.
 
 **Why Xpra over KasmVNC:** Xpra is seamless, so each app window becomes its own browser window instead of a whole remote desktop. It also forwards audio (Opus) and the clipboard over a single WebSocket, and it can keep `xdg-open` local (`--forward-xdg-open=off`). That last point matters for sign-in: the Cursor callback has to land on a browser inside the container, not on your laptop.
 
 ```
-browser ──HTTPS──▶ Traefik ──forwardAuth──▶ authentik-server (embedded outpost)
-                     │
-                     └──ws (traefik network)──▶ grokbot:14500 ── Xpra password ──▶ Xvfb + Grok Bot + Firefox
+browser ──HTTPS──▶ Traefik ──ws (traefik network)──▶ grokbot:14500 ── Xpra password ──▶ Xvfb + Grok Bot + Firefox
 ```
 
 ## Layout
@@ -23,7 +21,6 @@ browser ──HTTPS──▶ Traefik ──forwardAuth──▶ authentik-server
 | `installer/` | Put the official installer here (not committed) |
 | `data/home/` | Persistent `$HOME`: app profile (`~/.config/<App Name>`), keyring, Firefox profile (not committed) |
 | `tools/` | Phase 1 inspection script and its throwaway image |
-| `../traefik/config/conf/authentik-forwardauth.yaml` | `authentik@file` middleware and the outpost callback route |
 
 ## Phase 1 inspection (run before the first build)
 
@@ -47,20 +44,15 @@ Read the report for the following:
 
 ## First-time setup
 
-1. **Authentik.** In the admin UI, create a Proxy Provider:
-   - Mode: *Forward auth (single application)*.
-   - External host: `https://grokbot.internal.earles.io`.
-   - Create an Application for it and bind a policy so that only your user (or an admin group) can access it.
-   - Add the application to the **authentik Embedded Outpost**.
-2. **Installer.** Copy the `.deb` (preferred) or `.AppImage` that matches the host architecture into `installer/`. Use the one from *More downloads* on x.ai/bot. An `.rpm` is not supported on this Debian base, so use the `.deb` instead.
-3. **Environment.** Run `cp .env.sample .env`. Set `GROKBOT_INSTALLER`, then set `XPRA_PASSWORD` and `KEYRING_PASSWORD` using `openssl rand -base64 24`. Store both passwords in Vaultwarden.
-4. **Data directory.** Run `mkdir -p data/home && sudo chown 1000:1000 data/home`.
-5. **Build and start.** Run `docker compose build && docker compose up -d`.
-6. **Check the auth gate.** `curl -sI https://grokbot.internal.earles.io/` must return **302** to Authentik, never 200. Gatus checks this too: the "Grok Bot" endpoint alerts if the response becomes 200.
+1. **Installer.** Copy the `.deb` (preferred) or `.AppImage` that matches the host architecture into `installer/`. Use the one from *More downloads* on x.ai/bot. An `.rpm` is not supported on this Debian base, so use the `.deb` instead.
+2. **Environment.** Run `cp .env.sample .env`. Set `GROKBOT_INSTALLER`, then set `XPRA_PASSWORD` and `KEYRING_PASSWORD` using `openssl rand -base64 24`. Store both passwords in Vaultwarden.
+3. **Data directory.** Run `mkdir -p data/home && sudo chown 1000:1000 data/home`.
+4. **Build and start.** Run `docker compose build && docker compose up -d`.
+5. **Check the gate.** Open `https://grokbot.internal.earles.io` in a browser; it must show the Xpra password prompt before any stream. Gatus checks that the page returns 200 and alerts if it stops.
 
 ## First-run sign-in
 
-1. Open `https://grokbot.internal.earles.io`, log in to Authentik, and enter the Xpra password. The Grok Bot window appears.
+1. Open `https://grokbot.internal.earles.io` and enter the Xpra password. The Grok Bot window appears.
 2. Click **Sign In with Cursor**. The app calls `xdg-open`, which opens **Firefox inside the session** as a second streamed window. Sign in there.
 3. The callback returns to the app in one of these ways:
    - **Custom scheme:** Firefox asks which app should open the link. Choose Grok Bot, tick *Always*, and confirm. The entrypoint already registered the scheme from the app's `.desktop` file.
@@ -105,12 +97,12 @@ docker compose start
 | Surface | Reachable from | Protection |
 |---------|---------------|------------|
 | Xpra `:14500` | Only containers on the `traefik` Docker network. No host port is published. | Xpra password |
-| `https://grokbot.internal.earles.io` | Wherever the dockerint01 Traefik `:443` is reachable (LAN/VPN) | TLS (Let's Encrypt), Authentik forward auth, Xpra password |
+| `https://grokbot.internal.earles.io` | Wherever the dockerint01 Traefik `:443` is reachable (LAN/VPN) | TLS (Let's Encrypt), Xpra password. No Authentik. |
 | Public internet | **Not exposed.** There is no Cloudflare tunnel, DMZ route, or port forward. | — |
 
 Do not add this to `dockerdmz01` or a Cloudflare tunnel without a separate review. Anyone who reaches the stream controls the Grok/Cursor account and its Bots' cloud computers.
 
-The commented `127.0.0.1:14500` port in `docker-compose.yml` is for debugging on the host only, and it bypasses Authentik.
+The commented `127.0.0.1:14500` port in `docker-compose.yml` is for debugging on the host only, and it bypasses the Xpra password.
 
 ## Security notes
 

@@ -3,7 +3,7 @@
 set -euo pipefail
 . /etc/grokbot/app.env
 
-: "${XPRA_PASSWORD:?must be set in .env, second auth layer behind Authentik}"
+: "${XPRA_PASSWORD:?must be set in .env, the only auth layer in front of the stream}"
 : "${KEYRING_PASSWORD:?must be set in .env, unlocks the keyring holding sign-in tokens}"
 [ "$XPRA_PASSWORD" != change_me ] && [ "$KEYRING_PASSWORD" != change_me ] || { echo "Replace the change_me values in .env" >&2; exit 1; }
 
@@ -21,13 +21,20 @@ for scheme in $APP_SCHEMES; do
   xdg-mime default "$APP_DESKTOP" "x-scheme-handler/$scheme"
 done
 
+# One session bus at a fixed path for Xpra, the keyring and the app. Xpra does not pass its own
+# bus address on to --start-child, which leaves libsecret without a bus and Electron's safeStorage
+# on its plaintext fallback, so the address goes to the children explicitly with --start-env
+export DBUS_SESSION_BUS_ADDRESS="unix:path=$XDG_RUNTIME_DIR/bus"
+dbus-daemon --session --address="$DBUS_SESSION_BUS_ADDRESS" --fork
+
 exec xpra start :100 \
   --daemon=no \
   --bind-tcp=0.0.0.0:14500,auth=file:filename="$XDG_RUNTIME_DIR/xpra-password" \
   --html=on \
   --mdns=no \
   --systemd-run=no \
-  --dbus-launch="dbus-launch --sh-syntax --close-stderr" \
+  --dbus-launch= \
+  --start-env=DBUS_SESSION_BUS_ADDRESS="$DBUS_SESSION_BUS_ADDRESS" \
   --pulseaudio=yes \
   --speaker=on \
   --microphone=disabled \

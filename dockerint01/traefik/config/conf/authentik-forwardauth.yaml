@@ -16,15 +16,6 @@ http:
           - X-authentik-uid
 
   routers:
-    # Sign-in callback path for grokbot.internal.earles.io, served by the outpost itself
-    router-grokbot-outpost:
-      rule: "Host(`grokbot.internal.earles.io`) && PathPrefix(`/outpost.goauthentik.io/`)"
-      service: authentik-outpost
-      entryPoints:
-        - websecure
-      tls:
-        certresolver: production
-
   services:
     authentik-outpost:
       loadBalancer:

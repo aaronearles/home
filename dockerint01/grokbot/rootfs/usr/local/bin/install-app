@@ -26,7 +26,6 @@ print(shoff+shentsize*shnum)' "$pkg")"
     desktop="/usr/share/applications/$(basename "$src")"
     # Point the menu/URL-handler entry at the unpacked AppRun (desktop entry only, app untouched)
     sed -E 's|^Exec=[^ ]+|Exec=/opt/grokbot/AppRun|' "$src" > "$desktop"
-    [ -f /opt/grokbot/chrome-sandbox ] && chown root:root /opt/grokbot/chrome-sandbox && chmod 4755 /opt/grokbot/chrome-sandbox
     ;;
   *.rpm)
     echo "This image is Debian-based: use the .deb from 'More downloads' (same app build)." >&2

@@ -1,5 +1,5 @@
 # Grok Bot desktop app (official Linux build) streamed to the browser via Xpra HTML5
-# Access: https://grokbot.internal.earles.io behind Authentik forward auth (see README.md)
+# Access: https://grokbot.internal.earles.io internal only, Xpra password (see README.md)
 services:
   grokbot:
     image: grokbot-xpra:local
@@ -14,7 +14,7 @@ services:
     volumes:
       - ./data/home:/home/grokbot # App profile, keyring, Firefox profile
     # ports:
-    #   - 127.0.0.1:14500:14500 # Debug only: bypasses Authentik, never bind to 0.0.0.0
+    #   - 127.0.0.1:14500:14500 # Debug only: bypasses the Xpra password gate, never bind to 0.0.0.0
     networks:
       - traefik
     shm_size: 2gb # Chromium/Electron needs more than the 64 MB default
@@ -30,8 +30,6 @@ services:
       - traefik.http.routers.grokbot.rule=Host(`grokbot.internal.earles.io`)
       - traefik.http.routers.grokbot.entrypoints=websecure
       - traefik.http.routers.grokbot.tls.certresolver=production
-      # Authentik forward auth, defined in ../traefik/config/conf/authentik-forwardauth.yaml
-      - traefik.http.routers.grokbot.middlewares=authentik@file
       - traefik.http.services.grokbot.loadbalancer.server.port=14500
 
 networks:

@@ -36,6 +36,9 @@ COPY installer/ /tmp/installer/
 COPY rootfs/usr/local/bin/install-app /usr/local/bin/install-app
 RUN test -n "${INSTALLER}" || { echo "Set GROKBOT_INSTALLER in .env" >&2; exit 1; } \
  && bash /usr/local/bin/install-app "/tmp/installer/${INSTALLER}" \
+ # postinst makes chrome-sandbox setuid root when the build has no user namespaces. APP_ARGS runs
+ # --no-sandbox, and the SUID fallback cannot exec from a path with a space ("/opt/Grok Bot"), so drop it
+ && find /opt -name chrome-sandbox -type f -exec chmod 0755 {} + \
  && rm -rf /tmp/installer /var/lib/apt/lists/*
 
 # Unprivileged session user; no sudo/pkexec, so in-app updaters cannot install anything

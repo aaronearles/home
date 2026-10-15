@@ -45,4 +45,4 @@ endpoints:
       ignore-redirect: true
       timeout: 30s
     conditions:
-      - "[STATUS] == 302" # Authentik redirect; a 200 means the stream is reachable without auth
+      - "[STATUS] == 200" # Xpra page is served; a non-200 means the stream is down
