@@ -108,6 +108,11 @@
       location.reload();
     } else if (m.t === 'open') {
       openExternal(m.url);
+    } else if (m.t === 'notify') {
+      showNotification(m);
+    } else if (m.t === 'notify-close') {
+      const n = shown.get(m.id);
+      if (n) { shown.delete(m.id); n.close(); }
     }
   };
 
@@ -238,6 +243,49 @@
       if (now - lastActivity > 15000) { lastActivity = now; sendPresence(true); }
     }, { capture: true, passive: true });
   }
+
+  // --- OS notifications from the app, shown with the Web Notifications API (tag dedupes across tabs) ---
+  const shown = new Map();
+  function showNotification(m) {
+    if (!('Notification' in window) || Notification.permission !== 'granted') return;
+    let n;
+    try {
+      n = new Notification(m.title, {
+        body: m.body, tag: `grokbot-${m.id}`, icon: new URL('./__relay/icon-256.png', document.baseURI).href,
+        silent: m.silent, requireInteraction: m.urgency === 'critical',
+      });
+    } catch (err) { console.warn('[relay] notification failed', err); return; }
+    shown.set(m.id, n);
+    n.onclick = () => { window.focus(); send({ t: 'notify-click', id: m.id }); n.close(); };
+    n.onclose = () => { if (shown.get(m.id) === n) { shown.delete(m.id); send({ t: 'notify-closed', id: m.id }); } };
+  }
+
+  // Permission needs a user gesture: offer it once with a small banner (dismissal is remembered)
+  const NOTIFY_DISMISSED = 'grokbot-relay-notify-dismissed';
+  function offerNotifications() {
+    let dismissed = false;
+    try { dismissed = localStorage.getItem(NOTIFY_DISMISSED) === '1'; } catch {}
+    if (!('Notification' in window) || Notification.permission !== 'default' || dismissed) return;
+    const bar = document.createElement('div');
+    bar.style.cssText = 'position:fixed;left:16px;bottom:16px;z-index:2147483647;background:#111;color:#fff;'
+      + 'font:14px system-ui,sans-serif;padding:10px 12px;border-radius:10px;box-shadow:0 4px 16px rgba(0,0,0,.3);'
+      + 'display:flex;gap:10px;align-items:center;max-width:calc(100vw - 32px)';
+    const text = document.createElement('span');
+    text.textContent = 'Get notified when your Bots reply?';
+    const enable = document.createElement('button');
+    enable.textContent = 'Enable notifications';
+    enable.style.cssText = 'background:#8ab4ff;color:#111;border:0;border-radius:6px;padding:5px 10px;font-weight:600;cursor:pointer';
+    enable.onclick = () => { Notification.requestPermission().finally(() => bar.remove()); };
+    const close = document.createElement('button');
+    close.textContent = '×';
+    close.title = 'Not now';
+    close.style.cssText = 'background:none;border:0;color:#fff;font-size:18px;cursor:pointer';
+    close.onclick = () => { try { localStorage.setItem(NOTIFY_DISMISSED, '1'); } catch {} bar.remove(); };
+    bar.append(text, enable, close);
+    document.body.appendChild(bar);
+  }
+  if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', offerNotifications);
+  else offerNotifications();
 
   window.__relayElectron = {
     ipcRenderer,

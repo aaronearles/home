@@ -12,6 +12,7 @@ const electron = require('electron');
 const codec = require('./codec.js');
 
 const { Readable } = require('node:stream');
+const { EventEmitter } = require('node:events');
 const { app, ipcMain, MessageChannelMain } = electron;
 const RESOURCES = process.env.GROKBOT_RESOURCES || '/opt/Grok Bot/resources';
 const ASAR = path.join(RESOURCES, 'app.asar');
@@ -377,6 +378,41 @@ const relayShell = overlay(electron.shell, {
   },
 });
 
+// OS notifications: the app falls back to electron.Notification on Linux without notify-send. Each one
+// is shown in the browsers (Web Notifications); a click there becomes the app's own "click" event,
+// which focuses the window and opens the agent like the desktop notification would.
+const notifications = new Map();
+let nextNotificationId = 1;
+class RelayNotification extends EventEmitter {
+  static isSupported() { return true; }
+  constructor(options = {}) {
+    super();
+    this.id = nextNotificationId++;
+    this.title = options.title || '';
+    this.body = options.body || '';
+    this.silent = options.silent === true;
+    this.urgency = options.urgency || 'normal';
+  }
+  show() {
+    notifications.set(this.id, this);
+    while (notifications.size > 200) notifications.delete(notifications.keys().next().value);
+    if (load) broadcast({ t: 'notify', id: this.id, title: String(this.title), body: String(this.body), silent: this.silent, urgency: this.urgency });
+    log('notification ->', load ? load.clients.size : 0, 'tab(s)');
+    this.emit('show', fakeEvent());
+  }
+  close() {
+    if (!notifications.delete(this.id)) return;
+    if (load) broadcast({ t: 'notify-close', id: this.id });
+    this.emit('close', fakeEvent());
+  }
+}
+function onNotificationEvent(m) {
+  const n = notifications.get(m.id);
+  if (!n) return;
+  if (m.t === 'notify-click') { debug('notification click', m.id); n.emit('click', fakeEvent()); }
+  if (m.t === 'notify-closed') { notifications.delete(m.id); n.emit('close', fakeEvent()); }
+}
+
 const relayPowerMonitor = overlay(electron.powerMonitor, {
   getSystemIdleTime: () => idleSeconds(),
   getSystemIdleState: (threshold) => (idleSeconds() >= threshold ? 'idle' : 'active'),
@@ -395,7 +431,8 @@ for (const key of Object.getOwnPropertyNames(electron)) {
       : key === 'shell' ? relayShell
         : key === 'protocol' ? relayProtocol
           : key === 'powerMonitor' ? relayPowerMonitor
-            : electron[key]),
+            : key === 'Notification' ? RelayNotification
+              : electron[key]),
   });
 }
 const originalLoad = Module._load;
@@ -501,6 +538,12 @@ async function handle(req, res) {
       proto: { base: `./__relay/p/${PROTO_SECRET}/`, schemes: [...appSchemes] },
     }), TYPES['.json']);
   }
+  if (DEBUG && req.method === 'POST' && url.pathname === '/__relay/debug/notify') {
+    const n = new RelayNotification({ title: 'Relay test', body: 'Notifications from Grok Bot reach this browser.' });
+    n.on('click', () => log('test notification clicked'));
+    n.show();
+    return respond(res, 200, String(n.id));
+  }
   if (req.method === 'POST' && url.pathname === '/__relay/sync') {
     const body = await readBody(req);
     if (body.session !== load.id || !load.clients.has(body.client)) return respond(res, 409, 'stale session');
@@ -603,6 +646,7 @@ function acceptWebSocket(req, socket) {
 function onBrowserMessage(client, m) {
   if (load.clients.get(client.id) !== client) return;
   if (m.t === 'presence') return notePresence(client, m);
+  if (m.t === 'notify-click' || m.t === 'notify-closed') { lastActive = client.id; return onNotificationEvent(m); }
   lastActive = client.id;
   if (m.t === 'ipc') {
     if (ONCE_PER_LOAD.has(m.ch)) {
