@@ -130,6 +130,64 @@
     bar.append(a, host, x);
   }
 
+  // --- Custom schemes the app serves itself (sand-media://, sand-avatar:, ...) cannot load in a browser;
+  // rewrite them to the relay's proxy wherever the UI can hand a URL to the page
+  const proto = session.proto || { base: '', schemes: [] };
+  const protoBase = new URL(proto.base, document.baseURI).href;
+  const schemeRe = proto.schemes.length
+    ? new RegExp('^(' + proto.schemes.map((s) => s.replace(/[.+-]/g, '\\$&')).join('|') + '):(//)?', 'i') : null;
+  function rewrite(value) {
+    if (!schemeRe || value == null) return value;
+    const s = String(value);
+    const m = schemeRe.exec(s);
+    if (!m) return value;
+    return protoBase + (m[2] ? 's/' : 'o/') + m[1].toLowerCase() + '/' + s.slice(m[0].length);
+  }
+  const rewriteSrcset = (v) => String(v).split(',').map((c) => {
+    const parts = c.trim().split(/\s+/);
+    parts[0] = rewrite(parts[0]);
+    return parts.join(' ');
+  }).join(', ');
+  const rewriteCss = (v) => (typeof v === 'string' && v.includes('url(')
+    ? v.replace(/url\((['"]?)([^'")]+)\1\)/g, (all, q, u) => `url(${q}${rewrite(u)}${q})`) : v);
+
+  if (schemeRe) {
+    const URL_ATTRS = { src: rewrite, href: rewrite, poster: rewrite, data: rewrite, srcset: rewriteSrcset };
+    const setAttribute = Element.prototype.setAttribute;
+    Element.prototype.setAttribute = function (name, value) {
+      const fn = URL_ATTRS[String(name).toLowerCase()];
+      return setAttribute.call(this, name, fn ? fn(value) : value);
+    };
+    const patchProp = (ctor, prop, fn) => {
+      const d = ctor && Object.getOwnPropertyDescriptor(ctor.prototype, prop);
+      if (!d || !d.set) return;
+      Object.defineProperty(ctor.prototype, prop, { ...d, set(v) { d.set.call(this, fn(v)); } });
+    };
+    for (const C of [window.HTMLImageElement, window.HTMLMediaElement, window.HTMLSourceElement, window.HTMLIFrameElement,
+      window.HTMLEmbedElement, window.HTMLTrackElement, window.HTMLInputElement]) patchProp(C, 'src', rewrite);
+    patchProp(window.HTMLImageElement, 'srcset', rewriteSrcset);
+    patchProp(window.HTMLSourceElement, 'srcset', rewriteSrcset);
+    patchProp(window.HTMLVideoElement, 'poster', rewrite);
+    patchProp(window.HTMLObjectElement, 'data', rewrite);
+    patchProp(window.HTMLAnchorElement, 'href', rewrite);
+    patchProp(window.HTMLLinkElement, 'href', rewrite);
+    for (const p of ['backgroundImage', 'background', 'maskImage', 'listStyleImage', 'content', 'cssText']) {
+      patchProp(window.CSSStyleDeclaration, p, rewriteCss);
+    }
+    const setProperty = CSSStyleDeclaration.prototype.setProperty;
+    CSSStyleDeclaration.prototype.setProperty = function (name, value, prio) {
+      return setProperty.call(this, name, rewriteCss(value), prio);
+    };
+    const fetch0 = window.fetch;
+    window.fetch = function (input, init) {
+      if (typeof input === 'string' || input instanceof URL) input = rewrite(String(input));
+      else if (input instanceof Request && schemeRe.test(input.url)) input = new Request(rewrite(input.url), input);
+      return fetch0.call(this, input, init);
+    };
+    const open0 = XMLHttpRequest.prototype.open;
+    XMLHttpRequest.prototype.open = function (method, url, ...rest) { return open0.call(this, method, rewrite(url), ...rest); };
+  }
+
   window.__relayElectron = {
     ipcRenderer,
     contextBridge: { exposeInMainWorld: (key, api) => { window[key] = api; } },

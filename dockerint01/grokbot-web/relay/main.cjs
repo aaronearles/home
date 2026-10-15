@@ -11,6 +11,7 @@ const Module = require('node:module');
 const electron = require('electron');
 const codec = require('./codec.js');
 
+const { Readable } = require('node:stream');
 const { app, ipcMain, MessageChannelMain } = electron;
 const RESOURCES = process.env.GROKBOT_RESOURCES || '/opt/Grok Bot/resources';
 const ASAR = path.join(RESOURCES, 'app.asar');
@@ -22,6 +23,11 @@ const DEBUG = process.env.RELAY_DEBUG === '1';
 const log = (...a) => console.log('[relay]', ...a);
 const debug = (...a) => DEBUG && console.log('[relay:debug]', ...a);
 const BLANK = 'data:text/html,<!doctype html><title>Grok Bot relay</title>';
+// Per-process capability prefix for the custom-scheme proxy: sandboxed frames send no cookies
+const PROTO_SECRET = crypto.randomBytes(18).toString('base64url');
+// The app serves these itself (protocol.handle); in the browser they are proxied through the relay
+const appSchemes = new Set();
+const FRAME_SCHEMES = new Set(['sand-html-preview', 'sand-canvas', 'sand-mcp-app']);
 
 // --- Make the vendor code see a packaged app at its real install location -------------------------
 function override(obj, key, value) {
@@ -140,24 +146,37 @@ class RelayBrowserWindow extends RealBrowserWindow {
   }
 }
 
+function overlay(target, overrides) {
+  return new Proxy(target, {
+    get(t, key) {
+      if (Object.prototype.hasOwnProperty.call(overrides, key)) return overrides[key];
+      const v = Reflect.get(t, key);
+      return typeof v === 'function' ? v.bind(t) : v;
+    },
+  });
+}
+
 // Links the app opens (sign-in page, docs, dashboards) belong in the user's browser, not the container
-const relayShell = new Proxy(electron.shell, {
-  get(target, key) {
-    if (key === 'openExternal') {
-      return async (url) => {
-        log('openExternal ->', String(url).replace(/([?&](challenge|uuid|verifier)=)[^&]+/g, '$1…'));
-        if (session) toClient({ t: 'open', url: String(url) });
-      };
-    }
-    return Reflect.get(target, key);
+const relayShell = overlay(electron.shell, {
+  openExternal: async (url) => {
+    log('openExternal ->', String(url).replace(/([?&](challenge|uuid|verifier)=)[^&]+/g, '$1…'));
+    if (session) toClient({ t: 'open', url: String(url) });
   },
+});
+
+// Record the custom schemes the app serves so the browser-side shim knows what to proxy
+const relayProtocol = overlay(electron.protocol, {
+  handle: (scheme, handler) => { appSchemes.add(scheme); debug('app scheme', scheme); return electron.protocol.handle(scheme, handler); },
 });
 
 const patchedElectron = {};
 for (const key of Object.getOwnPropertyNames(electron)) {
   Object.defineProperty(patchedElectron, key, {
     enumerable: true,
-    get: () => (key === 'BrowserWindow' ? RelayBrowserWindow : key === 'shell' ? relayShell : electron[key]),
+    get: () => (key === 'BrowserWindow' ? RelayBrowserWindow
+      : key === 'shell' ? relayShell
+        : key === 'protocol' ? relayProtocol
+          : electron[key]),
   });
 }
 const originalLoad = Module._load;
@@ -183,7 +202,8 @@ function getIndexHtml() {
     indexHtml = read(path.join(RENDERER, 'index.html')).toString('utf8').replace(
       /<head>/i,
       '<head>\n    <script src="./__relay/codec.js"></script>\n    <script src="./__relay/shim.js"></script>\n    <script src="./__relay/preload.js"></script>',
-    );
+    // Proxied frame schemes load from the relay's own origin (sandboxed by response header)
+    ).replace(/frame-src /, "frame-src 'self' ");
   }
   return indexHtml;
 }
@@ -233,6 +253,7 @@ async function handle(req, res) {
     });
   }
   if (url.pathname === '/healthz') return respond(res, mainWin ? 200 : 503, mainWin ? 'ok' : 'starting');
+  if (url.pathname.startsWith(`/__relay/p/${PROTO_SECRET}/`)) return proxyScheme(req, res, url);
   if (!authorized(req)) return respond(res, 401, 'Unauthorized: open this URL once with ?token=<RELAY_TOKEN>');
 
   if (url.pathname === '/__relay/codec.js') return respond(res, 200, read(path.join(__dirname, 'codec.js')), TYPES['.js']);
@@ -249,7 +270,10 @@ async function handle(req, res) {
       await reloaded;
     }
     session.claimed = true;
-    return respond(res, 200, JSON.stringify({ id: session.id, argv: mainArgv, versions: process.versions }), TYPES['.json']);
+    return respond(res, 200, JSON.stringify({
+      id: session.id, argv: mainArgv, versions: process.versions,
+      proto: { base: `./__relay/p/${PROTO_SECRET}/`, schemes: [...appSchemes] },
+    }), TYPES['.json']);
   }
   if (req.method === 'POST' && url.pathname === '/__relay/sync') {
     const body = await readBody(req);
@@ -271,6 +295,36 @@ async function handle(req, res) {
     debug('404', rel);
     return respond(res, 404, 'Not found');
   }
+}
+
+// --- Custom-scheme proxy: /__relay/p/<secret>/<s|o>/<scheme>/<rest> -> <scheme>://<rest> (s) or <scheme>:<rest> (o)
+const PASS_REQUEST = ['range', 'accept', 'if-none-match', 'if-modified-since'];
+const PASS_RESPONSE = ['content-type', 'content-length', 'content-range', 'accept-ranges', 'etag', 'last-modified', 'cache-control'];
+async function proxyScheme(req, res, url) {
+  const rest = url.pathname.slice(`/__relay/p/${PROTO_SECRET}/`.length);
+  const m = /^([so])\/([a-z][a-z0-9+.-]*)\/(.*)$/s.exec(rest);
+  if (!m || !appSchemes.has(m[2])) return respond(res, 404, 'Unknown scheme');
+  const [, kind, scheme, tail] = m;
+  const target = `${scheme}:${kind === 's' ? '//' : ''}${tail}${url.search}`;
+  const headers = {};
+  for (const h of PASS_REQUEST) if (req.headers[h]) headers[h] = req.headers[h];
+  let upstream;
+  try {
+    upstream = await electron.session.defaultSession.fetch(target, { method: req.method === 'HEAD' ? 'HEAD' : 'GET', headers });
+  } catch (err) {
+    log('scheme fetch failed:', scheme, err.message);
+    return respond(res, 502, 'Scheme handler failed');
+  }
+  debug('scheme', scheme, upstream.status);
+  const out = { 'X-Content-Type-Options': 'nosniff' };
+  for (const h of PASS_RESPONSE) { const v = upstream.headers.get(h); if (v != null) out[h] = v; }
+  // In the app these frames get their own origin; here they would share the relay's, so force an opaque one
+  if (FRAME_SCHEMES.has(scheme)) {
+    out['Content-Security-Policy'] = 'sandbox allow-scripts allow-forms allow-popups allow-popups-to-escape-sandbox allow-modals allow-downloads';
+  }
+  res.writeHead(upstream.status, out);
+  if (!upstream.body || req.method === 'HEAD') return res.end();
+  Readable.fromWeb(upstream.body).on('error', () => res.destroy()).pipe(res);
 }
 
 // --- Minimal RFC 6455 WebSocket (text frames, fragmentation, ping/pong, close) ----------------------

@@ -23,6 +23,7 @@ browser                                         container (nothing displayed or 
   - replays browser IPC as events from that real window, so the app's trusted-sender checks hold;
   - forwards `shell.openExternal` to the browser.
 - **`relay/shim.js`.** This is the browser-side stand-in for the 7 `electron` APIs the preload uses: `contextBridge`, `ipcRenderer` (send/sendSync/invoke/on), `webFrame`, and `webUtils`. The preload is served wrapped as a normal script, so the vendor's CSP stays intact.
+- **Custom schemes.** The app serves `sand-avatar:`, `sand-favicon:`, `sand-media:`, `sand-canvas:`, `sand-html-preview:` and `sand-mcp-app:` through `protocol.handle`, and the relay records each registration. The shim rewrites those URLs wherever the UI can set one (src/href/srcset/poster, inline styles, `fetch`, XHR) to `/__relay/p/<secret>/…`. The relay fetches them back through `session.fetch`, which runs the app's own handlers, and streams the response, including Range requests. The secret is an unguessable per-process prefix rather than the cookie, because sandboxed frames send no cookies.
 - **Sign-in.** Cursor login is a polling flow (`loginDeepControl` → `/auth/poll`). The sign-in page opens in your browser (a new tab, or the banner link if the popup was blocked), and the main process picks up the result.
 
 ## Setup
@@ -51,6 +52,6 @@ docker run --rm -v "$PWD/tools:/test:ro" -v /tmp/out:/out \
 
 ## Known gaps (spike)
 
-- **Custom schemes.** `sand-avatar:`, `sand-favicon:`, `sand-media:`, `sand-canvas:`, `sand-html-preview:` and `sand-mcp-app:` are served by the main process through `protocol.handle`. They are not proxied yet, so avatars, media, and previews may be missing.
+- **Frame schemes.** `sand-html-preview:`, `sand-canvas:` and `sand-mcp-app:` frames are proxied but untested. In the app they get their own origin; here they are forced to an opaque origin with a `CSP: sandbox` header (no `allow-same-origin`), so features that need frame storage may break. Absolute paths (`/x`) inside framed documents resolve to the relay root.
 - **Desktop-only features.** Window controls are no-ops. The `<webview>` teach-recording feature and the remote-computer (VNC) panel are untested.
 - **Fragility.** The relay depends on internal names: the `preload.cjs` path, the main-window detection, and the `sand:*` channels. Re-test after every app update.
