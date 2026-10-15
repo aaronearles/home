@@ -32,6 +32,7 @@ app.whenReady().then(async () => {
       sidebarItems: document.querySelectorAll('nav a, nav button, [role="listitem"], [role="option"]').length,
       textChars: (document.body.innerText || '').length,
       signInScreen: /Sign in/.test(document.body.innerText || '') && !document.querySelector('[contenteditable="true"]'),
+      couldntRefresh: ((document.body.innerText || '').match(/Couldn.t refresh/g) || []).length,
     })`).catch((e) => e.message);
     console.log('[probe]', probe);
   } else {

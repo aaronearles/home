@@ -113,7 +113,7 @@ function portsForBrowserIds(ids, owner) {
 // request ids are prefixed per client and replies routed back, events go to every client.
 const COORD_TRANSPORT_FAMILY = 'coordinator-transport-state';
 const coord = { upstream: null, requested: false, ready: false, version: null, helloVersion: null,
-  transportEvent: null, virtual: new Map(), backlog: [], inbound: new Map() };
+  transportEvent: null, virtual: new Map(), backlog: [], inbound: new Map(), methods: new Map() };
 
 function coordReset() {
   if (coord.upstream) { try { coord.upstream.close(); } catch {} }
@@ -189,6 +189,7 @@ function coordFromClient(cid, v, f) {
   }
   if ((f.kind === 'request' || f.kind === 'cancel') && typeof f.requestId === 'string') {
     const out = { ...f, requestId: `${cid}|${f.requestId}` };
+    if (f.kind === 'request') coord.methods.set(out.requestId, f.method);
     if (coord.ready) coord.upstream.postMessage(out); else coord.backlog.push(out);
     return;
   }
@@ -215,6 +216,11 @@ function coordFromUpstream(f) {
     return;
   }
   if (f.kind === 'reply' && typeof f.requestId === 'string') {
+    const method = coord.methods.get(f.requestId);
+    coord.methods.delete(f.requestId);
+    if (f.outcome && f.outcome.status !== 'ok') {
+      log('coordinator error reply:', method || '?', JSON.stringify(f.outcome).slice(0, 600));
+    }
     const sep = f.requestId.indexOf('|');
     const v = sep > 0 && coord.virtual.get(f.requestId.slice(0, sep));
     if (v) v.port.postMessage({ ...f, requestId: f.requestId.slice(sep + 1) });
