@@ -38,42 +38,200 @@ override(app, 'isPackaged', true);
 override(process, 'resourcesPath', RESOURCES);
 app.getAppPath = () => ASAR;
 
-// --- Relay state: one "session" per load of the hidden main window ----------------------------------
+// --- Relay state ---------------------------------------------------------------------------------------
+// A "load" is one navigation of the hidden main window. Any number of browser clients (tabs, devices)
+// attach to the same load: replies go to the client that asked, main-process broadcasts go to all.
 let mainWin = null;
 let mainReady = null;
-let session = null;
-let relayReload = false;
-const ports = new Map();
+let load = null;
+let nextClientNum = 1;
+let lastActive = null; // client that last sent something: receives openExternal and unsolicited ports
+const ports = new Map(); // port id -> { port, owner }; browser-made ids are "<clientId>:<n>"
 let nextServerPortId = 1;
+// Sent once by main when the window loads; replayed to clients that attach later
+const STICKY_CHANNELS = new Set(['sand:main-edge-served']);
+// Renderer boot signals main expects once per window load, not once per browser tab
+const ONCE_PER_LOAD = new Set(['sand:renderer-boot-gate-opened', 'sand:renderer-boot-gate-landed']);
 
-function newSession() {
-  if (session && session.client) {
-    sendTo(session.client, { t: relayReload ? 'superseded' : 'reload' });
-    session.client.close();
-  }
-  for (const p of ports.values()) { try { p.close(); } catch {} }
+function newLoad() {
+  if (load) for (const c of load.clients.values()) { deliver(c, { t: 'reload' }); if (c.ws) c.ws.close(); }
+  for (const { port } of ports.values()) { try { port.close(); } catch {} }
   ports.clear();
-  session = { id: crypto.randomUUID(), queue: [], client: null, claimed: false };
-  debug('new session', session.id);
+  coordReset();
+  load = { id: crypto.randomUUID(), clients: new Map(), sticky: [], gates: new Set() };
+  debug('new load', load.id);
 }
 
-function toClient(m) {
-  if (session.client && session.client.open) sendTo(session.client, m);
-  else session.queue.push(m);
+function deliver(client, m) {
+  if (client.ws && client.ws.open) sendTo(client.ws, m);
+  else client.queue.push(m);
+}
+function broadcast(m) { for (const c of load.clients.values()) deliver(c, m); }
+function toOwner(owner, m) { const c = owner && load.clients.get(owner); if (c) deliver(c, m); }
+function activeClient() {
+  return load.clients.get(lastActive) || [...load.clients.values()].filter((c) => c.ws && c.ws.open).pop() || null;
 }
 
-function bindPort(id, port) {
-  ports.set(id, port);
+function addClient() {
+  const client = { id: `c${nextClientNum++}`, ws: null, queue: [...load.sticky], loadId: load.id };
+  load.clients.set(client.id, client);
+  // A page that never opens its WebSocket (closed mid-boot) is dropped after a minute
+  setTimeout(() => { if (!client.ws) removeClient(client); }, 60000).unref();
+  debug('client', client.id, 'joined;', load.clients.size, 'attached');
+  return client;
+}
+function removeClient(client) {
+  if (!load || load.clients.get(client.id) !== client) return;
+  load.clients.delete(client.id);
+  for (const [id, rec] of ports) if (rec.owner === client.id) { ports.delete(id); try { rec.port.close(); } catch {} }
+  closeVirtual(client.id);
+  if (lastActive === client.id) lastActive = null;
+  debug('client', client.id, 'left;', load.clients.size, 'attached');
+}
+
+function bindPort(id, port, owner) {
+  ports.set(id, { port, owner });
   port.on('message', (e) => {
-    debug('port', id, '-> browser');
-    toClient({ t: 'pm', id, d: codec.encode(e.data), p: e.ports.map(registerPort) });
+    debug('port', id, '-> browser', owner);
+    toOwner(owner, { t: 'pm', id, d: codec.encode(e.data), p: e.ports.map((p) => registerPort(p, owner)) });
   });
-  port.on('close', () => { if (ports.get(id) === port) { ports.delete(id); toClient({ t: 'pc', id }); } });
+  port.on('close', () => {
+    const rec = ports.get(id);
+    if (rec && rec.port === port) { ports.delete(id); toOwner(owner, { t: 'pc', id }); }
+  });
   port.start();
 }
-function registerPort(port) { const id = nextServerPortId++; bindPort(id, port); return id; }
-function portsForBrowserIds(ids = []) {
-  return ids.map((id) => { const { port1, port2 } = new MessageChannelMain(); bindPort(id, port1); return port2; });
+function registerPort(port, owner) { const id = nextServerPortId++; bindPort(id, port, owner); return id; }
+function portsForBrowserIds(ids, owner) {
+  return (ids || []).map((id) => { const { port1, port2 } = new MessageChannelMain(); bindPort(id, port1, owner); return port2; });
+}
+
+// --- Coordinator multiplexer --------------------------------------------------------------------------
+// Main serves the coordinator to exactly one renderer: a second port request disposes the coordinator
+// process and starts a new one. So the relay holds that single upstream connection and gives each client
+// a virtual port, speaking the coordinator's frame protocol (lifecycle/request/cancel/reply/event):
+// request ids are prefixed per client and replies routed back, events go to every client.
+const COORD_TRANSPORT_FAMILY = 'coordinator-transport-state';
+const coord = { upstream: null, requested: false, ready: false, version: null, helloVersion: null,
+  transportEvent: null, virtual: new Map(), backlog: [], inbound: new Map() };
+
+function coordReset() {
+  if (coord.upstream) { try { coord.upstream.close(); } catch {} }
+  for (const cid of [...coord.virtual.keys()]) closeVirtual(cid);
+  Object.assign(coord, { upstream: null, requested: false, ready: false, version: null, transportEvent: null, backlog: [] });
+  coord.inbound.clear();
+}
+
+function closeVirtual(cid) {
+  const v = coord.virtual.get(cid);
+  if (!v) return;
+  coord.virtual.delete(cid);
+  try { v.port.close(); } catch {}
+}
+
+function coordRequestUpstream() {
+  if (coord.requested || coord.upstream) return;
+  coord.requested = true;
+  debug('coordinator: requesting upstream port');
+  invokeIpc('sand:coordinator-port-request', [undefined])
+    .catch((e) => { coord.requested = false; log('coordinator port request failed:', e.message); });
+}
+
+function coordAdoptUpstream(port) {
+  const replacing = coord.upstream != null || coord.version != null;
+  if (coord.upstream) { try { coord.upstream.close(); } catch {} }
+  // A replacement upstream means the coordinator restarted: clients reconnect through fresh ports.
+  // The first one answers the request clients are already waiting on, so their ports stay.
+  if (replacing) for (const cid of [...coord.virtual.keys()]) closeVirtual(cid);
+  Object.assign(coord, { upstream: port, requested: false, ready: false, transportEvent: null });
+  coord.inbound.clear();
+  port.on('message', (e) => coordFromUpstream(e.data));
+  port.on('close', () => {
+    if (coord.upstream !== port) return;
+    log('coordinator connection closed');
+    coord.upstream = null; coord.ready = false;
+    for (const cid of [...coord.virtual.keys()]) closeVirtual(cid);
+  });
+  port.start();
+  port.postMessage({ kind: 'lifecycle', phase: 'hello', protocolVersion: coord.helloVersion ?? 3 });
+  log('coordinator: upstream adopted');
+}
+
+function coordGreet(v) {
+  v.port.postMessage({ kind: 'lifecycle', phase: 'ready', protocolVersion: coord.version });
+  if (coord.transportEvent) v.port.postMessage(coord.transportEvent);
+  v.ready = true;
+}
+
+function coordServeClient(client) {
+  closeVirtual(client.id); // a renderer that re-requests replaces its previous port
+  const { port1: muxEnd, port2: clientEnd } = new MessageChannelMain();
+  const v = { port: muxEnd, ready: false, helloPending: false };
+  coord.virtual.set(client.id, v);
+  muxEnd.on('message', (e) => coordFromClient(client.id, v, e.data));
+  muxEnd.start();
+  const id = registerPort(clientEnd, client.id);
+  deliver(client, { t: 'ipc', ch: 'sand:coordinator-port', a: codec.encode([null]), p: [id] });
+  debug('coordinator: virtual port for', client.id);
+}
+
+function coordFromClient(cid, v, f) {
+  if (coord.virtual.get(cid) !== v || !f || typeof f !== 'object') return;
+  if (f.kind === 'lifecycle') {
+    if (f.phase === 'hello') {
+      coord.helloVersion ??= f.protocolVersion;
+      if (coord.ready) coordGreet(v);
+      else { v.helloPending = true; coordRequestUpstream(); }
+    } else if (f.phase === 'shutdown') {
+      closeVirtual(cid); // never forwarded: it would end the coordinator connection for every client
+    }
+    return;
+  }
+  if ((f.kind === 'request' || f.kind === 'cancel') && typeof f.requestId === 'string') {
+    const out = { ...f, requestId: `${cid}|${f.requestId}` };
+    if (coord.ready) coord.upstream.postMessage(out); else coord.backlog.push(out);
+    return;
+  }
+  if (f.kind === 'reply' && coord.inbound.has(f.requestId)) { // reply to a coordinator-initiated request
+    coord.inbound.delete(f.requestId);
+    if (coord.upstream) coord.upstream.postMessage(f);
+    return;
+  }
+  debug('coordinator: unhandled client frame', f.kind);
+}
+
+function coordFromUpstream(f) {
+  if (!f || typeof f !== 'object') return;
+  if (f.kind === 'lifecycle') {
+    if (f.phase === 'ready') {
+      coord.ready = true; coord.version = f.protocolVersion;
+      for (const v of coord.virtual.values()) if (v.helloPending) { v.helloPending = false; coordGreet(v); }
+      for (const out of coord.backlog.splice(0)) coord.upstream.postMessage(out);
+      log('coordinator: ready, serving', coord.virtual.size, 'client(s)');
+    } else if (f.phase === 'shutdown') {
+      log('coordinator: shutdown', f.reason, f.detail || '');
+      for (const v of coord.virtual.values()) v.port.postMessage(f);
+    }
+    return;
+  }
+  if (f.kind === 'reply' && typeof f.requestId === 'string') {
+    const sep = f.requestId.indexOf('|');
+    const v = sep > 0 && coord.virtual.get(f.requestId.slice(0, sep));
+    if (v) v.port.postMessage({ ...f, requestId: f.requestId.slice(sep + 1) });
+    return;
+  }
+  if (f.kind === 'event') {
+    if (f.family === COORD_TRANSPORT_FAMILY) coord.transportEvent = f;
+    for (const v of coord.virtual.values()) if (v.ready) v.port.postMessage(f);
+    return;
+  }
+  if (f.kind === 'request' || f.kind === 'cancel') { // coordinator asking the UI: the active client answers
+    const target = (activeClient() && coord.virtual.get(activeClient().id)) || [...coord.virtual.values()].find((v) => v.ready);
+    if (f.kind === 'request') coord.inbound.set(f.requestId, true);
+    if (target) target.port.postMessage(f);
+    return;
+  }
+  debug('coordinator: unhandled upstream frame', f.kind);
 }
 
 // Replay a browser IPC message as if the hidden window's real renderer sent it, so the app's own
@@ -115,16 +273,24 @@ function adoptMainWindow(win, opts) {
   const wc = win.webContents;
   let resolveReady;
   mainReady = new Promise((r) => { resolveReady = r; });
-  newSession();
+  newLoad();
 
   win.loadFile = () => win.loadURL(BLANK);
-  wc.send = (channel, ...args) => { debug('main send', channel); toClient({ t: 'ipc', ch: channel, a: codec.encode(args) }); };
+  wc.send = (channel, ...args) => {
+    debug('main send', channel);
+    const m = { t: 'ipc', ch: channel, a: codec.encode(args) };
+    if (STICKY_CHANNELS.has(channel)) load.sticky.push(m);
+    broadcast(m);
+  };
   wc.postMessage = (channel, message, transfer = []) => {
     debug('main postMessage', channel, `(${transfer.length} ports)`);
-    toClient({ t: 'ipc', ch: channel, a: codec.encode([message]), p: transfer.map(registerPort) });
+    if (channel === 'sand:coordinator-port' && transfer.length === 1) return coordAdoptUpstream(transfer[0]);
+    const owner = activeClient();
+    if (!owner) { log('dropping', channel, 'from main: no browser attached'); transfer.forEach((p) => p.close()); return; }
+    deliver(owner, { t: 'ipc', ch: channel, a: codec.encode([message]), p: transfer.map((p) => registerPort(p, owner.id)) });
   };
   wc.on('did-start-navigation', (details) => {
-    if (details.isMainFrame && !details.isSameDocument) { newSession(); relayReload = false; }
+    if (details.isMainFrame && !details.isSameDocument) newLoad();
   });
   wc.on('did-finish-load', () => resolveReady());
   wc.on('render-process-gone', (_e, d) => log('hidden window renderer gone:', d.reason));
@@ -160,7 +326,8 @@ function overlay(target, overrides) {
 const relayShell = overlay(electron.shell, {
   openExternal: async (url) => {
     log('openExternal ->', String(url).replace(/([?&](challenge|uuid|verifier)=)[^&]+/g, '$1…'));
-    if (session) toClient({ t: 'open', url: String(url) });
+    const target = load && activeClient();
+    if (target) deliver(target, { t: 'open', url: String(url) });
   },
 });
 
@@ -263,21 +430,16 @@ async function handle(req, res) {
   if (req.method === 'POST' && url.pathname === '/__relay/session') {
     if (!mainWin) await new Promise((r) => { const t = setInterval(() => mainWin && (clearInterval(t), r()), 200); });
     await mainReady;
-    if (session.claimed) {
-      relayReload = true;
-      const reloaded = new Promise((r) => mainWin.webContents.once('did-finish-load', r));
-      mainWin.webContents.reload();
-      await reloaded;
-    }
-    session.claimed = true;
+    const client = addClient();
     return respond(res, 200, JSON.stringify({
-      id: session.id, argv: mainArgv, versions: process.versions,
+      id: load.id, client: client.id, argv: mainArgv, versions: process.versions,
       proto: { base: `./__relay/p/${PROTO_SECRET}/`, schemes: [...appSchemes] },
     }), TYPES['.json']);
   }
   if (req.method === 'POST' && url.pathname === '/__relay/sync') {
     const body = await readBody(req);
-    if (body.session !== session.id) return respond(res, 409, 'stale session');
+    if (body.session !== load.id || !load.clients.has(body.client)) return respond(res, 409, 'stale session');
+    lastActive = body.client;
     const ret = emitIpc(body.ch, codec.decode(body.a), [], true);
     return respond(res, 200, JSON.stringify({ r: codec.encode(ret) }), TYPES['.json']);
   }
@@ -373,31 +535,44 @@ function acceptWebSocket(req, socket) {
   return client;
 }
 
-function onBrowserMessage(m) {
-  if (m.t === 'ipc') emitIpc(m.ch, codec.decode(m.a), portsForBrowserIds(m.p), false);
-  else if (m.t === 'pm') {
-    const port = ports.get(m.id);
-    if (!port) return debug('message for unknown port', m.id);
-    debug('port', m.id, '<- browser');
-    port.postMessage(codec.decode(m.d), portsForBrowserIds(m.p));
+function onBrowserMessage(client, m) {
+  if (load.clients.get(client.id) !== client) return;
+  lastActive = client.id;
+  if (m.t === 'ipc') {
+    if (ONCE_PER_LOAD.has(m.ch)) {
+      if (load.gates.has(m.ch)) return debug('swallowed repeat', m.ch, 'from', client.id);
+      load.gates.add(m.ch);
+    }
+    emitIpc(m.ch, codec.decode(m.a), portsForBrowserIds(m.p, client.id), false);
+  } else if (m.t === 'pm') {
+    const rec = ports.get(m.id);
+    if (!rec) return debug('message for unknown port', m.id);
+    debug('port', m.id, '<- browser', client.id);
+    rec.port.postMessage(codec.decode(m.d), portsForBrowserIds(m.p, client.id));
   } else if (m.t === 'pc') {
-    const port = ports.get(m.id);
-    if (port) { ports.delete(m.id); port.close(); }
+    const rec = ports.get(m.id);
+    if (rec) { ports.delete(m.id); rec.port.close(); }
   } else if (m.t === 'inv') {
     const args = codec.decode(m.a);
-    const method = args[0] && typeof args[0] === 'object' && args[0].method ? `.${args[0].method}` : '';
-    debug('invoke', m.ch + method);
+    debug('invoke', m.ch, 'from', client.id);
+    if (m.ch === 'sand:coordinator-port-request') {
+      coordServeClient(client);
+      return deliver(client, { t: 'inv', id: m.id, r: codec.encode(null) });
+    }
     // The UI's reliability reports (mostly outcome "ok" telemetry): log the ones that are not ok, so
     // relay-specific breakage is visible. They are also sent upstream by the app.
     if (m.ch.endsWith(':reportClientFailure')) {
       const report = args[0];
-      if (!report || typeof report !== 'object' || report.outcome !== 'ok') {
+      const bad = !report || typeof report !== 'object'
+        || (report.outcome !== undefined && report.outcome !== 'ok')
+        || Object.keys(report).some((k) => /error/i.test(k));
+      if (bad) {
         log('client failure:', JSON.stringify(codec.encode(args)).slice(0, 1500));
       }
     }
     Promise.resolve().then(() => invokeIpc(m.ch, args))
-      .then((r) => toClient({ t: 'inv', id: m.id, r: codec.encode(r) }))
-      .catch((e) => { log('invoke failed:', m.ch + method, e && e.message); toClient({ t: 'inv', id: m.id, e: codec.encode(e) }); });
+      .then((r) => deliver(client, { t: 'inv', id: m.id, r: codec.encode(r) }))
+      .catch((e) => { log('invoke failed:', m.ch, e && e.message); deliver(client, { t: 'inv', id: m.id, e: codec.encode(e) }); });
   }
 }
 
@@ -406,16 +581,17 @@ const server = http.createServer((req, res) => {
 });
 server.on('upgrade', (req, socket) => {
   const url = new URL(req.url, 'http://relay');
-  if (url.pathname !== '/__relay/ws' || !authorized(req) || !session || url.searchParams.get('session') !== session.id) {
+  const client = load && url.searchParams.get('session') === load.id && load.clients.get(url.searchParams.get('client'));
+  if (url.pathname !== '/__relay/ws' || !authorized(req) || !client || client.ws) {
     socket.end('HTTP/1.1 403 Forbidden\r\n\r\n');
     return;
   }
-  const client = acceptWebSocket(req, socket);
-  client.onmessage = onBrowserMessage;
-  if (session.client) session.client.close();
-  session.client = client;
-  debug('browser attached; flushing', session.queue.length, 'queued messages');
-  while (session.queue.length && client.open) sendTo(client, session.queue.shift());
+  const ws = acceptWebSocket(req, socket);
+  ws.onmessage = (m) => onBrowserMessage(client, m);
+  ws.onclose = () => removeClient(client);
+  client.ws = ws;
+  debug('client', client.id, 'connected; flushing', client.queue.length, 'queued messages');
+  while (client.queue.length && ws.open) sendTo(ws, client.queue.shift());
 });
 server.listen(PORT, '0.0.0.0', () => log(`listening on :${PORT}${TOKEN ? '' : ' (WARNING: no RELAY_TOKEN set, unauthenticated)'}`));
 

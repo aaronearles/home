@@ -23,6 +23,18 @@ browser                                         container (nothing displayed or 
   - replays browser IPC as events from that real window, so the app's trusted-sender checks hold;
   - forwards `shell.openExternal` to the browser.
 - **`relay/shim.js`.** This is the browser-side stand-in for the 7 `electron` APIs the preload uses: `contextBridge`, `ipcRenderer` (send/sendSync/invoke/on), `webFrame`, and `webUtils`. The preload is served wrapped as a normal script, so the vendor's CSP stays intact.
+- **Multiple clients.** Every page load is a client of the same hidden window:
+  - `sendSync`/`invoke` replies go back to the client that asked.
+  - The main process's broadcasts go to every client.
+  - MessagePorts belong to the client they were made for.
+  - `openExternal` opens in whichever client was last active.
+  - The two renderer boot-gate signals are forwarded once per window load.
+- **Coordinator multiplexer.** The main process serves the coordinator to exactly one renderer, and a second port request restarts the coordinator process. So the relay holds that single connection and gives each client a virtual port, using the coordinator's frame protocol:
+  - The relay answers each client's `hello` itself with `ready` and the last transport-state event.
+  - `request`/`cancel` ids are prefixed per client, and `reply` frames are routed back by that prefix.
+  - `event` frames go to every client.
+  - A client's `shutdown` only drops that client.
+  - If the main process hands over a new upstream (the coordinator restarted), the virtual ports are closed and the clients reconnect, which is the app's own recovery path.
 - **Custom schemes.** The app serves `sand-avatar:`, `sand-favicon:`, `sand-media:`, `sand-canvas:`, `sand-html-preview:` and `sand-mcp-app:` through `protocol.handle`, and the relay records each registration. The shim rewrites those URLs wherever the UI can set one (src/href/srcset/poster, inline styles, `fetch`, XHR) to `/__relay/p/<secret>/…`. The relay fetches them back through `session.fetch`, which runs the app's own handlers, and streams the response, including Range requests. The secret is an unguessable per-process prefix rather than the cookie, because sandboxed frames send no cookies.
 - **Sign-in.** Cursor login is a polling flow (`loginDeepControl` → `/auth/poll`). The sign-in page opens in your browser (a new tab, or the banner link if the popup was blocked), and the main process picks up the result.
 
@@ -38,7 +50,7 @@ docker compose build && docker compose up -d
 
 Open `https://grokbot-web.internal.earles.io/?token=<RELAY_TOKEN>` once per browser. The token is stored in an HttpOnly cookie.
 
-Only one browser tab is active at a time. Opening a new tab reloads the hidden window and takes over the session.
+Any number of tabs and devices can be open at once. They all share the one hidden window and one coordinator. Changes made in one tab (new messages, agent state) reach the others as the app's own events.
 
 ## Smoke test
 

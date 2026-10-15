@@ -15,13 +15,14 @@
     return JSON.parse(xhr.responseText);
   }
 
-  // A session is one load of the hidden main window; the server reloads it for each new page load
+  // Every page load is its own client of the shared hidden main window
   const session = syncPost('session', {});
 
   // --- WebSocket transport with an outbound queue until open
   const wsUrl = new URL('ws', base);
   wsUrl.protocol = wsUrl.protocol === 'https:' ? 'wss:' : 'ws:';
   wsUrl.searchParams.set('session', session.id);
+  wsUrl.searchParams.set('client', session.client);
   const ws = new WebSocket(wsUrl);
   const outbox = [];
   const send = (m) => (ws.readyState === 1 ? ws.send(JSON.stringify(m)) : outbox.push(m));
@@ -30,11 +31,12 @@
 
   // --- MessagePort bridging: each relayed port is one end of a local MessageChannel
   const ports = new Map();
-  let nextPortId = -1; // browser-allocated ids are negative, server-allocated positive
+  let portSeq = 0; // browser-allocated ids are "<client>:<n>", server-allocated are numbers
+  const newPortId = () => `${session.client}:${++portSeq}`;
   function bindPort(id, port) {
     ports.set(id, port);
     port.onmessage = (e) => {
-      const ids = [...e.ports].map((p) => { const nid = nextPortId--; bindPort(nid, p); return nid; });
+      const ids = [...e.ports].map((p) => { const nid = newPortId(); bindPort(nid, p); return nid; });
       send({ t: 'pm', id, d: codec.encode(e.data), p: ids });
     };
   }
@@ -60,14 +62,14 @@
   }
   const ipcRenderer = {
     send: (channel, ...args) => send({ t: 'ipc', ch: channel, a: codec.encode(args) }),
-    sendSync: (channel, ...args) => codec.decode(syncPost('sync', { session: session.id, ch: channel, a: codec.encode(args) }).r),
+    sendSync: (channel, ...args) => codec.decode(syncPost('sync', { session: session.id, client: session.client, ch: channel, a: codec.encode(args) }).r),
     invoke: (channel, ...args) => new Promise((resolve, reject) => {
       const id = nextInvoke++;
       invokes.set(id, { resolve, reject });
       send({ t: 'inv', id, ch: channel, a: codec.encode(args) });
     }),
     postMessage: (channel, message, transfer = []) => {
-      const ids = transfer.map((p) => { const nid = nextPortId--; bindPort(nid, p); return nid; });
+      const ids = transfer.map((p) => { const nid = newPortId(); bindPort(nid, p); return nid; });
       send({ t: 'ipc', ch: channel, a: codec.encode([message]), p: ids });
     },
     on: (channel, fn) => addListener(channel, fn, false),

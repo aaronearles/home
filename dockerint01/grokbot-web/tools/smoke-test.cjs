@@ -21,10 +21,21 @@ app.whenReady().then(async () => {
     console.log('[click]', process.env.TEST_CLICK, clicked);
     await new Promise((r) => setTimeout(r, 6000));
   }
-  fs.writeFileSync('/out/shot.png', (await wc.capturePage()).toPNG());
+  if (process.env.TEST_SAFE !== '1') fs.writeFileSync('/out/shot.png', (await wc.capturePage()).toPNG());
   const text = await wc.executeJavaScript('document.body ? document.body.innerText.slice(0, 1500) : "(no body)"').catch((e) => 'ERR ' + e.message);
   const globals = await wc.executeJavaScript('JSON.stringify({desktop: typeof window.desktop, coordinatorPort: typeof window.coordinatorPort, root: (document.getElementById("root")||{}).childElementCount})').catch((e) => e.message);
   console.log('[globals]', globals);
-  console.log('[text]', JSON.stringify(text));
+  if (process.env.TEST_SAFE === '1') {
+    // Privacy-safe probe for a signed-in session: structure only, no page text
+    const probe = await wc.executeJavaScript(`JSON.stringify({
+      composer: !!document.querySelector('[contenteditable="true"], textarea'),
+      sidebarItems: document.querySelectorAll('nav a, nav button, [role="listitem"], [role="option"]').length,
+      textChars: (document.body.innerText || '').length,
+      signInScreen: /Sign in/.test(document.body.innerText || '') && !document.querySelector('[contenteditable="true"]'),
+    })`).catch((e) => e.message);
+    console.log('[probe]', probe);
+  } else {
+    console.log('[text]', JSON.stringify(text));
+  }
   app.quit();
 });
