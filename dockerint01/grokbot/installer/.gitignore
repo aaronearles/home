@@ -1,0 +1,3 @@
+# Official installer goes here; vendor binaries are not committed
+*
+!.gitignore

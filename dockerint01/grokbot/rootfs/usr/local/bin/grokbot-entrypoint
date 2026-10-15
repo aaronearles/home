@@ -1,0 +1,43 @@
+#!/bin/bash
+# Prepare the persistent home, stash secrets out of the environment, then run Xpra in the foreground.
+set -euo pipefail
+. /etc/grokbot/app.env
+
+: "${XPRA_PASSWORD:?must be set in .env, second auth layer behind Authentik}"
+: "${KEYRING_PASSWORD:?must be set in .env, unlocks the keyring holding sign-in tokens}"
+[ "$XPRA_PASSWORD" != change_me ] && [ "$KEYRING_PASSWORD" != change_me ] || { echo "Replace the change_me values in .env" >&2; exit 1; }
+
+# Secrets go to files in the private runtime dir; the app and browser never inherit them
+umask 077
+printf '%s' "$XPRA_PASSWORD" > "$XDG_RUNTIME_DIR/xpra-password"
+printf '%s' "$KEYRING_PASSWORD" > "$XDG_RUNTIME_DIR/keyring-password"
+unset XPRA_PASSWORD KEYRING_PASSWORD
+umask 022
+
+# Links open in Firefox inside the session; the app's own URL schemes route back to the app
+mkdir -p "$HOME/.config" "$HOME/.local/share/applications"
+xdg-mime default firefox-esr.desktop x-scheme-handler/http x-scheme-handler/https text/html
+for scheme in $APP_SCHEMES; do
+  xdg-mime default "$APP_DESKTOP" "x-scheme-handler/$scheme"
+done
+
+exec xpra start :100 \
+  --daemon=no \
+  --bind-tcp=0.0.0.0:14500,auth=file:filename="$XDG_RUNTIME_DIR/xpra-password" \
+  --html=on \
+  --mdns=no \
+  --systemd-run=no \
+  --dbus-launch="dbus-launch --sh-syntax --close-stderr" \
+  --pulseaudio=yes \
+  --speaker=on \
+  --microphone=disabled \
+  --webcam=no \
+  --clipboard=yes \
+  --clipboard-direction=both \
+  --notifications=yes \
+  --file-transfer=off \
+  --open-files=off \
+  --forward-xdg-open=off \
+  --start-new-commands=no \
+  --exit-with-children=no \
+  --start-child=/usr/local/bin/grokbot-session

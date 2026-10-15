@@ -1,0 +1,16 @@
+#!/bin/bash
+# Runs inside the Xpra session (DISPLAY and the D-Bus session bus already set).
+set -u
+. /etc/grokbot/app.env
+
+# Unlock (first run: create) the login keyring so libsecret/safeStorage has a real backend
+eval "$(gnome-keyring-daemon --replace --unlock --components=secrets < "$XDG_RUNTIME_DIR/keyring-password")"
+export GNOME_KEYRING_CONTROL
+
+# Relaunch the app if it is closed or crashes; the Xpra session stays up
+while true; do
+  # shellcheck disable=SC2086 # APP_ARGS is a list of flags
+  "$APP_EXEC" ${APP_ARGS:-}
+  echo "Grok Bot exited ($?); restarting in 5s" >&2
+  sleep 5
+done

@@ -35,3 +35,14 @@ endpoints:
   #   group: Public
   #   <<: *defaults
   #   url: http://earlesgonewild.earles.internal
+
+  - name: Grok Bot
+    group: Internal
+    <<: *defaults
+    url: https://grokbot.internal.earles.io/
+    client:
+      insecure: true
+      ignore-redirect: true
+      timeout: 30s
+    conditions:
+      - "[STATUS] == 302" # Authentik redirect; a 200 means the stream is reachable without auth

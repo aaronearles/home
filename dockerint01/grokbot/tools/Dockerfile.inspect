@@ -1,0 +1,6 @@
+# Throwaway image for tools/inspect.sh (Phase 1); unpacks and greps, never runs the app
+FROM node:22-bookworm-slim
+RUN apt-get update \
+ && apt-get install -y --no-install-recommends file binutils squashfs-tools rpm2cpio cpio python3 \
+ && npm install -g @electron/asar@3.4.1 \
+ && rm -rf /var/lib/apt/lists/*

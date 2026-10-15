@@ -1,0 +1,52 @@
+#!/bin/bash
+# Install the official Grok Bot package exactly as shipped and record how to launch it.
+# Usage: install-app /path/to/installer.{deb,AppImage}
+set -euo pipefail
+
+pkg="$1"
+[ -f "$pkg" ] || { echo "installer not found: $pkg" >&2; exit 1; }
+mkdir -p /etc/grokbot
+
+case "$pkg" in
+  *.deb)
+    apt-get update
+    apt-get install -y --no-install-recommends "$pkg"
+    pkgname="$(dpkg-deb -f "$pkg" Package)"
+    desktop="$(dpkg -L "$pkgname" | grep -m1 '^/usr/share/applications/.*\.desktop$')"
+    ;;
+  *.AppImage|*.appimage)
+    # squashfs payload starts right after the ELF runtime; unpack without executing the AppImage
+    offset="$(python3 -I -c 'import struct,sys
+d=open(sys.argv[1],"rb").read(64)
+assert d[:4]==b"\x7fELF" and d[4]==2, "expected 64-bit ELF AppImage"
+shoff,=struct.unpack_from("<Q",d,0x28); shentsize,shnum=struct.unpack_from("<HH",d,0x3A)
+print(shoff+shentsize*shnum)' "$pkg")"
+    unsquashfs -q -o "$offset" -d /opt/grokbot "$pkg"
+    src="$(find /opt/grokbot -maxdepth 1 -name '*.desktop' | head -1)"
+    desktop="/usr/share/applications/$(basename "$src")"
+    # Point the menu/URL-handler entry at the unpacked AppRun (desktop entry only, app untouched)
+    sed -E 's|^Exec=[^ ]+|Exec=/opt/grokbot/AppRun|' "$src" > "$desktop"
+    [ -f /opt/grokbot/chrome-sandbox ] && chown root:root /opt/grokbot/chrome-sandbox && chmod 4755 /opt/grokbot/chrome-sandbox
+    ;;
+  *.rpm)
+    echo "This image is Debian-based: use the .deb from 'More downloads' (same app build)." >&2
+    exit 1
+    ;;
+  *)
+    echo "unknown installer format: $pkg" >&2
+    exit 1
+    ;;
+esac
+
+[ -n "${desktop:-}" ] && [ -f "$desktop" ] || { echo "no .desktop entry found in package" >&2; exit 1; }
+exec_bin="$(sed -nE 's/^Exec=("?)([^" ]+)\1.*/\2/p' "$desktop" | head -1)"
+command -v "$exec_bin" >/dev/null || [ -x "$exec_bin" ] || { echo "launcher not executable: $exec_bin" >&2; exit 1; }
+schemes="$(sed -nE 's/^MimeType=//p' "$desktop" | tr ';' '\n' | sed -nE 's|^x-scheme-handler/||p' | xargs)"
+
+cat > /etc/grokbot/app.env <<EOF
+APP_EXEC=$exec_bin
+APP_DESKTOP=$(basename "$desktop")
+APP_SCHEMES="$schemes"
+EOF
+update-desktop-database -q /usr/share/applications || true
+echo "Installed: $(cat /etc/grokbot/app.env | xargs)"
