@@ -15,8 +15,14 @@
     return JSON.parse(xhr.responseText);
   }
 
+  // Presence for the app's away-park logic: a visible, focused tab counts as the user being present
+  const presenceState = () => ({
+    visible: document.visibilityState === 'visible',
+    focused: document.visibilityState === 'visible' && document.hasFocus(),
+  });
+
   // Every page load is its own client of the shared hidden main window
-  const session = syncPost('session', {});
+  const session = syncPost('session', { presence: { ...presenceState(), active: true } });
 
   // --- WebSocket transport with an outbound queue until open
   const wsUrl = new URL('ws', base);
@@ -221,6 +227,17 @@
   }
   if (installResizeObserverFallback(window)) console.info('[relay] ResizeObserver device-pixel-content-box fallback active');
   window.__relayInstallResizeObserverFallback = installResizeObserverFallback; // for tools/ tests
+
+  const sendPresence = (active) => send({ t: 'presence', ...presenceState(), active });
+  for (const ev of ['focus', 'blur']) window.addEventListener(ev, () => sendPresence(ev === 'focus'));
+  document.addEventListener('visibilitychange', () => sendPresence(document.visibilityState === 'visible'));
+  let lastActivity = 0;
+  for (const ev of ['pointerdown', 'keydown', 'wheel', 'touchstart']) {
+    window.addEventListener(ev, () => {
+      const now = Date.now();
+      if (now - lastActivity > 15000) { lastActivity = now; sendPresence(true); }
+    }, { capture: true, passive: true });
+  }
 
   window.__relayElectron = {
     ipcRenderer,

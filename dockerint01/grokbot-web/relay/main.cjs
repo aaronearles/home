@@ -90,6 +90,7 @@ function removeClient(client) {
   closeVirtual(client.id);
   if (lastActive === client.id) lastActive = null;
   debug('client', client.id, 'left;', load.clients.size, 'attached');
+  updatePresence();
 }
 
 function bindPort(id, port, owner) {
@@ -108,6 +109,38 @@ function registerPort(port, owner) { const id = nextServerPortId++; bindPort(id,
 function portsForBrowserIds(ids, owner) {
   return (ids || []).map((id) => { const { port1, port2 } = new MessageChannelMain(); bindPort(id, port1, owner); return port2; });
 }
+
+// --- Presence: the hidden window mirrors the browsers ------------------------------------------------
+// The app parks its cloud gateway when nobody is present: main window unfocused for 10 minutes, where
+// "unfocused since" comes from system idle time (on Xvfb, effectively forever). The hidden window and
+// powerMonitor therefore answer from what the browsers report: focused = any visible, focused tab;
+// idle time = time since the last input in any tab.
+const presence = { focused: false, visible: false, lastInputMs: 0 };
+const fakeEvent = () => ({ preventDefault() {}, defaultPrevented: false });
+function updatePresence() {
+  if (!mainWin || mainWin.isDestroyed() || !load) return;
+  const clients = [...load.clients.values()];
+  const focused = clients.some((c) => c.focused);
+  const visible = clients.some((c) => c.visible);
+  const was = { ...presence };
+  presence.focused = focused;
+  presence.visible = visible;
+  if (focused && !was.focused) presence.lastInputMs = Date.now();
+  if (visible !== was.visible) mainWin.emit(visible ? 'show' : 'hide', fakeEvent());
+  if (focused !== was.focused) {
+    mainWin.emit(focused ? 'focus' : 'blur', fakeEvent());
+    app.emit(focused ? 'browser-window-focus' : 'browser-window-blur', fakeEvent(), mainWin);
+  }
+  if (focused !== was.focused || visible !== was.visible) log('presence:', focused ? 'focused' : visible ? 'visible, unfocused' : 'away');
+}
+function notePresence(client, p) {
+  if (!p || typeof p !== 'object') return;
+  client.focused = p.focused === true;
+  client.visible = p.visible === true;
+  if (p.active === true) presence.lastInputMs = Date.now();
+  updatePresence();
+}
+const idleSeconds = () => (presence.lastInputMs ? Math.floor((Date.now() - presence.lastInputMs) / 1000) : 365 * 86400);
 
 // --- Coordinator multiplexer --------------------------------------------------------------------------
 // Main serves the coordinator to exactly one renderer: a second port request disposes the coordinator
@@ -285,6 +318,10 @@ function adoptMainWindow(win, opts) {
   newLoad();
 
   win.loadFile = () => win.loadURL(BLANK);
+  win.isFocused = () => presence.focused;
+  win.isVisible = () => presence.visible;
+  win.isMinimized = () => false;
+  wc.isFocused = () => presence.focused;
   wc.send = (channel, ...args) => {
     debug('main send', channel);
     const m = { t: 'ipc', ch: channel, a: codec.encode(args) };
@@ -340,6 +377,11 @@ const relayShell = overlay(electron.shell, {
   },
 });
 
+const relayPowerMonitor = overlay(electron.powerMonitor, {
+  getSystemIdleTime: () => idleSeconds(),
+  getSystemIdleState: (threshold) => (idleSeconds() >= threshold ? 'idle' : 'active'),
+});
+
 // Record the custom schemes the app serves so the browser-side shim knows what to proxy
 const relayProtocol = overlay(electron.protocol, {
   handle: (scheme, handler) => { appSchemes.add(scheme); debug('app scheme', scheme); return electron.protocol.handle(scheme, handler); },
@@ -352,7 +394,8 @@ for (const key of Object.getOwnPropertyNames(electron)) {
     get: () => (key === 'BrowserWindow' ? RelayBrowserWindow
       : key === 'shell' ? relayShell
         : key === 'protocol' ? relayProtocol
-          : electron[key]),
+          : key === 'powerMonitor' ? relayPowerMonitor
+            : electron[key]),
   });
 }
 const originalLoad = Module._load;
@@ -450,7 +493,9 @@ async function handle(req, res) {
   if (req.method === 'POST' && url.pathname === '/__relay/session') {
     if (!mainWin) await new Promise((r) => { const t = setInterval(() => mainWin && (clearInterval(t), r()), 200); });
     await mainReady;
+    const body = await readBody(req).catch(() => ({}));
     const client = addClient();
+    notePresence(client, body.presence);
     return respond(res, 200, JSON.stringify({
       id: load.id, client: client.id, argv: mainArgv, versions: process.versions,
       proto: { base: `./__relay/p/${PROTO_SECRET}/`, schemes: [...appSchemes] },
@@ -557,6 +602,7 @@ function acceptWebSocket(req, socket) {
 
 function onBrowserMessage(client, m) {
   if (load.clients.get(client.id) !== client) return;
+  if (m.t === 'presence') return notePresence(client, m);
   lastActive = client.id;
   if (m.t === 'ipc') {
     if (ONCE_PER_LOAD.has(m.ch)) {

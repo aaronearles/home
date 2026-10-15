@@ -4,7 +4,9 @@ const fs = require('node:fs');
 const URL_ = process.env.TEST_URL;
 const WAIT = Number(process.env.TEST_WAIT_MS || 20000);
 app.whenReady().then(async () => {
-  const w = new BrowserWindow({ show: false, width: 1280, height: 860, webPreferences: { partition: 'test' } });
+  // TEST_SHOW=1: a visible, focused window, so the page reports itself as present (focused tab)
+  const w = new BrowserWindow({ show: process.env.TEST_SHOW === '1', width: 1280, height: 860, webPreferences: { partition: 'test' } });
+  if (process.env.TEST_SHOW === '1') w.focus();
   const wc = w.webContents;
   wc.on('console-message', (e) => {
     const msg = e.message; const lvl = e.level;
