@@ -28,6 +28,9 @@ const PROTO_SECRET = crypto.randomBytes(18).toString('base64url');
 // The app serves these itself (protocol.handle); in the browser they are proxied through the relay
 const appSchemes = new Set();
 const FRAME_SCHEMES = new Set(['sand-html-preview', 'sand-canvas', 'sand-mcp-app']);
+// The app's own icon, installed by its .deb, used as the page favicon
+const ICON_SIZES = new Set(['16', '32', '48', '64', '128', '256', '512']);
+const iconPath = (size) => `/usr/share/icons/hicolor/${size}x${size}/apps/grok-bot.png`;
 
 // --- Make the vendor code see a packaged app at its real install location -------------------------
 function override(obj, key, value) {
@@ -376,7 +379,12 @@ function getIndexHtml() {
       /<head>/i,
       '<head>\n    <script src="./__relay/codec.js"></script>\n    <script src="./__relay/shim.js"></script>\n    <script src="./__relay/preload.js"></script>',
     // Proxied frame schemes load from the relay's own origin (sandboxed by response header)
-    ).replace(/frame-src /, "frame-src 'self' ");
+    ).replace(/frame-src /, "frame-src 'self' ").replace(
+      /<\/title>/i,
+      '</title>\n    <link rel="icon" type="image/png" sizes="32x32" href="./__relay/icon-32.png">'
+      + '\n    <link rel="icon" type="image/png" sizes="16x16" href="./__relay/icon-16.png">'
+      + '\n    <link rel="apple-touch-icon" href="./__relay/icon-256.png">',
+    );
   }
   return indexHtml;
 }
@@ -427,6 +435,12 @@ async function handle(req, res) {
   }
   if (url.pathname === '/healthz') return respond(res, mainWin ? 200 : 503, mainWin ? 'ok' : 'starting');
   if (url.pathname.startsWith(`/__relay/p/${PROTO_SECRET}/`)) return proxyScheme(req, res, url);
+  // Public: the app icon (favicons are not always fetched with cookies)
+  const icon = url.pathname === '/favicon.ico' ? '32' : (/^\/__relay\/icon-(\d+)\.png$/.exec(url.pathname) || [])[1];
+  if (icon && ICON_SIZES.has(icon)) {
+    try { return respond(res, 200, read(iconPath(icon)), 'image/png', { 'Cache-Control': 'public, max-age=86400' }); }
+    catch { return respond(res, 404, 'Not found'); }
+  }
   if (!authorized(req)) return respond(res, 401, 'Unauthorized: open this URL once with ?token=<RELAY_TOKEN>');
 
   if (url.pathname === '/__relay/codec.js') return respond(res, 200, read(path.join(__dirname, 'codec.js')), TYPES['.js']);
