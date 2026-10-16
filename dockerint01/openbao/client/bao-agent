@@ -1,0 +1,165 @@
+#!/bin/sh
+# bao-agent: minimal OpenBao client for agents. Needs only curl and jq.
+#
+# Credentials file (default ~/.config/openbao/credentials, mode 600):
+#   BAO_ADDR=https://openbao.internal.earles.io
+#   BAO_ROLE_ID=...
+#   BAO_SECRET_ID=...
+# Produced by ./scripts/agent-credentials.sh on the OpenBao host.
+#
+# Commands:
+#   bao-agent token                    print a valid token (logs in / reuses cache)
+#   bao-agent get <path> [field]       read a secret (JSON, or one field raw)
+#   bao-agent put <path> k=v k=@file k=-   write a secret (- reads stdin)
+#   bao-agent list <path>              list keys under a folder
+#   bao-agent whoami                   show this identity's policies and TTL
+#   bao-agent unwrap <wrapping-token>  redeem a wrapped secret_id into the credentials file
+#   bao-agent exec <path> -- cmd ...   run cmd with the secret's keys as env vars
+#
+# <path> is a KV path without the mount, e.g. infra/cloudflare/dns-token.
+#
+# Optional env: BAO_CACERT (CA file for a private CA, e.g. step-ca),
+# BAO_SKIP_VERIFY=true (testing only), BAO_CREDENTIALS_FILE, BAO_KV_MOUNT.
+#
+# Tips for AI agents: prefer `exec` or `$(bao-agent get ... field)` inside the
+# command that needs the value, so the secret never gets printed to your
+# transcript or logs.
+set -eu
+
+CREDS=${BAO_CREDENTIALS_FILE:-$HOME/.config/openbao/credentials}
+CACHE=${BAO_TOKEN_CACHE:-${XDG_RUNTIME_DIR:-$HOME/.cache}/openbao-token}
+MOUNT=${BAO_KV_MOUNT:-kv}
+
+die() { printf 'bao-agent: %s\n' "$*" >&2; exit 1; }
+command -v curl >/dev/null || die "curl is required"
+command -v jq >/dev/null || die "jq is required"
+
+# Load credentials. Environment variables win over the file.
+if [ -f "$CREDS" ]; then
+  _addr=${BAO_ADDR:-} _rid=${BAO_ROLE_ID:-} _sid=${BAO_SECRET_ID:-}
+  # shellcheck disable=SC1090
+  . "$CREDS"
+  BAO_ADDR=${_addr:-${BAO_ADDR:-}}
+  BAO_ROLE_ID=${_rid:-${BAO_ROLE_ID:-}}
+  BAO_SECRET_ID=${_sid:-${BAO_SECRET_ID:-}}
+fi
+BAO_ADDR=${BAO_ADDR:-https://openbao.internal.earles.io}
+BAO_ADDR=${BAO_ADDR%/}
+
+# TLS options, same env names as the official bao CLI.
+TLS_OPT=""
+[ -n "${BAO_CACERT:-}" ] && TLS_OPT="--cacert $BAO_CACERT"
+[ "${BAO_SKIP_VERIFY:-}" = "true" ] && TLS_OPT="-k"
+
+# api METHOD PATH [curl args...]  -> JSON body on stdout, dies on HTTP errors
+api() {
+  method=$1 path=$2; shift 2
+  # shellcheck disable=SC2086
+  out=$(curl -sS $TLS_OPT -X "$method" -w '\n%{http_code}' \
+    ${BAO_TOKEN:+-H "X-Vault-Token: $BAO_TOKEN"} "$@" "$BAO_ADDR/v1/$path") \
+    || die "cannot reach $BAO_ADDR"
+  code=$(printf '%s' "$out" | tail -n1)
+  body=$(printf '%s' "$out" | sed '$d')
+  case $code in
+    2??) printf '%s' "$body" ;;
+    *) err=$(printf '%s' "$body" | jq -r '.errors | join("; ")' 2>/dev/null || true)
+       die "$method $path: HTTP $code ${err:-}" ;;
+  esac
+}
+
+login() {
+  [ -n "${BAO_ROLE_ID:-}" ] && [ -n "${BAO_SECRET_ID:-}" ] \
+    || die "no BAO_ROLE_ID / BAO_SECRET_ID (expected in $CREDS)"
+  body=$(jq -n --arg r "$BAO_ROLE_ID" --arg s "$BAO_SECRET_ID" '{role_id:$r, secret_id:$s}')
+  resp=$(printf '%s' "$body" | BAO_TOKEN='' api POST auth/approle/login \
+    -H 'Content-Type: application/json' --data-binary @-) || exit 1
+  token=$(printf '%s' "$resp" | jq -r .auth.client_token)
+  [ -n "$token" ] && [ "$token" != null ] || die "login returned no token"
+  ttl=$(printf '%s' "$resp" | jq -r .auth.lease_duration)
+  # Cache with an expiry 60s early, readable only by us.
+  mkdir -p "$(dirname "$CACHE")"
+  (umask 077; printf '%s %s\n' "$(( $(date +%s) + ttl - 60 ))" "$token" > "$CACHE")
+  printf '%s' "$token"
+}
+
+token() {
+  if [ -n "${BAO_TOKEN:-}" ]; then printf '%s' "$BAO_TOKEN"; return; fi
+  if [ -f "$CACHE" ]; then
+    read -r exp tok < "$CACHE" || true
+    if [ -n "${exp:-}" ] && [ "$(date +%s)" -lt "$exp" ]; then printf '%s' "$tok"; return; fi
+  fi
+  login
+}
+
+# Note: always capture api output with `x=$(api ...) || exit 1` before piping
+# it anywhere. POSIX sh has no pipefail, so `api ... | jq` would hide errors.
+tok() { t=$(token) || exit 1; printf '%s' "$t"; }
+
+cmd=${1:-}; [ $# -gt 0 ] && shift
+case $cmd in
+  token)
+    tok; echo ;;
+  whoami)
+    t=$(tok) || exit 1
+    resp=$(BAO_TOKEN=$t api GET auth/token/lookup-self) || exit 1
+    printf '%s' "$resp" | jq '{display_name: .data.display_name, policies: .data.policies, ttl: .data.ttl, meta: .data.meta}' ;;
+  get)
+    [ $# -ge 1 ] || die "usage: get <path> [field]"
+    t=$(tok) || exit 1
+    resp=$(BAO_TOKEN=$t api GET "$MOUNT/data/${1#/}") || exit 1
+    data=$(printf '%s' "$resp" | jq .data.data)
+    if [ $# -ge 2 ]; then
+      printf '%s' "$data" | jq -e --arg f "$2" 'has($f)' >/dev/null || die "no field '$2' in $1"
+      printf '%s' "$data" | jq -j --arg f "$2" '.[$f]'
+    else
+      printf '%s\n' "$data"
+    fi ;;
+  put)
+    [ $# -ge 2 ] || die "usage: put <path> key=value [key=@file] [key=-]"
+    path=$1; shift
+    json='{}'
+    for kv in "$@"; do
+      k=${kv%%=*} v=${kv#*=}
+      [ "$k" != "$kv" ] || die "expected key=value, got '$kv'"
+      case $v in
+        -)  v=$(cat) ;;
+        @*) v=$(cat "${v#@}") ;;
+      esac
+      json=$(printf '%s' "$json" | jq --arg k "$k" --arg v "$v" '. + {($k): $v}')
+    done
+    t=$(tok) || exit 1
+    resp=$(printf '%s' "$json" | jq '{data: .}' \
+      | BAO_TOKEN=$t api POST "$MOUNT/data/${path#/}" -H 'Content-Type: application/json' --data-binary @-) || exit 1
+    printf '%s' "$resp" | jq -c '{version: .data.version}' ;;
+  list)
+    [ $# -ge 1 ] || die "usage: list <path>"
+    t=$(tok) || exit 1
+    resp=$(BAO_TOKEN=$t api LIST "$MOUNT/metadata/${1#/}") || exit 1
+    printf '%s' "$resp" | jq -r '.data.keys[]' ;;
+  unwrap)
+    [ $# -ge 1 ] || die "usage: unwrap <wrapping-token>"
+    resp=$(BAO_TOKEN=$1 api POST sys/wrapping/unwrap) || exit 1
+    sid=$(printf '%s' "$resp" | jq -r .data.secret_id)
+    [ -n "$sid" ] && [ "$sid" != null ] || die "unwrap returned no secret_id"
+    mkdir -p "$(dirname "$CREDS")"
+    (umask 077; {
+      echo "BAO_ADDR=$BAO_ADDR"
+      echo "BAO_ROLE_ID=${BAO_ROLE_ID:?set BAO_ROLE_ID (printed next to the wrapping token)}"
+      echo "BAO_SECRET_ID=$sid"
+    } > "$CREDS.tmp" && mv "$CREDS.tmp" "$CREDS")
+    rm -f "$CACHE"
+    echo "bao-agent: wrote $CREDS" >&2 ;;
+  exec)
+    [ $# -ge 3 ] && [ "$2" = "--" ] || die "usage: exec <path> -- command [args...]"
+    path=$1; shift 2
+    t=$(tok) || exit 1
+    resp=$(BAO_TOKEN=$t api GET "$MOUNT/data/${path#/}") || exit 1
+    data=$(printf '%s' "$resp" | jq .data.data)
+    # Export each key as an env var (uppercased, non-alphanumerics -> _).
+    eval "$(printf '%s' "$data" | jq -r 'to_entries[]
+      | "export \(.key | ascii_upcase | gsub("[^A-Z0-9_]"; "_"))=\(.value | tostring | @sh)"')"
+    exec "$@" ;;
+  ""|-h|--help|help)
+    sed -n '2,26p' "$0" | sed 's/^# \{0,1\}//' ;;
+  *) die "unknown command '$cmd' (try --help)" ;;
+esac

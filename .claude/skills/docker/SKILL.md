@@ -193,7 +193,7 @@ services:
 - **Use `.env` files** for environment-specific configurations
 - **Create `.env.sample`** files as templates for new deployments
 - **Never commit** actual secrets to repository (add `.env` to `.gitignore`)
-- **Use HashiCorp Vault** for production secrets
+- **Use OpenBao** (`dockerint01/openbao/`) for production secrets
 
 #### .env File Template
 ```bash

@@ -1,3 +1,7 @@
+DEPRECATED: replaced by ../openbao/ (OpenBao, the open-source Vault fork).
+See ../openbao/docs/operations.md#migrating-from-hashicorp-vault to copy
+anything worth keeping, then `docker compose down` this stack.
+
 TODO:
     Need to move db to NAS and configure backups!
 

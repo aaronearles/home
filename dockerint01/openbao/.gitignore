@@ -1,0 +1,7 @@
+# Runtime state. Never commit any of these.
+data/
+logs/
+unseal/
+credentials/
+backups/
+.env

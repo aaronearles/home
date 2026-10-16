@@ -1,0 +1,90 @@
+services:
+  openbao:
+    image: openbao/openbao:2.7.1
+    container_name: openbao
+    restart: unless-stopped
+    # Start as root so the image entrypoint can chown ./data and ./logs to the
+    # openbao user (uid 100); it then drops privileges with su-exec.
+    user: "0:0"
+    environment:
+      - BAO_ADDR=http://127.0.0.1:8200
+    volumes:
+      - ./config:/openbao/config:ro
+      - ./unseal:/openbao/unseal:ro # unseal.key, created by scripts/init-unseal-key.sh
+      - ./data:/openbao/file        # Raft storage (encrypted)
+      - ./logs:/openbao/logs        # audit.log
+    # ports:
+    #   - "8200:8200" # Not published; reach it via Traefik
+    networks:
+      traefik:
+      backend:
+        aliases:
+          # Sidecars use this name so they always connect over the backend
+          # network, which their AppRole CIDR binding expects.
+          - openbao-backend
+    command: server
+    healthcheck:
+      # 200 = unsealed and active. 429/472/473 are standby states, 501 = not
+      # initialised, 503 = sealed.
+      test: ["CMD", "wget", "-q", "-O", "/dev/null", "http://127.0.0.1:8200/v1/sys/health"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 20s
+    labels:
+      - traefik.enable=true
+      - traefik.docker.network=traefik
+      - traefik.http.routers.openbao.rule=Host(`openbao.internal.earles.io`)
+      - traefik.http.routers.openbao.entrypoints=websecure
+      - traefik.http.routers.openbao.tls.certresolver=production
+      - traefik.http.services.openbao.loadbalancer.server.port=8200
+
+  # Daily Raft snapshots to the NAS. Snapshots are encrypted with the barrier
+  # key, so restoring one also needs unseal/unseal.key (keep that in Vaultwarden).
+  openbao-backup:
+    image: openbao/openbao:2.7.1
+    container_name: openbao-backup
+    restart: unless-stopped
+    user: "0:0" # reads root-only credentials/backup; writes to the NAS like vaultwarden-backup
+    env_file:
+      - .env
+    environment:
+      - BAO_ADDR=http://openbao-backend:8200
+    volumes:
+      - ./scripts/backup-loop.sh:/backup-loop.sh:ro
+      - ./credentials/backup:/credentials:ro # role_id + secret_id
+      - ${BACKUP_DIR:-./backups}:/backups
+    networks:
+      - backend
+    depends_on:
+      - openbao
+    entrypoint: /bin/sh
+    command: /backup-loop.sh
+
+  # One-way mirror of selected OpenBao secrets into Vaultwarden, so a human
+  # can read them in the Bitwarden apps. See docs/vaultwarden-sync.md.
+  openbao-vaultwarden-sync:
+    image: openbao-vaultwarden-sync:local
+    build: ./vaultwarden-sync
+    container_name: openbao-vaultwarden-sync
+    restart: unless-stopped
+    env_file:
+      - .env
+    environment:
+      - BAO_ADDR=http://openbao-backend:8200
+    volumes:
+      - ./credentials/vaultwarden-sync:/credentials:ro # role_id + secret_id
+    # Reaches Vaultwarden at https://vaultwarden.internal.earles.io through
+    # Traefik (the bw CLI refuses plain HTTP), so no traefik network needed.
+    networks:
+      - backend
+    depends_on:
+      - openbao
+    labels:
+      - com.centurylinklabs.watchtower.enable=false # built locally; nothing to pull
+
+networks:
+  traefik:
+    external: true
+  backend:
+    external: false

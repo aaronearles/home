@@ -1,0 +1,24 @@
+#!/bin/sh
+# Run the bao CLI inside the openbao container, so the host needs no install.
+#   ./scripts/bao status
+#   BAO_TOKEN=... ./scripts/bao kv list kv/
+# BAO_TOKEN is passed through when set. Otherwise the CLI uses the token saved
+# in the container by `./scripts/bao login` (lost when the container is
+# recreated, which is fine because tokens are short-lived).
+set -eu
+container=${BAO_CONTAINER:-openbao}
+# Attach stdin only when bao will read it: a full terminal (interactive use,
+# login prompts), or an argument of `-` / `key=-` (policy files, passwords).
+# Otherwise `docker exec -i` would swallow input meant for the calling script.
+flags=
+if [ -t 0 ] && [ -t 1 ]; then
+  flags=-it
+else
+  for arg in "$@"; do
+    case $arg in -|*=-) flags=-i; break ;; esac
+  done
+fi
+if [ -n "${BAO_TOKEN:-}" ]; then
+  exec docker exec $flags -e BAO_TOKEN "$container" bao "$@"
+fi
+exec docker exec $flags "$container" bao "$@"

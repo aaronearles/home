@@ -27,7 +27,7 @@ All services follow a standardized docker-compose.yml format with consistent pro
 ### Authentication & Security
 - **Authentik**: Centralized SSO/OIDC provider for all internal services
 - **Vaultwarden**: Self-hosted password management
-- **HashiCorp Vault**: Enterprise secrets management
+- **OpenBao**: Secrets management and machine identities for agents (`dockerint01/openbao/`, open-source Vault fork)
 - **Network Isolation**: Services properly segregated with minimal exposure
 
 ## Common Development Commands
@@ -99,7 +99,7 @@ terraform import resource_type.resource_name resource_id
 ### Environment Variables
 - **Terraform**: Use `*.auto.tfvars` for automatic loading, `sample.tfvars` as templates
 - **Docker**: Services use `.env` files for environment-specific configurations
-- **Secrets**: Managed via HashiCorp Vault integration, never committed to git
+- **Secrets**: Managed in OpenBao (`dockerint01/openbao/`), never committed to git
 
 ### Docker Compose Standardization Patterns
 
@@ -255,7 +255,7 @@ networks:
 
 ### Service Hierarchy
 1. **Core Infrastructure**: Traefik → DNS → Certificates
-2. **Authentication**: Authentik → Vault → SSO integration  
+2. **Authentication**: Authentik → OpenBao → SSO integration  
 3. **Monitoring**: Gatus → Grafana → Alerting
 4. **Applications**: All other services depend on core + auth
 
@@ -281,7 +281,7 @@ networks:
 4. Deploy to staging (`dockerint01/`) then production (`dockerdmz01/`)
 
 ### Secret Management
-- Use Vault for production secrets
+- Use OpenBao for production secrets (see `dockerint01/openbao/README.md`)
 - Environment variables for non-sensitive configuration
 - `.env.sample` files as templates
 - Never commit actual secrets to repository
@@ -316,7 +316,7 @@ Services are discoverable via:
 - Encrypted at rest via container volumes
 - TLS termination at Traefik
 - Regular backups via automated scripts
-- Secret rotation through Vault
+- Secret rotation through OpenBao
 
 ## Common Issues & Troubleshooting
 

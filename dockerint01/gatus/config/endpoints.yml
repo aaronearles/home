@@ -35,3 +35,11 @@ endpoints:
   #   group: Public
   #   <<: *defaults
   #   url: http://earlesgonewild.earles.internal
+
+  - name: OpenBao
+    group: Infrastructure
+    <<: *defaults
+    url: https://openbao.internal.earles.io/v1/sys/health
+    conditions:
+      - "[STATUS] == 200" # 503 = sealed, 501 = not initialised
+      - "[BODY].sealed == false"
