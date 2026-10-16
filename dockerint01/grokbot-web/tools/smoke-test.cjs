@@ -18,6 +18,11 @@ app.whenReady().then(async () => {
   wc.setWindowOpenHandler(({ url }) => { console.log('[window.open]', url.replace(/(challenge|uuid)=[^&]+/g, '$1=…')); return { action: 'deny' }; });
   try { await wc.loadURL(URL_); } catch (err) { console.log('[load-error]', err.message); }
   await new Promise((r) => setTimeout(r, WAIT));
+  if (process.env.TEST_EVAL) {
+    const r = await wc.executeJavaScript(`Promise.resolve().then(() => ${process.env.TEST_EVAL}).then((v) => JSON.stringify(v ?? null), (e) => 'threw: ' + e)`).catch((e) => 'ERR ' + e.message);
+    console.log('[eval]', r);
+    await new Promise((res) => setTimeout(res, 5000));
+  }
   if (process.env.TEST_CLICK) {
     const clicked = await wc.executeJavaScript(`(() => { const b = [...document.querySelectorAll('button,a')].find(e => e.innerText.trim().startsWith(${JSON.stringify(process.env.TEST_CLICK)})); if (!b) return false; b.click(); return true; })()`);
     console.log('[click]', process.env.TEST_CLICK, clicked);

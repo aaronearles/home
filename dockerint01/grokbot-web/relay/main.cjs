@@ -319,6 +319,9 @@ function adoptMainWindow(win, opts) {
   newLoad();
 
   win.loadFile = () => win.loadURL(BLANK);
+  // The UI's title-bar close button (closeWindow) must not close the hidden window: on Linux the app
+  // quits when its last window closes, taking the backend down for every browser
+  win.close = () => log('ignored close of the hidden main window (title-bar close from a browser)');
   win.isFocused = () => presence.focused;
   win.isVisible = () => presence.visible;
   win.isMinimized = () => false;
