@@ -16,6 +16,14 @@ endpoints:
     conditions:
       - "[CONNECTED] == true"
 
+  - name: OpenBao
+    group: Infrastructure
+    <<: *defaults
+    url: https://vault.internal.earles.io/v1/sys/health
+    conditions:
+      - "[STATUS] == 200" # 429 standby, 503 sealed, 501 uninitialized
+      - "[BODY].sealed == false"
+
   # - name: DMZ_Reverse_Proxy
   #   group: Infrastructure
   #   <<: *defaults
