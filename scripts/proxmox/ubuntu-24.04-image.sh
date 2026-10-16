@@ -47,7 +47,7 @@ qm set 8001 --ipconfig0 ip=dhcp --searchdomain earles.internal
 #EOF
 
 # Apply vendor.yml
-qm set 8001 --cicustom "vendor=local:snippets/ubuntu.yaml"
+qm set 8001 --cicustom "vendor=local:snippets/cloud-base.yaml"
 
 qm set 8001 --tags _template,ubuntu-24.04
 
