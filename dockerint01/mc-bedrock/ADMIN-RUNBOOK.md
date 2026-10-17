@@ -148,6 +148,19 @@ Classic layout:
 
 Cobblestone forms in spot 2. If they get obsidian, a live reset gives them a fresh lava bucket.
 
+### Snapshot and restore one area (no restart): "rebuild it after they blow it up"
+```
+structure save <name> <x1> <y1> <z1> <x2> <y2> <z2> false disk true   # blocks only (no entities), kept on disk
+structure load <name> <x1> <y1> <z1>                                   # put it back, min corner first
+```
+- **Max size:** 64×384×64 per structure. Split bigger builds into several.
+- **Finding the area:** `querytarget <player>` for positions, and `scriptevent earles:claims probe <x> <z>` on a grid for the topmost blocks.
+- **Restoring cleanly:**
+  - Wait until the explosions and fire are done, or kill lit TNT first (`kill @e[type=tnt]`, plus add-on TNT entities). Otherwise it burns again straight away.
+  - Fire that spread **outside** the box isn't fixed.
+- **Example (2026-10-17):** `statue_backup` = the boys' statue, x 1822–1885, y 50–170, z 690–753 in Experimental. Restore with `structure load statue_backup 1822 50 690`.
+- For a whole-world safety net: `./backup-worlds.sh --snapshot <reason>`.
+
 ## Server lifecycle
 
 ### Restart
