@@ -17,6 +17,10 @@
 //   scriptevent earles:claims unwall <id>              remove that wall (cobblestone walls on the ring only)
 //   scriptevent earles:claims probe <x> <z>            debug: what the wall builder sees as ground there
 //   scriptevent earles:claims skybox <player>         5x5x5 bulletproof-glass box, 50 blocks above that player
+//   scriptevent earles:claims clearglass              remove every skybox built since boxes were recorded
+//   scriptevent earles:claims clearglass <x1> <y1> <z1> <x2> <y2> <z2> [dimension]
+//                                                      remove bulletproof glass in that region (overworld by default;
+//                                                      use for hand-placed glass and older skyboxes)
 //
 // earles:bulletproof_glass looks like vanilla glass. It is not in the creative inventory,
 // not mineable, and not destroyed by explosions. Players can't break or place it; the
@@ -444,8 +448,10 @@ system.afterEvents.scriptEventReceive.subscribe((ev) => {
         console.warn(`[claims] removed ${theirs.length} claim(s) of ${owner}`);
     } else if (cmd === "skybox") {
         skybox(rest[0]);
+    } else if (cmd === "clearglass") {
+        clearGlass(rest);
     } else {
-        console.warn("[claims] usage: scriptevent earles:claims list | remove <id> | removeall <owner> | wall <id> | unwall <id> | probe <x> <z> | skybox <player>");
+        console.warn("[claims] usage: scriptevent earles:claims list | remove <id> | removeall <owner> | wall <id> | unwall <id> | probe <x> <z> | skybox <player> | clearglass [x1 y1 z1 x2 y2 z2 [dimension]]");
     }
 });
 
@@ -482,9 +488,78 @@ function skybox(name) {
     try {
         dim.runCommand(`fill ${x1} ${y1} ${z1} ${x2} ${y2} ${z2} ${GLASS} hollow`);
         player.teleport({ x: x + 0.5, y, z: z + 0.5 });
+        recordGlassBox({ dim: dim.id, x1, y1, z1, x2, y2, z2 });
         console.warn(`[claims] skybox ${player.name}: bulletproof glass (${x1},${y1},${z1}) to (${x2},${y2},${z2}) in ${dim.id}, ${SKYBOX_ABOVE} above y=${feet}`);
-        console.warn(`[claims] remove it with: fill ${x1} ${y1} ${z1} ${x2} ${y2} ${z2} air replace ${GLASS}`);
+        console.warn(`[claims] remove it with: scriptevent earles:claims clearglass   (or: fill ${x1} ${y1} ${z1} ${x2} ${y2} ${z2} air replace ${GLASS})`);
     } catch (e) {
         console.warn(`[claims] skybox failed: ${e}`);
     }
+}
+
+// ---- Clearing bulletproof glass ---------------------------------------------------------
+// Every skybox is recorded, so `clearglass` with no arguments removes all of them. Glass placed
+// any other way (fill / setblock, or skyboxes built before recording) can be cleared by giving
+// a region. Chunks that aren't loaded get a temporary ticking area; the fill runs once they are.
+const GLASS_BOXES_KEY = "earles_claims_glass_boxes";
+const CLEAR_MAX_BLOCKS = 32768;   // the fill command's limit per call
+
+function glassBoxes() {
+    const raw = tryRun(() => world.getDynamicProperty(GLASS_BOXES_KEY));
+    return typeof raw === "string" ? JSON.parse(raw) : [];
+}
+
+function recordGlassBox(box) {
+    const all = glassBoxes();
+    all.push(box);
+    world.setDynamicProperty(GLASS_BOXES_KEY, JSON.stringify(all));
+}
+
+let clearJob = 0;
+function clearRegion(box, done) {
+    const dim = world.getDimension(box.dim);
+    const [x1, x2] = [Math.min(box.x1, box.x2), Math.max(box.x1, box.x2)];
+    const [y1, y2] = [Math.min(box.y1, box.y2), Math.max(box.y1, box.y2)];
+    const [z1, z2] = [Math.min(box.z1, box.z2), Math.max(box.z1, box.z2)];
+    const area = `earles_clr_${++clearJob}`;
+    tryRun(() => dim.runCommand(`tickingarea add ${x1} ${y1} ${z1} ${x2} ${y2} ${z2} ${area}`));
+    system.runTimeout(() => {
+        // Slice by height so every fill stays under the command's block limit
+        const layer = (x2 - x1 + 1) * (z2 - z1 + 1);
+        const step = Math.max(1, Math.floor(CLEAR_MAX_BLOCKS / layer));
+        let ok = 0, failed = 0;
+        for (let y = y1; y <= y2; y += step) {
+            const top = Math.min(y2, y + step - 1);
+            try { dim.runCommand(`fill ${x1} ${y} ${z1} ${x2} ${top} ${z2} air replace ${GLASS}`); ok++; } catch { failed++; }
+        }
+        tryRun(() => dim.runCommand(`tickingarea remove ${area}`));
+        done({ ok, failed });
+    }, 40);
+}
+
+function clearGlass(args) {
+    const nums = args.slice(0, 6).map(Number);
+    let boxes, explicit = false;
+    if (args.length >= 6 && nums.every(Number.isFinite)) {
+        explicit = true;
+        const dimId = args[6] ? (args[6].includes(":") ? args[6] : `minecraft:${args[6]}`) : "minecraft:overworld";
+        if (!tryRun(() => world.getDimension(dimId))) return console.warn(`[claims] clearglass: unknown dimension '${args[6]}'`);
+        boxes = [{ dim: dimId, x1: nums[0], y1: nums[1], z1: nums[2], x2: nums[3], y2: nums[4], z2: nums[5] }];
+    } else if (args.length === 0) {
+        boxes = glassBoxes();
+        if (!boxes.length) return console.warn("[claims] clearglass: no recorded skybox boxes. Give a region to clear hand-placed or older glass: clearglass <x1> <y1> <z1> <x2> <y2> <z2>");
+    } else {
+        return console.warn("[claims] usage: scriptevent earles:claims clearglass [x1 y1 z1 x2 y2 z2 [dimension]]");
+    }
+    let pending = boxes.length, failedBoxes = [];
+    for (const b of boxes) {
+        clearRegion(b, ({ ok, failed }) => {
+            console.warn(`[claims] clearglass: (${b.x1},${b.y1},${b.z1}) to (${b.x2},${b.y2},${b.z2}) in ${b.dim}: ${ok} fill(s) ok${failed ? `, ${failed} failed` : ""}`);
+            if (failed) failedBoxes.push(b);
+            if (--pending === 0) {
+                if (!explicit) world.setDynamicProperty(GLASS_BOXES_KEY, failedBoxes.length ? JSON.stringify(failedBoxes) : undefined);
+                console.warn(`[claims] clearglass: done, ${boxes.length - failedBoxes.length}/${boxes.length} region(s) cleared${failedBoxes.length ? " (failed ones stay recorded - rerun)" : ""}`);
+            }
+        });
+    }
+    console.warn(`[claims] clearglass: clearing ${boxes.length} region(s)...`);
 }

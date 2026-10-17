@@ -49,7 +49,10 @@ scriptevent earles:claims wall <id>        # build/rebuild the stone wall; print
 scriptevent earles:claims unwall <id>      # remove it (recorded blocks; older walls: cobblestone walls on the ring)
 scriptevent earles:claims probe <x> <z>    # debug: what the wall builder sees as ground
 scriptevent earles:claims skybox <player> # 5×5×5 bulletproof-glass box, 50 blocks above that player
+scriptevent earles:claims clearglass       # remove every recorded skybox box
+scriptevent earles:claims clearglass <x1> <y1> <z1> <x2> <y2> <z2> [dimension]   # remove bulletproof glass in a region
 ```
+`./clear-glass.sh` runs the same thing from the shell and prints the result. With no arguments it clears every skybox built since boxes were recorded (a world property, so it survives restarts). For glass placed by hand with `fill`/`setblock`, or by skyboxes built earlier, give a region. Unloaded chunks are loaded with a temporary ticking area first, and big regions are cleared in slices to stay under the fill limit. Tested: glass in three height slices of a 68,921-block region was removed and a cube outside the region was left alone. The no-argument (recorded boxes) path needs a player for `skybox`, so it hasn't been exercised yet.
 `skybox henry` and `skybox hcearles` are the same (`theo` = `ttearles`, `dad` = `aearles`). Extra words are ignored, so `skybox henry in bulletproof glass` works too. The player has to be online. The box is built 50 blocks above their feet and they are teleported up into it, so it doesn't replace the ground they were standing on. The log prints the corner coordinates and the `fill ... air replace earles:bulletproof_glass` command that removes the box.
 
 Note: `fill ... replace cobblestone_wall` from the console misses walls that have connected to each other (different block state), so use `unwall` to remove walls.
