@@ -3,6 +3,7 @@
 Written 2026-10-12. Each player can claim up to **3** squares of **32×32**, from **bedrock to the sky**. Others can't change claimed land unless the owner trusts them. Enabled in **experimental** and **creative** modes.
 
 ## Using it
+- **Craft a Claim Flag (a secret recipe):** 4 sticks in a **plus shape** on a crafting table, with the middle square left empty (top, left, right, bottom). It's **hidden from the recipe book on purpose**: its unlock item is `minecraft:barrier`, which survival players can't get, so the recipe never "unlocks". Crafting by placing the sticks by hand should still work. If hand-crafting turns out not to work, change the unlock in `BP/recipes/claim_flag.json` to `{"item": "minecraft:stick"}` so it shows up in the book.
 - **Get the Claim Flag** (gold/red flag): creative inventory (search "Claim Flag"), or from the console `give <player> earles:claim_flag`.
 - **Use it** (LT on Xbox / tap-hold on iPhone) to open the menu:
   - **Claim land here:** 32×32 centred on you. It can't overlap another claim, and green sparkles show the border for 10 s.

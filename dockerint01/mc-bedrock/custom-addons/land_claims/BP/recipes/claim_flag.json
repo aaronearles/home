@@ -1,0 +1,29 @@
+{
+  "format_version": "1.20.10",
+  "minecraft:recipe_shaped": {
+    "description": {
+      "identifier": "earles:claim_flag"
+    },
+    "tags": [
+      "crafting_table"
+    ],
+    "pattern": [
+      " S ",
+      "S S",
+      " S "
+    ],
+    "key": {
+      "S": {
+        "item": "minecraft:stick"
+      }
+    },
+    "result": {
+      "item": "earles:claim_flag"
+    },
+    "unlock": [
+      {
+        "item": "minecraft:barrier"
+      }
+    ]
+  }
+}

@@ -211,6 +211,7 @@ The server rotates between five worlds:
 - **Land Claims** (`custom-addons/land_claims`, see its README) is on in creative and experimental.
   - Players use the Claim Flag (`give <player> earles:claim_flag`) to claim 32×32 from bedrock to sky, up to 3 each, with trust.
   - Optional stone wall ring (2 high, 5 blocks inside the edge) from the flag menu.
+  - Survival players craft the Claim Flag with 4 sticks in a plus shape (middle empty). The recipe is deliberately hidden from the recipe book (its unlock item is the barrier block). Tell the kids; they won't find it by browsing.
   - Admin: `scriptevent earles:claims list | remove <id> | removeall <owner> | wall <id> | unwall <id> | probe <x> <z> | skybox <player> | clearglass [x1 y1 z1 x2 y2 z2 [dimension]]` (output in the server log).
   - **Bulletproof glass** (`earles:bulletproof_glass`) is vanilla glass that players can't break, place, or blow up, and it isn't in the creative inventory. `skybox henry` (or `hcearles`) builds a 5×5×5 box 50 blocks above that player and teleports them into it. **Clean up with `./clear-glass.sh`** (removes every recorded skybox) or `./clear-glass.sh X1 Y1 Z1 X2 Y2 Z2` for a region, which also catches hand-placed glass and skyboxes built before recording was added. Unloaded chunks are handled automatically.
   - Railgun and some TNT Destructive types can still damage claims.
