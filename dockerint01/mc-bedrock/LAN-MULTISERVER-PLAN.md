@@ -1,8 +1,36 @@
 # Plan: multiple servers on the LAN tab (no extra Xbox accounts)
 
-**Status:** theory, untested. Written 2026-10-12 to pick up later.
+**Status:** partly tested 2026-10-17 (see [Results](#results-2026-10-17)). **Discovery works and several servers list at once. Joining fails** because of a BDS 1.26.5x NetherNet bug ([BDS-23108](https://mojira.dev/BDS-23108)). Xbox not tested yet. Written 2026-10-12.
 
 **Goal:** run several Bedrock servers at once (e.g. Skyblock, survival, creative) and let the Xbox join any of them, including **split-screen**. Avoid three Microsoft broadcast accounts and three MCXboxBroadcast sidecars. Ideally avoid needing a Game Pass subscription.
+
+## Results (2026-10-17)
+
+Tested with [aaronearles/mc-lan](https://github.com/aaronearles/mc-lan): two LXCs on pve (CT 221 "EARLES Survival", CT 222 "EARLES Creative"), each with eth0 on Trusted and eth1 tagged VLAN 10 (Users, `172.20.10.5` / `.6`), running the same itzg image with host networking. BDS 1.26.52.3 (latest stable; the only newer build is the 1.26.70.20 preview). Client: iPhone, 1.26.52.
+
+**What works**
+- **The theory about discovery was right.** With an address on `172.20.10.0/24`, both servers answer NetherNet LAN discovery (UDP 7551) and appear in the iPhone's LAN list together, with no extra accounts. They also appear when the phone is on VLAN 100.
+- `dockerint01` answers LAN discovery too. While MCXboxBroadcast runs, the client shows Skyblock only once, as "Friend's world".
+- VLAN 10 broadcasts also reach the Trusted segment (they show up on the CTs' untagged eth0). That explains the 2026-10-09 captures.
+
+**What fails: every LAN join**
+- Joining any LAN entry fails with **"Boat", `InitialConnection-145`, `Transport: NetherNet:2193`**. This happened with both new servers, and with **Skyblock on `dockerint01` with MCXboxBroadcast stopped**, from both VLAN 10 and VLAN 100. So it isn't the network, the VLAN, the firewall (Users → Trusted is allowed) or the LXC setup.
+- **What the captures show** (the discovery packets decrypt with the fixed key `sha256(uint64le 0xdeadbeef)`, as in `df-mc/go-nethernet`):
+  - The server's reply is well-formed: name, protocol 2193, 1.26.52, world, player counts.
+  - On join, the phone sends the server **one NetherNet message (id 2) with sender ID 0 and empty data** to 7551. The server never replies, and the phone sends nothing else: no TCP 19132, no ICE, nothing through the signaling service. Skyblock showed "Connecting…" before failing. The new servers failed instantly. The traffic on the wire was the same.
+- **This is a known, open, unconfirmed bug: [BDS-23108](https://mojira.dev/BDS-23108)** "Transport type 'nethernet' renders server inaccessible" (1.26.51.1 and 1.26.52.3; Windows, Xbox, PlayStation, Switch, iOS). People there report the same `InitialConnection-145 … NetherNet:2193`. See also [BDS-23111](https://mojira.dev/BDS-23111).
+- **`transport=raknet` is not an option.** BDS 1.26.52.3 logs "NetherNet is the only supported transport type". A RakNet server answers the phone's RakNet LAN pings (UDP 19132), but the phone still never tries to join it.
+- **Also found:** on a fresh data directory, current BDS writes `allow-list=true` with an empty list, which rejects everyone. Set `ALLOW_LIST=false`. `dockerint01`'s older `server.properties` already has it off.
+
+**Workarounds reported on BDS-23108 (not tested yet)**
+1. **Join once by IP:** after one successful manual join by IP:port, LAN joins reportedly work until the next BDS restart.
+2. **`online-mode=false` + `allow-list=false`:** reportedly works every time. It turns off Xbox Live authentication, which might be acceptable for LAN-only servers on the Users VLAN, but gamertags are then unverified.
+
+**Next**
+- Try the two workarounds from the iPhone.
+- Test from the Xbox: LAN list, join, split-screen.
+- Watch BDS-23108 and the next BDS release. If LAN joins stay broken, the [fallback](#fallback-three-broadcast-accounts-friends-tab-works-anywhere) is the only working route today. Check first whether split-screen works on the Friends route with today's Skyblock.
+- The public servers (CubeCraft and so on) that show up as "LAN world" on the phone come from the internet. They also appear on cellular, so they aren't LAN discovery.
 
 ## The constraints
 
@@ -111,7 +139,9 @@ If LAN discovery can't be made to work:
 
 ## Open questions
 
-- Does BDS 1.26.5x answer NetherNet LAN discovery on every interface, or only some?
-- Is split-screen allowed when joining a dedicated server through the LAN tab?
+- ~~Does BDS 1.26.5x answer NetherNet LAN discovery on every interface, or only some?~~ Every interface: it answered on both eth0 and eth1 (2026-10-17). Joining is the problem, see Results.
+- ~~Does the iPhone LAN tab behave the same?~~ It lists the servers, but joins fail (BDS-23108).
+- Do the BDS-23108 workarounds (join once by IP, or `online-mode=false`) make LAN joins work?
+- Does the Xbox behave the same?
+- Is split-screen allowed when joining a dedicated server through the LAN tab? (Untestable until a LAN join works.)
 - Is Game Pass really not required for LAN joins on current Xbox Minecraft?
-- Does the iPhone LAN tab behave the same (handy for testing without the Xbox)?
