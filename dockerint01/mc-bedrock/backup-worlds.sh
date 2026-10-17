@@ -82,6 +82,11 @@ for entry in listing.split(", "):
 EOF
     docker compose exec -T minecraft send-command "save resume" </dev/null >/dev/null
     HELD=0
+    # Add-on pack lists aren't part of the save-query file list, so copy them explicitly
+    # (without them a restored world loads with no add-ons)
+    for f in world_behavior_packs.json world_resource_packs.json levelname.txt; do
+        [[ -f "data/worlds/$ACTIVE/$f" ]] && cp "data/worlds/$ACTIVE/$f" "$STAGE/$ACTIVE/$f"
+    done
     log "Copied $(echo "$files" | tr ',' '\n' | wc -l) files from $ACTIVE; saves resumed."
 fi
 

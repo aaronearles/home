@@ -211,7 +211,8 @@ The server rotates between five worlds:
 - **Land Claims** (`custom-addons/land_claims`, see its README) is on in creative and experimental.
   - Players use the Claim Flag (`give <player> earles:claim_flag`) to claim 32×32 from bedrock to sky, up to 3 each, with trust.
   - Optional stone wall ring (2 high, 5 blocks inside the edge) from the flag menu.
-  - Admin: `scriptevent earles:claims list | remove <id> | removeall <owner> | wall <id> | unwall <id> | probe <x> <z>` (output in the server log).
+  - Admin: `scriptevent earles:claims list | remove <id> | removeall <owner> | wall <id> | unwall <id> | probe <x> <z> | skybox <player>` (output in the server log).
+  - **Bulletproof glass** (`earles:bulletproof_glass`) is vanilla glass that players can't break, place, or blow up, and it isn't in the creative inventory. `skybox henry` (or `hcearles`) builds a 5×5×5 box 50 blocks above that player and teleports them into it. The log prints the `fill ... air replace earles:bulletproof_glass` line that removes the box.
   - Railgun and some TNT Destructive types can still damage claims.
 - **Our own add-ons** live in `custom-addons/<name>/{BP,RP}` (in git); `setup-addons.sh` finds them as well as downloaded ones. **Tornado TNT** (`custom-addons/tornado_tnt`, see its README) is on in experimental mode:
   - `give <player> earles:tornado_tnt 16`
@@ -227,6 +228,10 @@ The server rotates between five worlds:
   - Check that no two replace the same file. Scripts, texts and the merged texture/sound lists are fine.
   - Check that no two define the same identifier.
   - After the restart, read the log for `[Scripting]` / `[Blocks]` errors. An add-on can need a newer script API than this BDS has (Tree Physics did). If so, drop it from `ADDONS` and restart.
+- **Local fixes to downloaded add-ons** are kept in git and re-applied by `fetch-addon.sh` after every download (so `--all` never undoes them):
+  - `tools/patches/tnt_destructive.patch`: **God TNT is removed.** Its chunk-erase job hangs the scripting watchdog and shuts the server down. It's off the creative menu, its recipes are gone, and the script no longer detonates it.
+  - `tools/patch-tree-physics.py`: Tree Physics compatibility (see `addons/SOURCES.md`; the add-on is currently disabled).
+  - If a patch stops applying after an add-on update, `fetch-addon.sh` stops with an error instead of installing it unpatched.
 - **Multi-pack add-ons** (e.g. CobbleDrock Core + Content) live in `addons/<name>/packs/<pack>/`. An optional `addons/<name>/packs.list` limits which packs `setup-addons.sh` enables (Tree Physics uses this).
 - **Restoring saved add-ons:** `./fetch-addon.sh --all` re-downloads everything in `addons/addons.tsv` and refuses on a sha256 mismatch. Favorites: `blasters`, `tnt_destructive`. Enable them for any world with `./setup-addons.sh <World> blasters tnt_destructive` (takes effect when that world next loads).
 - **Adding or updating an add-on** (ask first):

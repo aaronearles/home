@@ -7,6 +7,8 @@ Community add-ons (third-party content, not committed to git). Each one has `BP/
 | `blasters` | [Blasters](https://www.curseforge.com/minecraft-bedrock/addons/blasters) v1.0.0 | arcstarstudios | 1707080 / 8945889 | `Blasters-v1.0.0.mcaddon` | `8b0630783678ea8dbc053202e233c97834e505e2ab5168a1dac1af5dad918ad2` |
 | `tnt_destructive` | [TNT Destructive](https://www.curseforge.com/minecraft-bedrock/addons/tnt-destructive-addon) V17 | LasokarXD | 1421053 / 8774863 | `TNT Destructive Addon.mcaddon` | `1eb875eaafde814a28a6ac70b19a50d86f0900b3b0fe5e3d994dbb58238605f9` |
 
+**Local edit - God TNT removed (2026-10-17):** its chunk-erase job hangs the scripting watchdog and shuts the server down. Off the creative menu, recipes deleted, script no longer detonates it. Kept as `tools/patches/tnt_destructive.patch` and re-applied by `fetch-addon.sh`, so the registry hash is still the original download's.
+
 Exact IDs and hashes for every add-on are in `addons.tsv`. The table above lists the first two in detail.
 
 ## Saved add-ons and re-fetching
@@ -30,6 +32,7 @@ The CurseForge web pages are behind a Cloudflare bot check, but the download API
 - **TNT Destructive:** `scripts/tnt_logic.js`.
   - Imports only `@minecraft/server` 1.12.0.
   - Runs `time set day` / `time set night` (day/night TNT).
+  - **2026-10-17:** God TNT (`destructive:tnt_god`) and God Dynamite (`destructive:dynamite_god`) are disabled in the unpacked pack. God TNT's chunk-erase job hangs the scripting watchdog and shuts the server down. `./fetch-addon.sh` overwrites this edit; re-apply it after a re-download.
 - **Neither needs experimental toggles** (`is_experimental: false` throughout).
 - When updating an add-on: re-download, re-check the hash, and re-review the scripts before replacing the folder.
 
@@ -49,7 +52,7 @@ Downloaded with `fetch-addon.sh`, hashes pinned in `addons.tsv`. Checks:
 | `orbital_railgun` | v7 (26.30) | 2 MB | OK | Stable script modules. Runs `fill`, `setblock`, `camerashake`, `tickingarea`, `time`. Big terrain damage by design. |
 | `portal_gun` | v1.1.1 (26.40) | 7 MB | OK | Stable modules. Runs `camera`, `setblock`. Author says "under active development". |
 | `quick_structures` | Quick Craft v3.8 | 5 MB | OK | Stable modules (1.12.0). Runs `tickingarea`, `playsound`. |
-| `tree_physics` | 1.0.2 (26.40) | 1 MB | **Doesn't run on this server (2026-10-12)**. Its script imports `EntitySwingSource`, which BDS 1.26.52's `@minecraft/server` 2.8.0 doesn't export, so the script fails and a block fails to parse. Retry after a BDS update. | Stable modules. URLs are code comments. `packs.list` enables the main BP+RP only (the Compatible BP is an optional alternative). Only affects **newly generated** trees, so best in a new world. |
+| `tree_physics` | 1.0.2 (26.40) | 1 MB | **Disabled** (removed from `ADDONS[experimental]` 2026-10-17). Stock 1.0.2 doesn't run on BDS 1.26.52: it imports `EntitySwingSource` (`@minecraft/server` 2.8.0) and `CustomForm` etc. (`@minecraft/server-ui` 2.1.0), none of which exist here. `tools/patch-tree-physics.py` (applied automatically by `fetch-addon.sh`) stubs those so it loads, and in a test **trees did fall**, but fallen trees were **not breakable and could be walked through**, because breaking them needs `playerSwingStart`, which this server lacks. Retry after a BDS update. | Stable modules otherwise. Only affects **newly generated** trees. `packs.list` enables the main BP+RP only. The download stays in `addons/tree_physics`. |
 | `immortal_dogs` | V1.1 | 1 MB | OK | Data-only behavior pack, no scripts. |
 | `serp_pokedrock` | v1.34.13 Base | 11 MB | OK | Stable modules. Declares the `script_eval` capability but never uses eval. The base download has 1 BP + 1 RP; the page mentions optional extra resource packs (not downloaded). |
 | `cobbledrock` | Full 1.3.2 | 273 MB | **Core only** (pokemon mode, 2026-10-12). Content (gyms, raid dens, fossils, villages) needs a newer Minecraft than BDS 1.26.52: script export `BiomeTypes` missing, and the `minecraft:multi_block` block trait. Enabling the Upcoming Creator Features + Beta APIs experiments did **not** help. `packs.list` limits it to Core; re-test Content after a BDS update. Core: no script errors; 1,220 harmless 'duplicate crafting item catalog' errors. | Core + Content (2 BP + 2 RP, ~24k files). Stable modules, ~140 scripts, nothing risky. **Overrides player.json.** Clients must download ~270 MB on first join, which is slow on Xbox. |
@@ -62,7 +65,7 @@ Downloaded with `fetch-addon.sh`, hashes pinned in `addons.tsv`. Checks:
 Only one add-on that replaces the player definition works per world. Those are `cobbledrock`, `marvel`, `spiderman` and `morphing_bracelet`. Blasters and TNT don't override it.
 
 ### Suggested groupings (when the kids are ready)
-- **Experimental (current world):** `blasters`, `tnt_destructive` + `orbital_railgun`, `portal_gun`, `quick_structures`, `immortal_dogs`, `serp_pokedrock`. None of these touch player.json. **Enabled 2026-10-12:** orbital_railgun, portal_gun, quick_structures (plus tornado_tnt, ours); a file/identifier overlap check found no conflicts. `tree_physics` failed to load (see above).
+- **Experimental (current world):** `blasters`, `tnt_destructive` + `orbital_railgun`, `portal_gun`, `quick_structures`, `immortal_dogs`, `serp_pokedrock`. None of these touch player.json. **Enabled 2026-10-12:** orbital_railgun, portal_gun, quick_structures (plus tornado_tnt, ours); a file/identifier overlap check found no conflicts. `tree_physics` was removed from this world on 2026-10-17 (see above).
 - **Pokémon world:** `cobbledrock` alone. It's heavy and owns player.json. Start with `serp_pokedrock` in Experimental to see whether they like it first.
 - **Heroes world:** `spiderman` (simpler), or `marvel` (bigger, needs the Education toggle, flips game modes).
 - **Morph world:** `morphing_bracelet` on its own.

@@ -1,0 +1,216 @@
+diff --git a/blocks/tnt_god.json b/blocks/tnt_god.json
+index e30cb12..f5070b2 100644
+--- a/blocks/tnt_god.json
++++ b/blocks/tnt_god.json
+@@ -2,10 +2,7 @@
+ 	"format_version": "1.21.60",
+ 	"minecraft:block": {
+ 		"description": {
+-			"identifier": "destructive:tnt_god",
+-			"menu_category": {
+-				"category": "items"
+-			}
++			"identifier": "destructive:tnt_god"
+ 		},
+ 		"components": {
+ 			"minecraft:geometry": "geometry.tntdestructive",
+diff --git a/entities/dynamite_god.json b/entities/dynamite_god.json
+index 194a8fb..a8d9a6a 100644
+--- a/entities/dynamite_god.json
++++ b/entities/dynamite_god.json
+@@ -75,7 +75,7 @@
+ 			"destructive:explode_event": {
+ 				"add": {
+ 					"component_groups": [
+-						"exploding"
++						"despawn_group"
+ 					]
+ 				}
+ 			},
+diff --git a/item_catalog/crafting_item_catalog.json b/item_catalog/crafting_item_catalog.json
+index bba4709..f11fd84 100644
+--- a/item_catalog/crafting_item_catalog.json
++++ b/item_catalog/crafting_item_catalog.json
+@@ -7,7 +7,7 @@
+                 "groups": [
+                     {
+                         "group_identifier": {
+-                            "icon": "destructive:tnt_god",
++                            "icon": "destructive:tnt_x5",
+                             "name": "destructive:itemGroup.name.tnt"
+                         },
+                         "items": [
+@@ -64,8 +64,7 @@
+                             "destructive:tnt_earthquake",
+                             "destructive:tnt_floating_island",
+                             "destructive:tnt_cannon",
+-                            "destructive:tnt_unbreakable",
+-                            "destructive:tnt_god"
++                            "destructive:tnt_unbreakable"
+                         ]
+                     }
+                 ]
+@@ -98,8 +97,7 @@
+                             "destructive:dynamite_ocean",
+                             "destructive:dynamite_enderman",
+                             "destructive:dynamite_lightning",
+-                            "destructive:dynamite_blackhole",
+-                            "destructive:dynamite_god"
++                            "destructive:dynamite_blackhole"
+                         ]
+                     }
+                 ]
+diff --git a/items/dynamite_god.json b/items/dynamite_god.json
+index 5e1b0dc..7f6baaa 100644
+--- a/items/dynamite_god.json
++++ b/items/dynamite_god.json
+@@ -2,10 +2,7 @@
+ 	"format_version": "1.21.130",
+ 	"minecraft:item": {
+ 		"description": {
+-			"identifier": "destructive:dynamite_god",
+-			"menu_category": {
+-				"category": "equipment"
+-			}
++			"identifier": "destructive:dynamite_god"
+ 		},
+ 		"components": {
+ 			"minecraft:icon": {
+diff --git a/recipes/dynamite_god_recipe.json a/recipes/dynamite_god_recipe.json
+deleted file mode 100644
+index 9375886..0000000
+--- a/recipes/dynamite_god_recipe.json
++++ /dev/null
+@@ -1,35 +0,0 @@
+-{
+-	"format_version": "1.21.130",
+-	"minecraft:recipe_shaped": {
+-		"description": {
+-			"identifier": "destructive:dynamite_god_recipe"
+-		},
+-		"unlock": [
+-			{
+-				"item": "destructive:tnt_god"
+-			}
+-		],
+-		"tags": [
+-			"crafting_table"
+-		],
+-		"pattern": [
+-			" A ",
+-			"ABA",
+-			" A "
+-		],
+-		"key": {
+-			"A": {
+-				"item": "minecraft:arrow",
+-				"data": 0
+-			},
+-			"B": {
+-				"item": "destructive:tnt_god",
+-				"data": 0
+-			}
+-		},
+-		"result": {
+-			"item": "destructive:dynamite_god",
+-			"count": 1
+-		}
+-	}
+-}
+\ No newline at end of file
+diff --git a/recipes/tnt_god_recipe.json a/recipes/tnt_god_recipe.json
+deleted file mode 100644
+index 390c40d..0000000
+--- a/recipes/tnt_god_recipe.json
++++ /dev/null
+@@ -1,43 +0,0 @@
+-{
+-	"format_version": "1.21.130",
+-	"minecraft:recipe_shaped": {
+-		"description": {
+-			"identifier": "destructive:tnt_god_recipe"
+-		},
+-		"unlock": [
+-			{
+-				"item": "destructive:tnt_x500"
+-			}
+-		],
+-		"tags": [
+-			"crafting_table"
+-		],
+-		"pattern": [
+-			"AAA",
+-			"ABC",
+-			"DDC"
+-		],
+-		"key": {
+-			"A": {
+-				"item": "minecraft:netherite_ingot",
+-				"data": 0
+-			},
+-			"B": {
+-				"item": "destructive:tnt_x500",
+-				"data": 0
+-			},
+-			"C": {
+-				"item": "minecraft:obsidian",
+-				"data": 0
+-			},
+-			"D": {
+-				"item": "minecraft:golden_apple",
+-				"data": 0
+-			}
+-		},
+-		"result": {
+-			"item": "destructive:tnt_god",
+-			"count": 1
+-		}
+-	}
+-}
+\ No newline at end of file
+diff --git a/scripts/tnt_logic.js b/scripts/tnt_logic.js
+index 2f020c3..a1105b3 100644
+--- a/scripts/tnt_logic.js
++++ b/scripts/tnt_logic.js
+@@ -2,6 +2,8 @@ import { world, system, BlockPermutation } from "@minecraft/server";
+ 
+ // gets what type of tnt it is
+ function getIgnitedId(typeId) {
++    // God TNT's chunk-erase job hangs the scripting watchdog and shuts the server down.
++    if (typeId === "destructive:tnt_god") return null;
+     if (typeId.startsWith("destructive:tnt_")) {
+         return `${typeId}_ignited`;
+     }
+@@ -1297,6 +1299,7 @@ function v17GodChunkLooksLoaded(dim, cx, cz) {
+     } catch { return false; }
+ }
+ function v17GodQueueChunk(dim, cx, cz) {
++    return; // god TNT disabled: never queue a chunk erase
+     const key = v17GodChunkKey(dim, cx, cz);
+     if (v17GodClearedChunks.has(key) || v17GodClearingChunks.has(key) || v17GodQueuedChunks.has(key)) return;
+     if (!v17GodChunkLooksLoaded(dim, cx, cz)) return;
+@@ -1505,6 +1508,7 @@ function v17GodVisualDetonations(loc, dim) {
+     } catch { }
+ }
+ function v17GodDetonate(entity, loc, dim) {
++    return; // god TNT disabled: no tag, no explosion, no world erase
+     try {
+         v17GodVisualDetonations(loc, dim);
+         v17SafeSound(dim, "ambient.weather.thunder", loc, { volume: 40, pitch: .25 });
+@@ -1566,7 +1570,7 @@ system.runInterval(() => { v17GodPumpQueue(); }, 1);
+ 
+ world.afterEvents.entitySpawn.subscribe((event) => {
+     const e = event.entity; if (!e) return;
+-    if (e.typeId === "destructive:tnt_god_ignited") v17GodCountdown(e);
++    if (e.typeId === "destructive:tnt_god_ignited") return;
+     if (e.typeId === "destructive:tnt_firework_ignited") {
+         system.runTimeout(() => {
+             try { if (e.hasTag("v17_god_orbiter")) return; } catch { }
+@@ -1729,7 +1733,6 @@ world.afterEvents.dataDrivenEntityTrigger.subscribe((event) => {
+             v17SafeSound(dim, "random.explode", loc);
+             break;
+         case "destructive:god":
+-            v17GodDetonate(entity, loc, dim);
+             break;
+         case "destructive:unbreakable": v17SafeSound(dim, "random.anvil_land", loc); v17Run(v17Unbreakable(loc, dim)); break;
+     }

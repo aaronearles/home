@@ -1,0 +1,7 @@
+{
+  "format_version": "1.21.40",
+  "earles:bulletproof_glass": {
+    "sound": "glass",
+    "textures": "glass"
+  }
+}

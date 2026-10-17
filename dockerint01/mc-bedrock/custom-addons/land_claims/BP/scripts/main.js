@@ -16,6 +16,11 @@
 //   scriptevent earles:claims wall <id>                build the stone wall on a claim
 //   scriptevent earles:claims unwall <id>              remove that wall (cobblestone walls on the ring only)
 //   scriptevent earles:claims probe <x> <z>            debug: what the wall builder sees as ground there
+//   scriptevent earles:claims skybox <player>         5x5x5 bulletproof-glass box, 50 blocks above that player
+//
+// earles:bulletproof_glass looks like vanilla glass. It is not in the creative inventory,
+// not mineable, and not destroyed by explosions. Players can't break or place it; the
+// console places it with skybox (or fill / setblock) and removes it with fill ... air.
 import { system, world } from "@minecraft/server";
 import { ActionFormData, ModalFormData } from "@minecraft/server-ui";
 
@@ -23,6 +28,10 @@ const OBJECTIVE = "earles_claims";
 const SIZE = 32;              // claim is SIZE x SIZE blocks
 const MAX_PER_PLAYER = 3;
 const FLAG = "earles:claim_flag";
+const GLASS = "earles:bulletproof_glass";
+const SKYBOX_ABOVE = 50;      // blocks above the player's feet
+// Console nicknames for skybox. Gamertags always work too.
+const PLAYER_ALIASES = { henry: "hcearles", theo: "ttearles", dad: "aearles" };
 const WALL_INSET = 5;         // stone wall this many blocks inside the claim edge
 const WALL_HEIGHT = 2;        // min blocks above the ground (cobblestone + wall cap; can't be jumped)
 const WALL_BLOCK = "minecraft:cobblestone_wall";
@@ -105,6 +114,11 @@ function deny(player, claim) {
 // ---- Protection -----------------------------------------------------------------
 
 world.beforeEvents.playerBreakBlock.subscribe((ev) => {
+    if (ev.block.typeId === GLASS) {
+        ev.cancel = true;
+        system.run(() => tryRun(() => ev.player.onScreenDisplay.setActionBar("§cBulletproof glass")));
+        return;
+    }
     const claim = claimAt(ev.block.dimension.id, ev.block.location.x, ev.block.location.z);
     if (!canBuild(ev.player.name, claim)) {
         ev.cancel = true;
@@ -114,7 +128,14 @@ world.beforeEvents.playerBreakBlock.subscribe((ev) => {
 
 // Placing blocks, buckets, flint and steel, chests, doors, buttons... all start as an
 // interaction with a block. Check the clicked block and the spot a block would go into.
+// This server's @minecraft/server has no playerPlaceBlock before-event, so holding the
+// glass is rejected here. That keeps a picked-up stack from being placed.
 world.beforeEvents.playerInteractWithBlock.subscribe((ev) => {
+    if (ev.itemStack?.typeId === GLASS) {
+        ev.cancel = true;
+        system.run(() => tryRun(() => ev.player.onScreenDisplay.setActionBar("§cBulletproof glass is admin-only")));
+        return;
+    }
     if (ev.itemStack?.typeId === FLAG) return;
     const { x, y, z } = ev.block.location;
     const [dx, , dz] = FACE[ev.blockFace] ?? [0, 0, 0];
@@ -128,12 +149,13 @@ world.beforeEvents.playerInteractWithBlock.subscribe((ev) => {
     }
 });
 
-// Explosions (TNT, creepers, add-on explosives) skip claimed blocks
+// Explosions (TNT, creepers, add-on explosives) skip claimed blocks and bulletproof glass.
 world.beforeEvents.explosion.subscribe((ev) => {
     const dimId = ev.dimension.id;
-    if (!getClaims().some((c) => c.dim === dimId)) return;
-    const blocks = ev.getImpactedBlocks();
-    const keep = blocks.filter((b) => !claimAt(dimId, b.location.x, b.location.z));
+    const claimsHere = getClaims().some((c) => c.dim === dimId);
+    let blocks;
+    try { blocks = ev.getImpactedBlocks(); } catch { return; }
+    const keep = blocks.filter((b) => b.typeId !== GLASS && !(claimsHere && claimAt(dimId, b.location.x, b.location.z)));
     if (keep.length !== blocks.length) ev.setImpactedBlocks(keep);
 });
 
@@ -420,7 +442,49 @@ system.afterEvents.scriptEventReceive.subscribe((ev) => {
         const theirs = claims.filter((k) => k.owner === owner);
         for (const c of theirs) { removeWall(world.getDimension(c.dim), c); removeClaim(c); }
         console.warn(`[claims] removed ${theirs.length} claim(s) of ${owner}`);
+    } else if (cmd === "skybox") {
+        skybox(rest[0]);
     } else {
-        console.warn("[claims] usage: scriptevent earles:claims list | remove <id> | removeall <owner> | wall <id> | unwall <id> | probe <x> <z>");
+        console.warn("[claims] usage: scriptevent earles:claims list | remove <id> | removeall <owner> | wall <id> | unwall <id> | probe <x> <z> | skybox <player>");
     }
 });
+
+// Hollow 5x5x5 of bulletproof glass, 50 blocks above an online player (3x3x3 of air
+// inside). The player is teleported up into it. "skybox henry" and "skybox hcearles"
+// are the same. Extra words are ignored, so "skybox henry in bulletproof glass" works too.
+function skybox(name) {
+    if (!name) {
+        console.warn("[claims] usage: scriptevent earles:claims skybox <player>");
+        return;
+    }
+    const want = (PLAYER_ALIASES[name.toLowerCase()] ?? name).toLowerCase();
+    const player = world.getAllPlayers().find((p) => p.name.toLowerCase() === want);
+    if (!player) {
+        const online = world.getAllPlayers().map((p) => p.name).join(", ") || "nobody";
+        console.warn(`[claims] skybox: no player '${name}' online (${online})`);
+        return;
+    }
+    const dim = player.dimension;
+    const x = Math.floor(player.location.x);
+    const z = Math.floor(player.location.z);
+    const feet = Math.floor(player.location.y);
+    const y = feet + SKYBOX_ABOVE;
+    let minY = -64, maxY = 319;
+    try {
+        const r = dim.heightRange;
+        if (r && Number.isFinite(r.min) && Number.isFinite(r.max)) { minY = r.min; maxY = r.max - 1; }
+    } catch { /* vanilla overworld limits */ }
+    const x1 = x - 2, y1 = y - 1, z1 = z - 2, x2 = x + 2, y2 = y + 3, z2 = z + 2;
+    if (y1 < minY || y2 > maxY) {
+        console.warn(`[claims] skybox: ${player.name} at y=${feet} can't fit a box ${SKYBOX_ABOVE} above (limit ${maxY})`);
+        return;
+    }
+    try {
+        dim.runCommand(`fill ${x1} ${y1} ${z1} ${x2} ${y2} ${z2} ${GLASS} hollow`);
+        player.teleport({ x: x + 0.5, y, z: z + 0.5 });
+        console.warn(`[claims] skybox ${player.name}: bulletproof glass (${x1},${y1},${z1}) to (${x2},${y2},${z2}) in ${dim.id}, ${SKYBOX_ABOVE} above y=${feet}`);
+        console.warn(`[claims] remove it with: fill ${x1} ${y1} ${z1} ${x2} ${y2} ${z2} air replace ${GLASS}`);
+    } catch (e) {
+        console.warn(`[claims] skybox failed: ${e}`);
+    }
+}
