@@ -50,6 +50,7 @@ scriptevent earles:claims wall <id>        # build/rebuild the stone wall; print
 scriptevent earles:claims unwall <id>      # remove it (recorded blocks; older walls: cobblestone walls on the ring)
 scriptevent earles:claims probe <x> <z>    # debug: what the wall builder sees as ground
 scriptevent earles:claims skybox <player> # 5×5×5 bulletproof-glass box, 50 blocks above that player
+scriptevent earles:claims book <player[,player]> <enchantment> [level]   # give an enchanted book, e.g. book henry,theo feather_falling 4
 scriptevent earles:claims clearglass       # remove every recorded skybox box
 scriptevent earles:claims clearglass <x1> <y1> <z1> <x2> <y2> <z2> [dimension]   # remove bulletproof glass in a region
 ```

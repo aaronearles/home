@@ -87,6 +87,15 @@ alias mc='docker compose -f ~/mc-bedrock/docker-compose.yml exec -T minecraft se
 - If the inventory is full, items drop on the ground.
 - Log line on success: `Gave Obsidian * 64 to aearles`. `No targets matched selector` means the player isn't online.
 
+### Enchanted books (`/give` can't do these)
+```
+scriptevent earles:claims book <player[,player...]> <enchantment> [level]     # e.g. book henry,theo feather_falling 4
+```
+- Run it through `send-command` like any console command; the result appears in the server log as `[claims] book: gave <player> an enchanted book (feather_falling 4)`.
+- Nicknames work (`henry`, `theo`, `dad`). A level above the enchantment's maximum fails with an error in the log. An enchantment name is the vanilla id without the prefix (`mending`, `sharpness`, `protection`, `unbreaking`).
+- If their inventory is full the book is dropped at their feet. The player must be online.
+- Needs the Land Claims add-on to be loaded (it is in creative, experimental and survival modes).
+
 ### Equip armor directly (worn, not in inventory)
 ```bash
 for slot in "head diamond_helmet" "chest diamond_chestplate" "legs diamond_leggings" "feet diamond_boots"; do

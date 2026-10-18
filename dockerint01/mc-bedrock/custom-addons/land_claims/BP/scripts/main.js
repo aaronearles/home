@@ -17,6 +17,9 @@
 //   scriptevent earles:claims unwall <id>              remove that wall (cobblestone walls on the ring only)
 //   scriptevent earles:claims probe <x> <z>            debug: what the wall builder sees as ground there
 //   scriptevent earles:claims skybox <player>         5x5x5 bulletproof-glass box, 50 blocks above that player
+//   scriptevent earles:claims book <player[,player...]> <enchantment> [level]
+//                                                      give an enchanted book, e.g. book henry,theo feather_falling 4
+//                                                      (nicknames work; the level must be allowed for that enchantment)
 //   scriptevent earles:claims clearglass              remove every skybox built since boxes were recorded
 //   scriptevent earles:claims clearglass <x1> <y1> <z1> <x2> <y2> <z2> [dimension]
 //                                                      remove bulletproof glass in that region (overworld by default;
@@ -25,7 +28,7 @@
 // earles:bulletproof_glass looks like vanilla glass. It is not in the creative inventory,
 // not mineable, and not destroyed by explosions. Players can't break or place it; the
 // console places it with skybox (or fill / setblock) and removes it with fill ... air.
-import { system, world } from "@minecraft/server";
+import { EnchantmentType, ItemStack, system, world } from "@minecraft/server";
 import { ActionFormData, ModalFormData } from "@minecraft/server-ui";
 
 const OBJECTIVE = "earles_claims";
@@ -450,8 +453,10 @@ system.afterEvents.scriptEventReceive.subscribe((ev) => {
         skybox(rest[0]);
     } else if (cmd === "clearglass") {
         clearGlass(rest);
+    } else if (cmd === "book") {
+        enchantBook(rest);
     } else {
-        console.warn("[claims] usage: scriptevent earles:claims list | remove <id> | removeall <owner> | wall <id> | unwall <id> | probe <x> <z> | skybox <player> | clearglass [x1 y1 z1 x2 y2 z2 [dimension]]");
+        console.warn("[claims] usage: scriptevent earles:claims list | remove <id> | removeall <owner> | wall <id> | unwall <id> | probe <x> <z> | skybox <player> | book <player[,player]> <enchantment> [level] | clearglass [x1 y1 z1 x2 y2 z2 [dimension]]");
     }
 });
 
@@ -562,4 +567,35 @@ function clearGlass(args) {
         });
     }
     console.warn(`[claims] clearglass: clearing ${boxes.length} region(s)...`);
+}
+
+// ---- Enchanted books ----------------------------------------------------------------------
+// /give can't put an enchantment on a book, but the scripting engine can.
+function enchantBook(args) {
+    const [who, enchantArg, levelArg] = args;
+    if (!who || !enchantArg) {
+        return console.warn("[claims] usage: scriptevent earles:claims book <player[,player...]> <enchantment> [level]   e.g. book henry,theo feather_falling 4");
+    }
+    const enchant = enchantArg.replace(/^minecraft:/, "").toLowerCase();
+    const level = levelArg === undefined ? 1 : Number(levelArg);
+    if (!Number.isInteger(level) || level < 1) return console.warn(`[claims] book: bad level '${levelArg}'`);
+    for (const name of who.split(",")) {
+        const want = (PLAYER_ALIASES[name.toLowerCase()] ?? name).toLowerCase();
+        const player = world.getAllPlayers().find((p) => p.name.toLowerCase() === want);
+        if (!player) {
+            console.warn(`[claims] book: no player '${name}' online (${world.getAllPlayers().map((p) => p.name).join(", ") || "nobody"})`);
+            continue;
+        }
+        try {
+            const stack = new ItemStack("minecraft:enchanted_book", 1);
+            const ench = stack.getComponent("minecraft:enchantable");
+            ench.addEnchantment({ type: new EnchantmentType(enchant), level });
+            const given = ench.getEnchantments().map((e) => `${e.type.id} ${e.level}`).join(", ");
+            const left = player.getComponent("minecraft:inventory").container.addItem(stack);
+            if (left) player.dimension.spawnItem(left, player.location);   // inventory full: drop it at their feet
+            console.warn(`[claims] book: gave ${player.name} an enchanted book (${given})${left ? " - inventory full, dropped at their feet" : ""}`);
+        } catch (e) {
+            console.warn(`[claims] book failed for ${player.name}: ${e}`);
+        }
+    }
 }
