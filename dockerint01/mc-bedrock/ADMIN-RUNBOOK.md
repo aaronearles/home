@@ -195,7 +195,7 @@ The server rotates between six worlds:
 | `skyblock` | `Skyblock` | void FLAT | survival (keep inventory ON) | on |
 | `survival` | `Earles2026` | normal | survival | **off** (achievements) |
 | `creative` | `Creative` | normal | creative | on, + Land Claims, Owner Button & Lever (ours) |
-| `experimental` | `Experimental` | normal | creative | on, + add-ons: Land Claims, Owner Button & Lever (ours), Blasters, TNT Destructive, Tornado TNT (ours), Orbital Railgun, Portal Gun, Quick Craft |
+| `experimental` | `Experimental` | normal | creative | on, + add-ons: Land Claims, Owner Button & Lever (ours), Blasters, TNT Destructive, Tornado TNT (ours), Orbital Railgun, Portal Gun, Quick Craft, Morphing Bracelet v0.3.2 (older release; the newer ones need an API this server lacks) |
 | `horror` | `Horror` | normal | survival (keep inventory ON) | on, + Twixxel's Stalkers (horror; watch from windows, hide in beds, break blocks) and The Bloop (a 16× sea monster, 500 HP, 50-damage attack; rare, spawns in forest-biome water; `summon skinscraft:bloop` to test; 15 harmless 'Block type doesn't exist' errors on every start). A trial mode - not for the kids' default world |
 | `pokemon` | `Pokemon` | normal | survival (keep inventory ON) | on, + CobbleDrock **Core** (Pokémon, catching, battles, Pokédex, PC). First join downloads a ~270 MB resource pack. |
 
