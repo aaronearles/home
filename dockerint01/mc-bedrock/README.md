@@ -1,6 +1,6 @@
 # mc-bedrock
 
-Minecraft Bedrock Dedicated Server (BDS) with Xbox Live broadcasting via MCXboxBroadcast, so Xbox and mobile players can join from the friends list. Rotates between five worlds (a **Pokémon** world with CobbleDrock, a hand-built classic **Skyblock**, a normal **survival** world, a **creative** world and an **experimental** creative world with community add-ons), with nightly backups.
+Minecraft Bedrock Dedicated Server (BDS) with Xbox Live broadcasting via MCXboxBroadcast, so Xbox and mobile players can join from the friends list. Rotates between six worlds (a **horror** trial world, a **Pokémon** world with CobbleDrock, a hand-built classic **Skyblock**, a normal **survival** world, a **creative** world and an **experimental** creative world with community add-ons), with nightly backups.
 
 > Day-to-day operation (giving items, resets, restarts, troubleshooting) is documented in **[ADMIN-RUNBOOK.md](ADMIN-RUNBOOK.md)**, which is written so an AI agent can operate the server.
 
@@ -117,6 +117,7 @@ The Skyblock world is a FLAT world whose `FlatWorldLayers` in `level.dat` is a s
 | `survival` | `Earles2026` | normal | survival | off (keeps achievements) |
 | `creative` | `Creative` | normal | creative | on, + our Land Claims & Owner Button/Lever |
 | `experimental` | `Experimental` | normal | creative | on, + our Land Claims, Owner Button/Lever & Tornado TNT, Blasters, TNT Destructive, Orbital Railgun, Portal Gun, Quick Craft |
+| `horror` | `Horror` | normal | survival, keep inventory | on, + Twixxel's Stalkers (horror) |
 | `pokemon` | `Pokemon` | normal | survival, keep inventory | on, + CobbleDrock Core (Pokémon) |
 
 ```bash

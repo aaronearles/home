@@ -70,3 +70,9 @@ Only one add-on that replaces the player definition works per world. Those are `
 - **Heroes world:** `spiderman` (simpler), or `marvel` (bigger, needs the Education toggle, flips game modes).
 - **Morph world:** `morphing_bracelet` on its own.
 - **Rejected:** `pickup_carry` was deleted, and its project is blocked from being fetched again.
+
+## Horror add-on (2026-10-18)
+
+| Add-on | Version | Size | Verdict | Notes |
+|---|---|---|---|---|
+| `twixxel_stalkers` ([Twixxel's Stalkers](https://www.curseforge.com/minecraft-bedrock/addons/twixxels-stalkers-bedrock-edition), PnTMC, project 1567781 / file 9190816) | 3.0.0 | 47 MB | **Enabled in `horror` mode only** | The most-downloaded horror add-on on CurseForge Bedrock (2.6M), picked by download count since CurseForge's rating sort returns the same order. Stable modules (`@minecraft/server` 2.0.0, `server-ui` 2.0.0), no `eval`, no network, no `player.json` override, no experiments, ~8,000 lines of script. 21 entities (`pntmc:cave_stalker`, `evil_stalker`, `hole_stalker2`, `chicken_stalker`, ...); a test spawn worked. **Behaviour to know:** stalkers watch from windows and unexpected places, hide in beds, **break blocks** (`setblock ... air destroy`, which Land Claims can't stop), and the script flips `gamerule sendcommandfeedback` off and back on around one scare. Loaded with 0 errors. It's horror: not for the 7-year-olds' default world. |

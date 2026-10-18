@@ -179,7 +179,7 @@ docker compose restart minecraft
 `./update.sh` (ask first if people are playing). Afterwards, run the health checklist.
 
 ### Switch worlds / modes (ask the owner first if people are playing)
-The server rotates between five worlds:
+The server rotates between six worlds:
 
 | Mode | World | Type | Game mode | Cheats |
 |---|---|---|---|---|
@@ -187,6 +187,7 @@ The server rotates between five worlds:
 | `survival` | `Earles2026` | normal | survival | **off** (achievements) |
 | `creative` | `Creative` | normal | creative | on, + Land Claims, Owner Button & Lever (ours) |
 | `experimental` | `Experimental` | normal | creative | on, + add-ons: Land Claims, Owner Button & Lever (ours), Blasters, TNT Destructive, Tornado TNT (ours), Orbital Railgun, Portal Gun, Quick Craft |
+| `horror` | `Horror` | normal | survival (keep inventory ON) | on, + Twixxel's Stalkers (horror; stalkers watch from windows, hide in beds and break blocks). A trial mode - not for the kids' default world |
 | `pokemon` | `Pokemon` | normal | survival (keep inventory ON) | on, + CobbleDrock **Core** (Pokémon, catching, battles, Pokédex, PC). First join downloads a ~270 MB resource pack. |
 
 ```bash
