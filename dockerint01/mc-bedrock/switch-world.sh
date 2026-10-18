@@ -25,6 +25,9 @@ cd "$(dirname "$0")"
 
 declare -A LEVEL=([skyblock]=Skyblock [survival]=Earles2026 [creative]=Creative [experimental]=Experimental [pokemon]=Pokemon [horror]=Horror)
 declare -A TYPE=([skyblock]=FLAT [survival]=DEFAULT [creative]=DEFAULT [experimental]=DEFAULT [pokemon]=DEFAULT [horror]=DEFAULT)
+# What visitors see as the world name (Xbox friends list, in-game); defaults to the world name.
+# horror is shown as "Survival" - a prank. Folder, scripts and mode names stay "horror"/"Horror".
+declare -A DISPLAY=([horror]=Survival)
 declare -A GAMEMODE=([skyblock]=survival [survival]=survival [creative]=creative [experimental]=creative [pokemon]=survival [horror]=survival)
 # Cheats permanently disable achievements in a world, so keep them off for survival
 declare -A CHEATS=([skyblock]=true [survival]=false [creative]=true [experimental]=true [pokemon]=true [horror]=true)
@@ -108,7 +111,7 @@ if [[ -n "${RULES[$MODE]:-}" ]]; then
 fi
 
 # What the Xbox friends list shows for the session
-sed -i -E "s/^(    world-name: ).*/\1${LEVEL[$MODE]}/; s/^(    game-mode: ).*/\1${GAMEMODE[$MODE]^}/" config/config.yml
+sed -i -E "s/^(    world-name: ).*/\1${DISPLAY[$MODE]:-${LEVEL[$MODE]}}/; s/^(    game-mode: ).*/\1${GAMEMODE[$MODE]^}/" config/config.yml
 docker compose restart mcxboxbroadcast >/dev/null 2>&1
 
 echo "Done! Now on $MODE (world ${LEVEL[$MODE]}, ${GAMEMODE[$MODE]})."
