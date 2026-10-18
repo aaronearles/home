@@ -117,7 +117,7 @@ The Skyblock world is a FLAT world whose `FlatWorldLayers` in `level.dat` is a s
 | `survival` | `Earles2026` | normal | survival | off (keeps achievements) |
 | `creative` | `Creative` | normal | creative | on, + our Land Claims & Owner Button/Lever |
 | `experimental` | `Experimental` | normal | creative | on, + our Land Claims, Owner Button/Lever & Tornado TNT, Blasters, TNT Destructive, Orbital Railgun, Portal Gun, Quick Craft |
-| `horror` | `Horror` | normal | survival, keep inventory | on, + Twixxel's Stalkers (horror) |
+| `horror` | `Horror` | normal | survival, keep inventory | on, + Twixxel's Stalkers & The Bloop (horror) |
 | `pokemon` | `Pokemon` | normal | survival, keep inventory | on, + CobbleDrock Core (Pokémon) |
 
 ```bash
