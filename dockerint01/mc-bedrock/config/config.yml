@@ -20,10 +20,10 @@ session:
     host-name: EARLES
 
     # The world name to broadcast
-    world-name: Earles2026
+    world-name: Experimental
 
     # The game mode to broadcast (Survival, Creative, Adventure)
-    game-mode: Survival
+    game-mode: Creative
 
     # The current number of players
     players: 0

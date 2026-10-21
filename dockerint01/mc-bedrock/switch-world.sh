@@ -25,9 +25,10 @@ cd "$(dirname "$0")"
 
 declare -A LEVEL=([skyblock]=Skyblock [survival]=Earles2026 [creative]=Creative [experimental]=Experimental [pokemon]=Pokemon [horror]=Horror)
 declare -A TYPE=([skyblock]=FLAT [survival]=DEFAULT [creative]=DEFAULT [experimental]=DEFAULT [pokemon]=DEFAULT [horror]=DEFAULT)
-# What visitors see as the world name (Xbox friends list, in-game); defaults to the world name.
-# horror is shown as "Survival" - a prank. Folder, scripts and mode names stay "horror"/"Horror".
-declare -A DISPLAY=([horror]=Survival)
+# What visitors see as the world name in the Xbox friends list, if it should differ from the
+# world name (e.g. DISPLAY=([horror]=Survival) as a prank; the world's level.dat LevelName and
+# levelname.txt would need the same name). Empty = every world shows its own name.
+declare -A DISPLAY=()
 declare -A GAMEMODE=([skyblock]=survival [survival]=survival [creative]=creative [experimental]=creative [pokemon]=survival [horror]=survival)
 # Cheats permanently disable achievements in a world, so keep them off for survival
 declare -A CHEATS=([skyblock]=true [survival]=false [creative]=true [experimental]=true [pokemon]=true [horror]=true)
