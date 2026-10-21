@@ -13,6 +13,10 @@
 #
 # Find the IDs on the CurseForge page: project ID in the sidebar, file ID in the download
 # link (/download/<file_id>). The web pages are behind Cloudflare; the download API isn't.
+# Local fixes are re-applied after every fetch, so a re-download never brings back what we removed:
+#   tools/patches/<name>.patch         git-format patch, applied to addons/<name>/BP with -p1
+#   tools/patch-tree-physics.py        the Tree Physics compatibility patch
+# (tnt_destructive: God TNT removed - its chunk erase hangs the scripting watchdog and crashes the server.)
 # New add-ons are recorded in addons/addons.tsv. Then REVIEW them (manifests, scripts,
 # player.json overrides, experiments; see addons/SOURCES.md) before enabling any.
 set -euo pipefail
@@ -22,6 +26,22 @@ REG=addons/addons.tsv
 BLOCKED_PROJECTS=(
     1251469   # Pickup & Carry (sirob): obfuscated scripts that eval runtime-decoded code
 )
+
+apply_local_patches() {
+    local name="$1" patch="tools/patches/$1.patch"
+    if [[ -f "$patch" ]]; then
+        if (cd "addons/$name/BP" && git apply -p1 --check "$OLDPWD/$patch" 2>/dev/null); then
+            (cd "addons/$name/BP" && git apply -p1 "$OLDPWD/$patch")
+            echo "  applied local patch: $patch"
+        else
+            echo "ERROR: $patch doesn't apply to the freshly fetched $name - the add-on changed; the patch needs updating" >&2
+            return 1
+        fi
+    fi
+    if [[ "$name" == "tree_physics" ]]; then
+        python3 -I tools/patch-tree-physics.py | sed 's/^/  /'
+    fi
+}
 
 fetch() {
     local name="$1" project="$2" files="$3" wants="${4:-}"
@@ -101,6 +121,8 @@ EOF
     rm -f -- addons/"$name"/original*
     cp -a "$tmp/out/." "addons/$name/"
     for id in "${ids[@]}"; do cp "$tmp/$id.bin" "addons/$name/original-$id.zip"; done
+
+    apply_local_patches "$name"
 
     touch "$REG"
     grep -v "^$name	" "$REG" > "$REG.new" || true

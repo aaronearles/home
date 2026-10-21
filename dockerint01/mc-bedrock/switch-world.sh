@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # Switches the server between the rotation worlds.
-# Usage: ./switch-world.sh [skyblock|survival|creative|experimental|pokemon] [-y]
+# Usage: ./switch-world.sh [skyblock|survival|creative|experimental|pokemon|horror] [-y]
 #        ./switch-world.sh            (no mode: show the active world)
 #   -y skips the confirmation prompt
 #
@@ -12,6 +12,8 @@
 #             (see ADDONS below and addons/SOURCES.md); add-ons are (re)installed
 #             by setup-addons.sh on every switch to this mode
 #   pokemon   Pokemon     normal world, survival, cheats on, keep inventory, CobbleDrock add-on
+#   horror    Horror      normal world, survival, cheats on, keep inventory, Twixxel's Stalkers
+#             (a stalker that watches from windows, hides in beds and breaks blocks; no land claims)
 #             (Core + Content; ~270 MB resource pack - first join downloads it)
 #
 # How it works: docker-compose.yml takes LEVEL_NAME / LEVEL_TYPE / GAMEMODE / ALLOW_CHEATS from .env.
@@ -21,15 +23,19 @@
 set -euo pipefail
 cd "$(dirname "$0")"
 
-declare -A LEVEL=([skyblock]=Skyblock [survival]=Earles2026 [creative]=Creative [experimental]=Experimental [pokemon]=Pokemon)
-declare -A TYPE=([skyblock]=FLAT [survival]=DEFAULT [creative]=DEFAULT [experimental]=DEFAULT [pokemon]=DEFAULT)
-declare -A GAMEMODE=([skyblock]=survival [survival]=survival [creative]=creative [experimental]=creative [pokemon]=survival)
+declare -A LEVEL=([skyblock]=Skyblock [survival]=Earles2026 [creative]=Creative [experimental]=Experimental [pokemon]=Pokemon [horror]=Horror)
+declare -A TYPE=([skyblock]=FLAT [survival]=DEFAULT [creative]=DEFAULT [experimental]=DEFAULT [pokemon]=DEFAULT [horror]=DEFAULT)
+# What visitors see as the world name in the Xbox friends list, if it should differ from the
+# world name (e.g. DISPLAY=([horror]=Survival) as a prank; the world's level.dat LevelName and
+# levelname.txt would need the same name). Empty = every world shows its own name.
+declare -A DISPLAY=()
+declare -A GAMEMODE=([skyblock]=survival [survival]=survival [creative]=creative [experimental]=creative [pokemon]=survival [horror]=survival)
 # Cheats permanently disable achievements in a world, so keep them off for survival
-declare -A CHEATS=([skyblock]=true [survival]=false [creative]=true [experimental]=true [pokemon]=true)
+declare -A CHEATS=([skyblock]=true [survival]=false [creative]=true [experimental]=true [pokemon]=true [horror]=true)
 # Add-ons (dirs under addons/) enabled for a mode's world
-declare -A ADDONS=([experimental]="land_claims blasters tnt_destructive tornado_tnt orbital_railgun portal_gun quick_structures" [creative]="land_claims" [pokemon]="cobbledrock")
+declare -A ADDONS=([experimental]="land_claims owner_button blasters tnt_destructive tornado_tnt orbital_railgun portal_gun quick_structures morphing_bracelet_032" [creative]="land_claims owner_button" [survival]="land_claims" [pokemon]="cobbledrock" [horror]="twixxel_stalkers the_bloop")
 # Extra game rules applied after every switch to a mode ("rule value" pairs, ;-separated)
-declare -A RULES=([pokemon]="keepinventory true")
+declare -A RULES=([pokemon]="keepinventory true" [horror]="keepinventory true")
 
 MC="docker compose exec -T minecraft send-command"
 mc() { $MC "$1" </dev/null >/dev/null; }
@@ -40,8 +46,8 @@ MODE=""; YES=0
 for a in "$@"; do
     case "$a" in
         -y) YES=1 ;;
-        skyblock|survival|creative|experimental|pokemon) MODE="$a" ;;
-        *) echo "Unknown option: $a (expected skyblock, survival, creative, experimental or pokemon)" >&2; exit 1 ;;
+        skyblock|survival|creative|experimental|pokemon|horror) MODE="$a" ;;
+        *) echo "Unknown option: $a (expected skyblock, survival, creative, experimental, pokemon or horror)" >&2; exit 1 ;;
     esac
 done
 
@@ -106,7 +112,7 @@ if [[ -n "${RULES[$MODE]:-}" ]]; then
 fi
 
 # What the Xbox friends list shows for the session
-sed -i -E "s/^(    world-name: ).*/\1${LEVEL[$MODE]}/; s/^(    game-mode: ).*/\1${GAMEMODE[$MODE]^}/" config/config.yml
+sed -i -E "s/^(    world-name: ).*/\1${DISPLAY[$MODE]:-${LEVEL[$MODE]}}/; s/^(    game-mode: ).*/\1${GAMEMODE[$MODE]^}/" config/config.yml
 docker compose restart mcxboxbroadcast >/dev/null 2>&1
 
 echo "Done! Now on $MODE (world ${LEVEL[$MODE]}, ${GAMEMODE[$MODE]})."

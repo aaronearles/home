@@ -1,0 +1,9 @@
+{
+  "format_version": "1.21.40",
+  "earles:owner_button": {
+    "sound": "stone"
+  },
+  "earles:owner_lever": {
+    "sound": "stone"
+  }
+}

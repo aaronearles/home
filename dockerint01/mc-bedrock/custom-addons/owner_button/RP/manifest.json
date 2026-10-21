@@ -1,0 +1,39 @@
+{
+  "format_version": 2,
+  "header": {
+    "name": "Owner Button & Lever (resources)",
+    "description": "Owner Button models and textures",
+    "uuid": "5a271252-97ea-40c2-ac62-e52e5f8f3e49",
+    "version": [
+      1,
+      1,
+      0
+    ],
+    "min_engine_version": [
+      1,
+      26,
+      50
+    ]
+  },
+  "modules": [
+    {
+      "type": "resources",
+      "uuid": "1982b18c-945e-42c4-a030-11abd797409e",
+      "version": [
+        1,
+        1,
+        0
+      ]
+    }
+  ],
+  "dependencies": [
+    {
+      "uuid": "61cb9b77-8df2-4d30-855e-e0f6f92d13ba",
+      "version": [
+        1,
+        1,
+        0
+      ]
+    }
+  ]
+}

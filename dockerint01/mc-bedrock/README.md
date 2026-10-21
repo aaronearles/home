@@ -1,6 +1,6 @@
 # mc-bedrock
 
-Minecraft Bedrock Dedicated Server (BDS) with Xbox Live broadcasting via MCXboxBroadcast, so Xbox and mobile players can join from the friends list. Rotates between five worlds (a **Pokémon** world with CobbleDrock, a hand-built classic **Skyblock**, a normal **survival** world, a **creative** world and an **experimental** creative world with community add-ons), with nightly backups.
+Minecraft Bedrock Dedicated Server (BDS) with Xbox Live broadcasting via MCXboxBroadcast, so Xbox and mobile players can join from the friends list. Rotates between six worlds (a **horror** trial world, a **Pokémon** world with CobbleDrock, a hand-built classic **Skyblock**, a normal **survival** world, a **creative** world and an **experimental** creative world with community add-ons), with nightly backups.
 
 > Day-to-day operation (giving items, resets, restarts, troubleshooting) is documented in **[ADMIN-RUNBOOK.md](ADMIN-RUNBOOK.md)**, which is written so an AI agent can operate the server.
 
@@ -23,7 +23,7 @@ mc-bedrock/
 ├── switch-world.sh             # Rotate between skyblock / survival / creative / experimental
 ├── setup-addons.sh             # Install add-ons from addons/ and enable them for a world
 ├── fetch-addon.sh              # Download a CurseForge add-on into addons/ (--all restores the registry)
-├── custom-addons/              # Our own add-ons (in git): tornado_tnt, land_claims
+├── custom-addons/              # Our own add-ons (in git): tornado_tnt, land_claims, owner_button
 ├── addons/                     # Community add-on packs (not in git) + addons.tsv registry & SOURCES.md (in git)
 ├── reset-skyblock.sh           # Full or live reset of the Skyblock world
 ├── backup-worlds.sh            # Nightly backup of all worlds (14 days) / --snapshot of the active world (7 days)
@@ -33,6 +33,7 @@ mc-bedrock/
 ├── ping.py                     # NetherNet status check (GET /v1/join)
 ├── update.sh                   # Updates JAR, pulls images, recreates containers
 ├── commands.txt                # Handy console commands
+├── drill-hole.sh               # 1x1 shaft in front of a player down to y=-50 with water at the bottom
 ├── MCXboxBroadcastStandalone.jar  # Downloaded by update.sh (not in git)
 ├── config/
 │   └── config.yml              # MCXboxBroadcast configuration
@@ -114,8 +115,9 @@ The Skyblock world is a FLAT world whose `FlatWorldLayers` in `level.dat` is a s
 |---|---|---|---|---|
 | `skyblock` | `Skyblock` | void FLAT | survival | on |
 | `survival` | `Earles2026` | normal | survival | off (keeps achievements) |
-| `creative` | `Creative` | normal | creative | on, + our Land Claims |
-| `experimental` | `Experimental` | normal | creative | on, + our Land Claims & Tornado TNT, Blasters, TNT Destructive, Orbital Railgun, Portal Gun, Quick Craft |
+| `creative` | `Creative` | normal | creative | on, + our Land Claims & Owner Button/Lever |
+| `experimental` | `Experimental` | normal | creative | on, + our Land Claims, Owner Button/Lever & Tornado TNT, Blasters, TNT Destructive, Orbital Railgun, Portal Gun, Quick Craft, Morphing Bracelet 0.3.2 |
+| `horror` | `Horror` | normal | survival, keep inventory | on, + Twixxel's Stalkers & The Bloop (horror) |
 | `pokemon` | `Pokemon` | normal | survival, keep inventory | on, + CobbleDrock Core (Pokémon) |
 
 ```bash

@@ -43,7 +43,7 @@ const UNBREAKABLE = new Set([
     "minecraft:command_block", "minecraft:chain_command_block", "minecraft:repeating_command_block",
     "minecraft:structure_block", "minecraft:jigsaw", "minecraft:end_portal", "minecraft:end_portal_frame",
     "minecraft:portal", "minecraft:end_gateway", "minecraft:reinforced_deepslate",
-    "earles:tornado_tnt",
+    "earles:tornado_tnt", "earles:bulletproof_glass",
 ]);
 const DONT_FLING = new Set(["minecraft:xp_orb", "minecraft:painting", "minecraft:leash_knot"]);
 

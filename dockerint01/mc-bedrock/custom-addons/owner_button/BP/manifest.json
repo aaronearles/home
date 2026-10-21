@@ -1,0 +1,54 @@
+{
+  "format_version": 2,
+  "header": {
+    "name": "Owner Button & Lever",
+    "description": "An orange button only its owner can press - Earles server",
+    "uuid": "61cb9b77-8df2-4d30-855e-e0f6f92d13ba",
+    "version": [
+      1,
+      1,
+      0
+    ],
+    "min_engine_version": [
+      1,
+      26,
+      50
+    ]
+  },
+  "modules": [
+    {
+      "type": "data",
+      "uuid": "c5f3b4e9-5025-4a48-a472-a0efa540a444",
+      "version": [
+        1,
+        1,
+        0
+      ]
+    },
+    {
+      "type": "script",
+      "language": "javascript",
+      "uuid": "1ac633d2-90aa-4eeb-8671-94df1228d753",
+      "version": [
+        1,
+        1,
+        0
+      ],
+      "entry": "scripts/main.js"
+    }
+  ],
+  "dependencies": [
+    {
+      "uuid": "5a271252-97ea-40c2-ac62-e52e5f8f3e49",
+      "version": [
+        1,
+        1,
+        0
+      ]
+    },
+    {
+      "module_name": "@minecraft/server",
+      "version": "2.9.0"
+    }
+  ]
+}

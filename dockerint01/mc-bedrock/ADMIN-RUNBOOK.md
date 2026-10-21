@@ -87,6 +87,15 @@ alias mc='docker compose -f ~/mc-bedrock/docker-compose.yml exec -T minecraft se
 - If the inventory is full, items drop on the ground.
 - Log line on success: `Gave Obsidian * 64 to aearles`. `No targets matched selector` means the player isn't online.
 
+### Enchanted books (`/give` can't do these)
+```
+scriptevent earles:claims book <player[,player...]> <enchantment> [level]     # e.g. book henry,theo feather_falling 4
+```
+- Run it through `send-command` like any console command; the result appears in the server log as `[claims] book: gave <player> an enchanted book (feather_falling 4)`.
+- Nicknames work (`henry`, `theo`, `dad`). A level above the enchantment's maximum fails with an error in the log. An enchantment name is the vanilla id without the prefix (`mending`, `sharpness`, `protection`, `unbreaking`).
+- If their inventory is full the book is dropped at their feet. The player must be online.
+- Needs the Land Claims add-on to be loaded (it is in creative, experimental and survival modes).
+
 ### Equip armor directly (worn, not in inventory)
 ```bash
 for slot in "head diamond_helmet" "chest diamond_chestplate" "legs diamond_leggings" "feet diamond_boots"; do
@@ -119,6 +128,11 @@ Game rules live in the world, so they survive restarts. A full Skyblock reset re
 ```
 
 ### Build helpers (run with a player name or @p)
+- `./build-house.sh <player> [wall] [floor]`: furnished 9×9 starter house centred on the player, with door, bed, crafting table, furnace, chest and lanterns. Prints the centre coordinates. `--at X Y Z` builds at fixed coordinates; `--extras-only` adds just the door and bed to an existing house.
+- **Two-block objects by command:** the oak door block is `wooden_door` (`oak_door` is the item), and setting its lower half adds the top. Setting a bed's head half adds its foot one block north.
+- **Morphing Bracelet (experimental mode):** the regular one is in the creative Equipment tab; its menu starts with only the player and gains a morph for each mob its owner kills. For every morph at once: `give <player> morphing_bracelet:metamorphing_bracelet` (not in the creative menu).
+- `./drill-hole.sh <player> [bottom_y]` drills a 1×1 shaft one block in front of the player, down to y=-50 (default), with a water source at the bottom to land in. Lava in the 3×3 around the shaft becomes stone; stone floor under the water.
+- The trick behind it, reusable for any "in front of the player" command: `execute as <player> at @s rotated ~ 0 positioned ^ ^ ^1 run <command>` means one block ahead at feet level, ignoring head pitch. `^ ^ ^N` = N blocks ahead.
 `./build-house.sh <player> [wall] [floor]`, `./build-smiley.sh <player>`, `./build-smiley-xl.sh <player>`, `./build-sonic.sh <player> [scale]`, `./spawn-chest.sh <player>` (a chest of netherite gear next to them), `./cycle-time.sh <secs>` / `./cycle-days.sh <secs>` (time-lapse; Ctrl+C to stop).
 
 ## Skyblock resets
@@ -144,6 +158,19 @@ Classic layout:
 
 Cobblestone forms in spot 2. If they get obsidian, a live reset gives them a fresh lava bucket.
 
+### Snapshot and restore one area (no restart): "rebuild it after they blow it up"
+```
+structure save <name> <x1> <y1> <z1> <x2> <y2> <z2> false disk true   # blocks only (no entities), kept on disk
+structure load <name> <x1> <y1> <z1>                                   # put it back, min corner first
+```
+- **Max size:** 64×384×64 per structure. Split bigger builds into several.
+- **Finding the area:** `querytarget <player>` for positions, and `scriptevent earles:claims probe <x> <z>` on a grid for the topmost blocks.
+- **Restoring cleanly:**
+  - Wait until the explosions and fire are done, or kill lit TNT first (`kill @e[type=tnt]`, plus add-on TNT entities). Otherwise it burns again straight away.
+  - Fire that spread **outside** the box isn't fixed.
+- **Example (2026-10-17):** `statue_backup` = the boys' statue, x 1822–1885, y 50–170, z 690–753 in Experimental. Restore with `structure load statue_backup 1822 50 690`.
+- For a whole-world safety net: `./backup-worlds.sh --snapshot <reason>`.
+
 ## Server lifecycle
 
 ### Restart
@@ -162,14 +189,15 @@ docker compose restart minecraft
 `./update.sh` (ask first if people are playing). Afterwards, run the health checklist.
 
 ### Switch worlds / modes (ask the owner first if people are playing)
-The server rotates between five worlds:
+The server rotates between six worlds:
 
 | Mode | World | Type | Game mode | Cheats |
 |---|---|---|---|---|
 | `skyblock` | `Skyblock` | void FLAT | survival (keep inventory ON) | on |
 | `survival` | `Earles2026` | normal | survival | **off** (achievements) |
-| `creative` | `Creative` | normal | creative | on, + Land Claims (ours) |
-| `experimental` | `Experimental` | normal | creative | on, + add-ons: Land Claims (ours), Blasters, TNT Destructive, Tornado TNT (ours), Orbital Railgun, Portal Gun, Quick Craft |
+| `creative` | `Creative` | normal | creative | on, + Land Claims, Owner Button & Lever (ours) |
+| `experimental` | `Experimental` | normal | creative | on, + add-ons: Land Claims, Owner Button & Lever (ours), Blasters, TNT Destructive, Tornado TNT (ours), Orbital Railgun, Portal Gun, Quick Craft, Morphing Bracelet v0.3.2 (older release; the newer ones need an API this server lacks) |
+| `horror` | `Horror` | normal | survival (keep inventory ON) | on, + Twixxel's Stalkers (horror; watch from windows, hide in beds, break blocks) and The Bloop (a 16× sea monster, 500 HP, 50-damage attack; rare, spawns in forest-biome water; `summon skinscraft:bloop` to test; 15 harmless 'Block type doesn't exist' errors on every start). A trial mode - not for the kids' default world |
 | `pokemon` | `Pokemon` | normal | survival (keep inventory ON) | on, + CobbleDrock **Core** (Pokémon, catching, battles, Pokédex, PC). First join downloads a ~270 MB resource pack. |
 
 ```bash
@@ -187,9 +215,16 @@ The server rotates between five worlds:
 - Older worlds outside the rotation (`PaleGarden`, `DroneWorld`, ...) stay in `data/worlds/`. `Pokemon.experiments-test-20261012` is a throwaway test world (experiments on) that can be deleted.
 
 ### Add-ons (experimental mode)
+- **Owner Button & Owner Lever** (`custom-addons/owner_button`, see its README) are on in creative and experimental.
+  - Orange button and lever that only their owner can use. The button gives a 1.5 s pulse; the lever toggles and holds power while on. Both strongly power the block they're on.
+  - Admin: `scriptevent earles:button list | place <x> <y> <z> <owner> [lever] | press <x> <y> <z>`.
+  - The PIN Keypad was removed 2026-10-12 (the PIN was visible on split-screen).
 - **Land Claims** (`custom-addons/land_claims`, see its README) is on in creative and experimental.
   - Players use the Claim Flag (`give <player> earles:claim_flag`) to claim 32×32 from bedrock to sky, up to 3 each, with trust.
-  - Admin: `scriptevent earles:claims list | remove <id> | removeall <owner>` (output in the server log).
+  - Optional stone wall ring (2 high, 5 blocks inside the edge) from the flag menu.
+  - Survival players craft the Claim Flag with 4 sticks in a plus shape (middle empty). The recipe is deliberately hidden from the recipe book (its unlock item is the barrier block). Tell the kids; they won't find it by browsing.
+  - Admin: `scriptevent earles:claims list | remove <id> | removeall <owner> | wall <id> | unwall <id> | probe <x> <z> | skybox <player> | clearglass [x1 y1 z1 x2 y2 z2 [dimension]]` (output in the server log).
+  - **Bulletproof glass** (`earles:bulletproof_glass`) is vanilla glass that players can't break, place, or blow up, and it isn't in the creative inventory. `skybox henry` (or `hcearles`) builds a 5×5×5 box 50 blocks above that player and teleports them into it. **Clean up with `./clear-glass.sh`** (removes every recorded skybox) or `./clear-glass.sh X1 Y1 Z1 X2 Y2 Z2` for a region, which also catches hand-placed glass and skyboxes built before recording was added. Unloaded chunks are handled automatically.
   - Railgun and some TNT Destructive types can still damage claims.
 - **Our own add-ons** live in `custom-addons/<name>/{BP,RP}` (in git); `setup-addons.sh` finds them as well as downloaded ones. **Tornado TNT** (`custom-addons/tornado_tnt`, see its README) is on in experimental mode:
   - `give <player> earles:tornado_tnt 16`
@@ -205,6 +240,10 @@ The server rotates between five worlds:
   - Check that no two replace the same file. Scripts, texts and the merged texture/sound lists are fine.
   - Check that no two define the same identifier.
   - After the restart, read the log for `[Scripting]` / `[Blocks]` errors. An add-on can need a newer script API than this BDS has (Tree Physics did). If so, drop it from `ADDONS` and restart.
+- **Local fixes to downloaded add-ons** are kept in git and re-applied by `fetch-addon.sh` after every download (so `--all` never undoes them):
+  - `tools/patches/tnt_destructive.patch`: **God TNT is removed.** Its chunk-erase job hangs the scripting watchdog and shuts the server down. It's off the creative menu, its recipes are gone, and the script no longer detonates it.
+  - `tools/patch-tree-physics.py`: Tree Physics compatibility (see `addons/SOURCES.md`; the add-on is currently disabled).
+  - If a patch stops applying after an add-on update, `fetch-addon.sh` stops with an error instead of installing it unpatched.
 - **Multi-pack add-ons** (e.g. CobbleDrock Core + Content) live in `addons/<name>/packs/<pack>/`. An optional `addons/<name>/packs.list` limits which packs `setup-addons.sh` enables (Tree Physics uses this).
 - **Restoring saved add-ons:** `./fetch-addon.sh --all` re-downloads everything in `addons/addons.tsv` and refuses on a sha256 mismatch. Favorites: `blasters`, `tnt_destructive`. Enable them for any world with `./setup-addons.sh <World> blasters tnt_destructive` (takes effect when that world next loads).
 - **Adding or updating an add-on** (ask first):
