@@ -1,10 +1,14 @@
 #!/usr/bin/env bash
 # Downloads a CurseForge Bedrock add-on and unpacks it into addons/<name>/, keeping
 # the original download(s) as addons/<name>/original-<file_id>.<ext>.
-# Usage: ./fetch-addon.sh <name> <project_id> <file_id>[+<file_id>...] [sha256[+sha256...]]
+# Usage: ./fetch-addon.sh <name> <project_id> <file_id>[+<file_id>...] [sha256[+sha256...]] [cdn_file_name]
 #   e.g. ./fetch-addon.sh blasters 1707080 8945889
 #        ./fetch-addon.sh pickup_carry 1251469 8896058+8896059     (BP and RP are separate files)
 #   ./fetch-addon.sh --all      re-fetch everything listed in addons/addons.tsv (hash-checked)
+#   Some projects return 404 from the download API. Give the file's name as the last argument
+#   (e.g. "The Bloop.mcaddon", pass "" for the sha256 if unknown) and the script falls back to
+#   the CDN link the website uses, https://mediafilez.forgecdn.net/files/<id/1000>/<id%1000>/<name>.
+#   The name is stored as a 5th column in addons.tsv so --all can restore it.
 #
 # Layout: an add-on with one behavior pack and/or one resource pack is unpacked to
 # addons/<name>/BP and addons/<name>/RP. One with more packs (e.g. Core + Content) goes
@@ -44,7 +48,7 @@ apply_local_patches() {
 }
 
 fetch() {
-    local name="$1" project="$2" files="$3" wants="${4:-}"
+    local name="$1" project="$2" files="$3" wants="${4:-}" cdn_name="${5:-}"
     local b
     for b in "${BLOCKED_PROJECTS[@]}"; do
         if [[ "$project" == "$b" ]]; then
@@ -59,8 +63,14 @@ fetch() {
     local shas=() i=0
     for id in "${ids[@]}"; do
         echo "Downloading $name (project $project, file $id)..."
-        curl -fsSL -A 'Mozilla/5.0' -o "$tmp/$id.bin" \
-            "https://www.curseforge.com/api/v1/mods/$project/files/$id/download"
+        if ! curl -fsSL -A 'Mozilla/5.0' -o "$tmp/$id.bin" \
+                "https://www.curseforge.com/api/v1/mods/$project/files/$id/download"; then
+            [[ -n "$cdn_name" ]] || { echo "ERROR: download API failed for file $id (pass the file name as the last argument to try the CDN)" >&2; return 1; }
+            local enc="${cdn_name// /%20}"
+            echo "  download API failed, trying the CDN link..."
+            curl -fsSL -A 'Mozilla/5.0' -o "$tmp/$id.bin" \
+                "https://mediafilez.forgecdn.net/files/${id:0:${#id}-3}/${id: -3}/$enc"
+        fi
         local got; got=$(sha256sum "$tmp/$id.bin" | cut -d' ' -f1)
         if [[ -n "${want[$i]:-}" && "$got" != "${want[$i]}" ]]; then
             echo "ERROR: sha256 mismatch for $name file $id (got $got, expected ${want[$i]}) - not installing" >&2
@@ -126,15 +136,15 @@ EOF
 
     touch "$REG"
     grep -v "^$name	" "$REG" > "$REG.new" || true
-    printf '%s\t%s\t%s\t%s\n' "$name" "$project" "$files" "$(IFS=+; echo "${shas[*]}")" >> "$REG.new"
+    printf '%s\t%s\t%s\t%s%s\n' "$name" "$project" "$files" "$(IFS=+; echo "${shas[*]}")" "${cdn_name:+$'\t'$cdn_name}" >> "$REG.new"
     sort -o "$REG" "$REG.new"; rm -f "$REG.new"
     echo "OK: addons/$name"
 }
 
 if [[ "${1:-}" == "--all" ]]; then
-    while IFS=$'\t' read -r name project files sha; do
+    while IFS=$'\t' read -r name project files sha cdn; do
         [[ -z "$name" || "$name" == \#* ]] && continue
-        fetch "$name" "$project" "$files" "$sha"
+        fetch "$name" "$project" "$files" "$sha" "$cdn"
     done < "$REG"
 else
     [[ $# -ge 3 ]] || { sed -n '2,20p' "$0"; exit 1; }
