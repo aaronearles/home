@@ -1,0 +1,50 @@
+# Squid forward proxy that egresses via NordVPN through Gluetun
+# See https://github.com/qdm12/gluetun-wiki/blob/main/setup/connect-a-container-to-gluetun.md#external-container-to-gluetun
+# Usage: https_proxy=https://squid-vpn.internal.earles.io:443 (TLS-wrapped proxy, same as squid-https)
+services:
+  gluetun:
+    image: qmcgaw/gluetun:latest
+    container_name: squid-vpn-gluetun
+    restart: unless-stopped
+    environment:
+      - VPN_SERVICE_PROVIDER=nordvpn # https://github.com/qdm12/gluetun-wiki/tree/main/setup#setup
+      - VPN_TYPE=wireguard
+      - WIREGUARD_PRIVATE_KEY=${WIREGUARD_PRIVATE_KEY} # https://github.com/qdm12/gluetun-wiki/blob/main/setup/providers/nordvpn.md#obtain-your-wireguard-private-key
+      - WIREGUARD_ADDRESSES=10.5.0.2/32
+      - SERVER_COUNTRIES="United States"
+      - TZ=US/Denver
+      - UPDATER_PERIOD=24h # https://github.com/qdm12/gluetun-wiki/blob/main/setup/servers.md#update-the-vpn-servers-list
+    volumes:
+      - ./gluetun:/gluetun
+    networks:
+      - traefik
+    devices:
+      - /dev/net/tun:/dev/net/tun
+    cap_add:
+      - NET_ADMIN
+    labels:
+      - traefik.enable=true
+      - traefik.docker.network=traefik
+      # TLS-wrapped proxy on port 443 via hostname routing; squid runs in this container's network namespace
+      - traefik.tcp.routers.squid-vpn.entrypoints=websecure
+      - traefik.tcp.routers.squid-vpn.rule=HostSNI(`squid-vpn.internal.earles.io`)
+      - traefik.tcp.routers.squid-vpn.service=squid-vpn
+      - traefik.tcp.routers.squid-vpn.tls=true
+      - traefik.tcp.routers.squid-vpn.tls.certresolver=production
+      - traefik.tcp.routers.squid-vpn.tls.options=proxy@file
+      - traefik.tcp.services.squid-vpn.loadbalancer.server.port=3128
+
+  squid:
+    image: ubuntu/squid
+    container_name: squid-vpn
+    restart: unless-stopped
+    environment:
+      - TZ=America/Denver
+    network_mode: "service:gluetun"
+    depends_on:
+      gluetun:
+        condition: service_healthy # Don't start squid until the tunnel is up
+
+networks:
+  traefik:
+    external: true
