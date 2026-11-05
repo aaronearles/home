@@ -1,31 +1,48 @@
-# Squid forward proxy that egresses via NordVPN through Gluetun
-# See https://github.com/qdm12/gluetun-wiki/blob/main/setup/connect-a-container-to-gluetun.md#external-container-to-gluetun
+# Squid forward proxy that spreads egress across multiple NordVPN tunnels (Gluetun)
+# Each Gluetun runs its built-in HTTP proxy; Squid round-robins requests across them (config/squid.conf)
 # Usage: https_proxy=https://squid-vpn.internal.earles.io:443 (TLS-wrapped proxy, same as squid-https)
+# To add a tunnel: copy a gluetunN service, pick another city, add a cache_peer line in config/squid.conf
+x-gluetun: &gluetun
+  image: qmcgaw/gluetun:latest
+  restart: unless-stopped
+  networks:
+    - backend
+  devices:
+    - /dev/net/tun:/dev/net/tun
+  cap_add:
+    - NET_ADMIN
+
+x-gluetun-env: &gluetun-env
+  VPN_SERVICE_PROVIDER: nordvpn # https://github.com/qdm12/gluetun-wiki/tree/main/setup#setup
+  VPN_TYPE: wireguard
+  WIREGUARD_PRIVATE_KEY: ${WIREGUARD_PRIVATE_KEY} # https://github.com/qdm12/gluetun-wiki/blob/main/setup/providers/nordvpn.md#obtain-your-wireguard-private-key
+  WIREGUARD_ADDRESSES: 10.5.0.2/32
+  SERVER_COUNTRIES: United States
+  HTTPPROXY: "on" # https://github.com/qdm12/gluetun-wiki/blob/main/setup/options/http-proxy.md
+  HTTPPROXY_STEALTH: "on"
+  TZ: US/Denver
+  UPDATER_PERIOD: 24h # https://github.com/qdm12/gluetun-wiki/blob/main/setup/servers.md#update-the-vpn-servers-list
+
 services:
-  gluetun:
-    image: qmcgaw/gluetun:latest
-    container_name: squid-vpn-gluetun
+  squid:
+    image: ubuntu/squid
+    container_name: squid-vpn
     restart: unless-stopped
     environment:
-      - VPN_SERVICE_PROVIDER=nordvpn # https://github.com/qdm12/gluetun-wiki/tree/main/setup#setup
-      - VPN_TYPE=wireguard
-      - WIREGUARD_PRIVATE_KEY=${WIREGUARD_PRIVATE_KEY} # https://github.com/qdm12/gluetun-wiki/blob/main/setup/providers/nordvpn.md#obtain-your-wireguard-private-key
-      - WIREGUARD_ADDRESSES=10.5.0.2/32
-      - SERVER_COUNTRIES="United States"
-      - TZ=US/Denver
-      - UPDATER_PERIOD=24h # https://github.com/qdm12/gluetun-wiki/blob/main/setup/servers.md#update-the-vpn-servers-list
+      - TZ=America/Denver
     volumes:
-      - ./gluetun:/gluetun
+      - ./config/squid.conf:/etc/squid/squid.conf:ro
     networks:
       - traefik
-    devices:
-      - /dev/net/tun:/dev/net/tun
-    cap_add:
-      - NET_ADMIN
+      - backend
+    depends_on:
+      - gluetun1
+      - gluetun2
+      - gluetun3
     labels:
       - traefik.enable=true
       - traefik.docker.network=traefik
-      # TLS-wrapped proxy on port 443 via hostname routing; squid runs in this container's network namespace
+      # TLS-wrapped proxy on port 443 via hostname routing
       - traefik.tcp.routers.squid-vpn.entrypoints=websecure
       - traefik.tcp.routers.squid-vpn.rule=HostSNI(`squid-vpn.internal.earles.io`)
       - traefik.tcp.routers.squid-vpn.service=squid-vpn
@@ -34,17 +51,35 @@ services:
       - traefik.tcp.routers.squid-vpn.tls.options=proxy@file
       - traefik.tcp.services.squid-vpn.loadbalancer.server.port=3128
 
-  squid:
-    image: ubuntu/squid
-    container_name: squid-vpn
-    restart: unless-stopped
+  gluetun1:
+    <<: *gluetun
+    container_name: squid-vpn-gluetun1
     environment:
-      - TZ=America/Denver
-    network_mode: "service:gluetun"
-    depends_on:
-      gluetun:
-        condition: service_healthy # Don't start squid until the tunnel is up
+      <<: *gluetun-env
+      SERVER_CITIES: Chicago
+    volumes:
+      - ./gluetun1:/gluetun
+
+  gluetun2:
+    <<: *gluetun
+    container_name: squid-vpn-gluetun2
+    environment:
+      <<: *gluetun-env
+      SERVER_CITIES: Dallas
+    volumes:
+      - ./gluetun2:/gluetun
+
+  gluetun3:
+    <<: *gluetun
+    container_name: squid-vpn-gluetun3
+    environment:
+      <<: *gluetun-env
+      SERVER_CITIES: Los Angeles
+    volumes:
+      - ./gluetun3:/gluetun
 
 networks:
   traefik:
     external: true
+  backend:
+    external: false
