@@ -15,7 +15,7 @@ browser                                         container (nothing displayed or 
 
 ## How it works
 
-- **Runtime.** The vendor binary is fuse-locked: no run-as-node, no `NODE_OPTIONS`, no inspector, and ASAR integrity is enforced. So the app's `app.asar` runs under **stock Electron 42.1.0** instead. That is the same version the app ships, so its native modules load. The download's checksum is pinned in the `Dockerfile`.
+- **Runtime.** The vendor binary is fuse-locked: no run-as-node, no `NODE_OPTIONS`, no inspector, and ASAR integrity is enforced. So the app's `app.asar` runs under **stock Electron 43.8.4** instead. That is the same version the app ships, so its native modules load. The download's checksum is pinned in the `Dockerfile`.
 - **`relay/main.cjs`.** This wrapper:
   - makes the app see a packaged install at `/opt/Grok Bot/resources`;
   - hands the app a `BrowserWindow` subclass. For the main window, the subclass drops the preload, keeps the window hidden, and loads a blank page instead of `renderer/index.html`;
@@ -55,7 +55,8 @@ docker compose build && docker compose up -d
 1. Get the new `.deb` URL; the download link redirects to `downloads.cursor.com/grokbot/stable/<build>/linux/x64/grok-bot_<version>_amd64.deb`.
 2. Set `GROKBOT_DEB_URL` and `GROKBOT_DEB_SHA256` in the `Dockerfile`.
 3. Check which Electron the new build uses: `strings "/opt/Grok Bot/grok-bot" | grep -m1 -o 'Electron/[0-9.]*'` on an extracted copy. Update `ELECTRON_VERSION` and `ELECTRON_SHA256` to match, using the release's `SHASUMS256.txt`.
-4. Rebuild, then run both tests in `tools/`.
+4. Rebuild, then run both tests in `tools/`. The build writes the relay's `package.json` from the app's own, so `app.getVersion()` (what the backend sees) follows the package automatically.
+5. Diff what the relay hooks against the previous build: the `sand:*` channels, every `new BrowserWindow` that loads `electron-preload/preload.cjs`, and the `frame-src` list in `renderer/index.html`. A new frame scheme must be added to `FRAME_SCHEMES` in `relay/main.cjs`, or its frames run on the relay's own origin.
 
 Open `https://grokbot-web.internal.earles.io/?token=<RELAY_TOKEN>` once per browser. The token is stored in an HttpOnly cookie.
 
@@ -77,7 +78,8 @@ docker run --rm -v "$PWD/tools:/test:ro" -v /tmp/out:/out \
 
 ## Known gaps (spike)
 
-- **Frame schemes.** `sand-html-preview:`, `sand-canvas:` and `sand-mcp-app:` frames are proxied but untested. In the app they get their own origin; here they are forced to an opaque origin with a `CSP: sandbox` header (no `allow-same-origin`), so features that need frame storage may break. Absolute paths (`/x`) inside framed documents resolve to the relay root.
+- **Chat popouts.** 1.0 can pop a chat out into its own window (feature gate `sand_chat_popout`). That window loads the main preload, and the relay can only serve one such window, so popouts are closed on creation (`chat popout is not available in the web UI` in the log). Open a second tab instead.
+- **Frame schemes.** `sand-html-preview:`, `sand-canvas:`, `sand-mcp-app:` and (1.0+) `sand-visualization:` frames are proxied but untested. In the app they get their own origin; here they are forced to an opaque origin with a `CSP: sandbox` header (no `allow-same-origin`), so features that need frame storage may break. Absolute paths (`/x`) inside framed documents resolve to the relay root.
 - **Browser compatibility.** The renderer is built for Electron's Chromium. The shim fills the one unguarded gap found so far: Safari rejects `ResizeObserver.observe(…, {box: "device-pixel-content-box"})` with a TypeError, which broke image rendering in chats ("Couldn't render this"). It falls back to `content-box` and derives `devicePixelContentBoxSize`. The other Chromium-only APIs found by scanning the bundle are feature-checked by the app itself: `requestIdleCallback`, `navigator.scheduling`, `userAgentData`, `ImageDecoder` (where JPEG re-encoding falls back to the original file), and `field-sizing` (CSS only).
 - **Desktop-only features.** Window controls are no-ops. The `<webview>` teach-recording feature and the remote-computer (VNC) panel are untested.
 - **Fragility.** The relay depends on internal names: the `preload.cjs` path, the main-window detection, and the `sand:*` channels. Re-test after every app update.

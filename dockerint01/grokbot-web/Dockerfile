@@ -8,12 +8,12 @@ ARG APP_GID=1000
 # Official Grok Bot package. Only its resources/ (app.asar) and icons are used, so it is unpacked
 # with dpkg-deb -x and its maintainer scripts (apt source, setuid chrome-sandbox) never run.
 # Updating: new URL + SHA-256, and check ELECTRON_VERSION still matches the app's Electron.
-ARG GROKBOT_VERSION=0.70.2
-ARG GROKBOT_DEB_URL=https://downloads.cursor.com/grokbot/stable/52da656f56d317510ca65ad6af3d69a2cde461e0/linux/x64/grok-bot_0.70.2_amd64.deb
-ARG GROKBOT_DEB_SHA256=ff70fc2173f9827be1648cbeaf39c7c1212a3fd9b2326c5028be8a2fdbef0900
+ARG GROKBOT_VERSION=1.0.1
+ARG GROKBOT_DEB_URL=https://downloads.cursor.com/grokbot/stable/7eb488cd12ea2e65065a6b227f3ab49160b618bd/linux/x64/grok-bot_1.0.1_amd64.deb
+ARG GROKBOT_DEB_SHA256=86086a84a995836b8cbf09dcab33abe0b0fde782cd9fa5b98a427ede711cc337
 # Same Electron version the app ships with, so its native modules load; checksum from SHASUMS256.txt
-ARG ELECTRON_VERSION=42.1.0
-ARG ELECTRON_SHA256=882047343a9e203c6cfc5d39b166ea9e025dd256943e0d3711f86725ad0e3bd9
+ARG ELECTRON_VERSION=43.8.4
+ARG ELECTRON_SHA256=944eceb858d41bcdf2cd741607f27cab9d2185ec6229cb56e3056bcf96e3d162
 
 ENV DEBIAN_FRONTEND=noninteractive \
     LANG=C.UTF-8 \
@@ -48,6 +48,12 @@ RUN groupadd -g ${APP_GID} grokbot \
  && install -d -o grokbot -g grokbot -m 0700 /run/user/${APP_UID}
 
 COPY relay/ /opt/grokbot-relay/
+# app.getVersion() and the app name come from the relay's package.json: mirror the app's own, so the
+# backend sees the real client version (a stale copy keeps version-gated features off)
+RUN ELECTRON_RUN_AS_NODE=1 /opt/electron/electron -e 'const fs = require("fs"); \
+      const a = JSON.parse(fs.readFileSync("/opt/Grok Bot/resources/app.asar/package.json", "utf8")); \
+      const r = { name: a.name, productName: a.productName, desktopName: a.desktopName, version: a.version, private: true, main: "main.cjs" }; \
+      fs.writeFileSync("/opt/grokbot-relay/package.json", JSON.stringify(r, null, 2) + "\n"); console.log("relay package.json:", a.version)'
 COPY grokbot-web-entrypoint /usr/local/bin/grokbot-web-entrypoint
 
 USER grokbot

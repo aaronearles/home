@@ -28,7 +28,7 @@ const BLANK = 'data:text/html,<!doctype html><title>Grok Bot relay</title>';
 const PROTO_SECRET = crypto.randomBytes(18).toString('base64url');
 // The app serves these itself (protocol.handle); in the browser they are proxied through the relay
 const appSchemes = new Set();
-const FRAME_SCHEMES = new Set(['sand-html-preview', 'sand-canvas', 'sand-mcp-app']);
+const FRAME_SCHEMES = new Set(['sand-html-preview', 'sand-canvas', 'sand-mcp-app', 'sand-visualization']);
 // The app's own icon, installed by its .deb, used as the page favicon
 const ICON_SIZES = new Set(['16', '32', '48', '64', '128', '256', '512']);
 const iconPath = (size) => `/usr/share/icons/hicolor/${size}x${size}/apps/grok-bot.png`;
@@ -308,6 +308,24 @@ function isMainWindowOptions(opts) {
   return typeof preload === 'string' && path.basename(preload) === 'preload.cjs'
     && path.basename(path.dirname(preload)) === 'electron-preload';
 }
+// Chat popouts (1.0+, feature gate sand_chat_popout) load the same preload; they are told apart by argv
+const POPOUT_ARG = '--sand-popout-agent-id=';
+function isPopoutOptions(opts) {
+  const args = (opts && opts.webPreferences && opts.webPreferences.additionalArguments) || [];
+  return args.some((a) => typeof a === 'string' && a.startsWith(POPOUT_ARG));
+}
+
+// A popout is a second renderer window the relay cannot serve (browser IPC is replayed as the main
+// window). Keep it from ever loading or showing, then close it once the app has finished setting it up;
+// the app's popout registry drops closed windows, so the next "Pop out" just tries again.
+function suppressPopout(win) {
+  win.loadFile = () => win.loadURL(BLANK);
+  win.show = () => {};
+  win.showInactive = () => {};
+  win.focus = () => {};
+  log('chat popout is not available in the web UI; ignored');
+  setImmediate(() => { if (!win.isDestroyed()) win.destroy(); });
+}
 
 let mainArgv = [];
 function adoptMainWindow(win, opts) {
@@ -351,13 +369,15 @@ const RealBrowserWindow = electron.BrowserWindow;
 class RelayBrowserWindow extends RealBrowserWindow {
   constructor(options = {}) {
     const main = isMainWindowOptions(options);
+    const popout = main && isPopoutOptions(options);
     let opts = options;
     if (main) {
       const { preload, ...webPreferences } = options.webPreferences;
       opts = { ...options, show: false, webPreferences };
     }
     super(opts);
-    if (main) adoptMainWindow(this, options);
+    if (popout) suppressPopout(this);
+    else if (main) adoptMainWindow(this, options);
     else this.on('ready-to-show', () => debug('secondary window', JSON.stringify(options.title || '')));
   }
 }
