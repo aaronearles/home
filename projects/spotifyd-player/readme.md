@@ -1,5 +1,12 @@
 # Raspberry Pi - Headless Spotifyd Client with Bluetooth
 
+> **Superseded (2026-11-16)** by [aaronearles/spotify-speaker](https://github.com/aaronearles/spotify-speaker):
+> a Proxmox VM with Spotify's official Soloist player, BlueZ and PipeWire, which keeps the speaker connected. It addresses
+> the likely causes of the unreliability described below: autopair connected only once at boot, spotifyd wrote
+> straight to the `bluealsa` device and broke when the speaker went away, and the Pi's Bluetooth shared its radio
+> with Wi-Fi. The Bose speaker from this
+> project is used there. This folder is kept for reference only.
+
 ## Status 
 This is currently working as-is, it boots and automatically presents in the official spotify app and automatically pairs to the bluetooth speaker successfully, but after some time it stops working or becomes inconsistent. I think the best solution is to eliminate the bluetooth complexity with a wired (amplified) speaker(s).
 
