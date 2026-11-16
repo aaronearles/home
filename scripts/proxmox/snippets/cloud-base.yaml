@@ -1,0 +1,24 @@
+#cloud-config
+# Vendor data for Proxmox cloud templates (qm set --cicustom "vendor=local:snippets/cloud-base.yaml")
+# User, password hash and ssh keys come from Proxmox ciuser/cipassword/sshkeys (user-data)
+ssh_pwauth: false
+disable_root: true
+
+write_files:
+  - path: /etc/sudoers.d/cloud-init
+    content: |
+      Defaults !requiretty
+  - path: /etc/sudoers.d/aearles
+    permissions: "0440"
+    content: |
+      aearles ALL=(ALL) NOPASSWD:ALL
+
+package_update: true
+package_upgrade: true
+packages:
+  - qemu-guest-agent
+
+runcmd:
+  - passwd -l root
+  - systemctl enable qemu-guest-agent
+  - systemctl start qemu-guest-agent
