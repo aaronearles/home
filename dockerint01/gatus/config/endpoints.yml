@@ -5,10 +5,243 @@ default-endpoint: &defaults
     timeout: 30s
   conditions:
     - "[CONNECTED] == true"
+    - "[STATUS] == 200"
   alerts:
     - type: ntfy
 
 endpoints:
+
+  # =============================================================================
+  # INFRASTRUCTURE & CORE SERVICES
+  # =============================================================================
+
+  - name: Traefik Proxy
+    group: Infrastructure
+    <<: *defaults
+    url: "http://dockerint01.earles.internal:8080/api/overview"
+    conditions:
+      - "[CONNECTED] == true"
+      - "[STATUS] == 200"
+
+  - name: Authentik SSO
+    group: Infrastructure
+    <<: *defaults
+    url: "https://authentik.internal.earles.io/"
+    conditions:
+      - "[CONNECTED] == true"
+      - "[STATUS] == 200"
+
+  - name: OpenBao
+    group: Infrastructure
+    <<: *defaults
+    url: "https://vault.internal.earles.io/v1/sys/health"
+    conditions:
+      - "[STATUS] == 200" # 429 standby, 503 sealed, 501 uninitialized
+      - "[BODY].sealed == false"
+
+  - name: Vaultwarden
+    group: Infrastructure
+    <<: *defaults
+    url: "https://vaultwarden.internal.earles.io/"
+    conditions:
+      - "[CONNECTED] == true"
+      - "[STATUS] == 200"
+
+  - name: Proxmox VE
+    group: Infrastructure
+    <<: *defaults
+    url: "https://pve.internal.earles.io/"
+    conditions:
+      - "[CONNECTED] == true"
+      - "[STATUS] == 200"
+
+  - name: NAS
+    group: Infrastructure
+    <<: *defaults
+    url: "https://nas.internal.earles.io/"
+    conditions:
+      - "[CONNECTED] == true"
+      - "[STATUS] == 200"
+
+  # =============================================================================
+  # MONITORING & OBSERVABILITY
+  # =============================================================================
+
+  - name: Gatus Status
+    group: Monitoring
+    <<: *defaults
+    url: "https://gatus.internal.earles.io/"
+    conditions:
+      - "[CONNECTED] == true"
+      - "[STATUS] == 200"
+
+  - name: Uptime Kuma
+    group: Monitoring
+    <<: *defaults
+    url: "https://uptime.internal.earles.io/"
+    conditions:
+      - "[CONNECTED] == true"
+      - "[STATUS] == 200"
+
+  - name: Beszel Hub
+    group: Monitoring
+    <<: *defaults
+    url: "https://beszel.internal.earles.io/"
+    conditions:
+      - "[CONNECTED] == true"
+      - "[STATUS] == 200"
+
+  - name: Dozzle Logs
+    group: Monitoring
+    <<: *defaults
+    url: "https://dozzle.internal.earles.io/"
+    conditions:
+      - "[CONNECTED] == true"
+      - "[STATUS] == 200"
+
+  - name: ChangeDetection
+    group: Monitoring
+    <<: *defaults
+    url: "https://changedetection.internal.earles.io/"
+    conditions:
+      - "[CONNECTED] == true"
+      - "[STATUS] == 200"
+
+  - name: Gotify
+    group: Monitoring
+    <<: *defaults
+    url: "https://gotify.internal.earles.io/health"
+    conditions:
+      - "[CONNECTED] == true"
+      - "[STATUS] == 200"
+
+  # =============================================================================
+  # DEVELOPMENT & PRODUCTIVITY
+  # =============================================================================
+
+  - name: Code Server
+    group: Development
+    <<: *defaults
+    url: "https://dev.internal.earles.io/"
+    conditions:
+      - "[CONNECTED] == true"
+      - "[STATUS] == 200"
+
+  - name: IT-Tools
+    group: Development
+    <<: *defaults
+    url: "https://it-tools.internal.earles.io/"
+    conditions:
+      - "[CONNECTED] == true"
+      - "[STATUS] == 200"
+
+  - name: NetDiag
+    group: Development
+    <<: *defaults
+    url: "https://netdiag.internal.earles.io/"
+    conditions:
+      - "[CONNECTED] == true"
+      - "[STATUS] == 200"
+
+  - name: Draw (Excalidraw)
+    group: Productivity
+    <<: *defaults
+    url: "https://draw.internal.earles.io/"
+    conditions:
+      - "[CONNECTED] == true"
+      - "[STATUS] == 200"
+
+  - name: Spinwheel
+    group: Productivity
+    <<: *defaults
+    url: "https://spinwheel.internal.earles.io/"
+    conditions:
+      - "[CONNECTED] == true"
+      - "[STATUS] == 200"
+
+  # =============================================================================
+  # MEDIA & ENTERTAINMENT
+  # =============================================================================
+
+  - name: Jellyfin Media
+    group: Media
+    <<: *defaults
+    url: "https://jellyfin.internal.earles.io/"
+    conditions:
+      - "[CONNECTED] == true"
+      - "[STATUS] == 200"
+
+  - name: Jellyseerr
+    group: Media
+    <<: *defaults
+    url: "https://jellyseerr.internal.earles.io/api/v1/status"
+    conditions:
+      - "[CONNECTED] == true"
+      - "[STATUS] == 200"
+
+  # =============================================================================
+  # DOWNLOADS (arr stack, behind arr-gluetun)
+  # =============================================================================
+
+  - name: Prowlarr
+    group: Downloads
+    <<: *defaults
+    url: "https://prowlarr.internal.earles.io/ping"
+    conditions:
+      - "[CONNECTED] == true"
+      - "[STATUS] == 200"
+
+  - name: Radarr
+    group: Downloads
+    <<: *defaults
+    url: "https://radarr.internal.earles.io/ping"
+    conditions:
+      - "[CONNECTED] == true"
+      - "[STATUS] == 200"
+
+  - name: Sonarr
+    group: Downloads
+    <<: *defaults
+    url: "https://sonarr.internal.earles.io/ping"
+    conditions:
+      - "[CONNECTED] == true"
+      - "[STATUS] == 200"
+
+  - name: Readarr
+    group: Downloads
+    <<: *defaults
+    url: "https://readarr.internal.earles.io/ping"
+    conditions:
+      - "[CONNECTED] == true"
+      - "[STATUS] == 200"
+
+  - name: qBittorrent
+    group: Downloads
+    <<: *defaults
+    url: "https://qbittorrent.internal.earles.io/"
+    conditions:
+      - "[CONNECTED] == true"
+      - "[STATUS] == 200"
+
+  - name: SABnzbd
+    group: Downloads
+    <<: *defaults
+    url: "https://sabnzbd.internal.earles.io/"
+    conditions:
+      - "[CONNECTED] == true"
+      - "[STATUS] == 200"
+
+  # =============================================================================
+  # HOME AUTOMATION
+  # =============================================================================
+
+  - name: Home Assistant
+    group: Home Automation
+    <<: *defaults
+    url: "https://ha.internal.earles.io/"
+    conditions:
+      - "[CONNECTED] == true"
+      - "[STATUS] == 200"
 
   - name: Thermostat
     group: Home
@@ -16,22 +249,71 @@ endpoints:
     conditions:
       - "[CONNECTED] == true"
 
-  # - name: DMZ_Reverse_Proxy
-  #   group: Infrastructure
-  #   <<: *defaults
-  #   url: "http://dmz.earles.internal:81/"
+  # =============================================================================
+  # AI & MACHINE LEARNING
+  # =============================================================================
 
-  # - name: Self
-  #   group: Infrastructure
-  #   <<: *defaults
-  #   url: http://docker.earles.internal:8080
-
-  - name: EarlesGoneWild External
-    group: Public
+  - name: OpenWebUI
+    group: AI
     <<: *defaults
-    url: https://earlesgonewild.blog
+    url: "https://openwebui.internal.earles.io/"
+    conditions:
+      - "[CONNECTED] == true"
+      - "[STATUS] == 200"
 
-  # - name: EarlesGoneWild Internal
+  - name: Grokbot Web
+    group: AI
+    <<: *defaults
+    url: "https://grokbot-web.internal.earles.io/healthz"
+    conditions:
+      - "[CONNECTED] == true"
+      - "[STATUS] == 200"
+
+  # =============================================================================
+  # BROWSING & REMOTE ACCESS
+  # =============================================================================
+
+  - name: Firefox Browser
+    group: Browsing
+    <<: *defaults
+    url: "https://firefox.internal.earles.io/"
+    conditions:
+      - "[CONNECTED] == true"
+      - "[STATUS] == 200"
+
+  - name: Firefox VPN
+    group: Browsing
+    <<: *defaults
+    url: "https://firefox2.internal.earles.io/"
+    conditions:
+      - "[CONNECTED] == true"
+      - "[STATUS] == 200"
+
+  # =============================================================================
+  # GAMING
+  # =============================================================================
+
+  - name: Minecraft Bedrock
+    group: Gaming
+    url: "tcp://dockerint01.earles.internal:19132" # Traefik -> NetherNet signaling
+    interval: 120s
+    conditions:
+      - "[CONNECTED] == true"
+
+  - name: MC Coords
+    group: Gaming
+    <<: *defaults
+    url: "https://mc-coords.internal.earles.io/"
+    conditions:
+      - "[CONNECTED] == true"
+      - "[STATUS] == 200"
+
+  # =============================================================================
+  # PUBLIC
+  # =============================================================================
+
+  # Returns 404 as of 2026-10-16
+  # - name: EarlesGoneWild External
   #   group: Public
   #   <<: *defaults
-  #   url: http://earlesgonewild.earles.internal
+  #   url: https://earlesgonewild.blog
