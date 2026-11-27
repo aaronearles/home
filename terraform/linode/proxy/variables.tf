@@ -9,16 +9,47 @@ variable "authorized_keys" {
   default     = [""]
 }
 
-variable "stackscript_id" {
+variable "image" {
+  type    = string
+  default = "linode/alpine3.24"
+}
+
+variable "region" {
   type        = string
-  description = "Optional: Linode StackScript ID to deploy"
-  default     = "" //Empty triggers conditional expression to nullify
+  description = "Linode region (us-iad = Washington DC / Ashburn)"
+  default     = "us-iad"
+}
+
+variable "ssh_user" {
+  type    = string
+  default = "aearles"
+}
+
+variable "ssh_port" {
+  type    = number
+  default = 443
+}
+
+variable "ssh_allowed_ipv4" {
+  type        = list(string)
+  description = "IPv4 CIDRs allowed to reach SSH. Restrict to your public IP if it is stable."
+  default     = ["0.0.0.0/0"]
+}
+
+variable "fqdn" {
+  type    = string
+  default = "proxy.local"
+}
+
+variable "timezone" {
+  type    = string
+  default = "UTC"
 }
 
 variable "tags" {
   type        = list(string)
   description = "List of tags to apply"
-  default     = [""]
+  default     = []
 }
 
 # variable "root_pass" { //Replaced with random_password.root_pass
